@@ -29,6 +29,12 @@ const no = {
   evidence_quote: "",
 };
 describe("Evidence-grounded three-model consensus", () => {
+  it("accepts finite fractional confidence on the documented 0-100 scale", () => {
+    expect(
+      validateBallots({ results: [{ ...yes, confidence: 85.5 }] }, reviews)[0]?.confidence,
+    ).toBe(85.5);
+    expect(() => validateBallots({ results: [{ ...yes, confidence: 101 }] }, reviews)).toThrow();
+  });
   it("accepts a complete three-provider response and preserves the ballots", async () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "fixture");
     vi.stubEnv("GEMINI_API_KEY", "fixture");

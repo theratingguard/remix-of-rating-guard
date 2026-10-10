@@ -224,7 +224,7 @@ For optional three-provider analysis, configure `REVIEW_ANALYSIS_MODE=three`,
 or `MULTI_MODEL_ENABLED=true`, together with
 `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` in the private server environment;
 retain the existing `OPENAI_API_KEY`. Models are GPT-4o, Claude Sonnet 4.6 and
-Gemini 2.5 Flash. All three independently receive the original source; two
+Gemini 3.8 Flash. All three independently receive the original source; two
 validated positive votes flag a concern. Every positive vote requires an
 exact source quote and an allowed policy heading. Missing keys, invalid
 responses or provider failures explicitly fail the analysis; no silent
