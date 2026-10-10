@@ -8,6 +8,12 @@ export type Database = {
   };
   public: {
     Tables: {
+      service_checks: {
+        Row: { service: string; success: boolean; detail: string; checked_at: string };
+        Insert: { service: string; success: boolean; detail: string; checked_at?: string };
+        Update: { success?: boolean; detail?: string; checked_at?: string };
+        Relationships: [];
+      };
       app_settings: {
         Row: { id: string; key: string; value: Json; updated_at: string };
         Insert: { id?: string; key: string; value: Json; updated_at?: string };

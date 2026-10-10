@@ -289,10 +289,8 @@ export async function resolveAndFetchPlace(
     placeId = (await cidLookup(parsed.cid)) ?? undefined;
   }
   if (!placeId && parsed.cid && !parsed.query) {
-    throw new ScanError(
-      "UNSUPPORTED_LINK",
-      "This link only contains an internal Google CID. Paste the business's Maps place link or a link with query_place_id; we will not guess a nearby business.",
-    );
+    const {resolveCidBusinessName}=await import("./google-cid.server");
+    parsed.query=await resolveCidBusinessName(parsed.cid);
   }
   if (!placeId) {
     if (!parsed.query)

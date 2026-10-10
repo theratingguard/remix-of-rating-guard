@@ -95,7 +95,7 @@ export function AiControlPanel() {
             </div>
             {status && (
               <p className="mt-2 text-xs">
-                {status.message} · {status.response_ms} ms · Checked{" "}
+                {status.message} · {status.response_ms} ms · Last verified / tested:{" "}
                 {new Date(status.checked_at).toLocaleString()} · Cost:{" "}
                 {status.cost_estimate_usd === null
                   ? "estimate unavailable (paid test)"
@@ -119,7 +119,9 @@ export function AiControlPanel() {
       <p className="text-xs">
         Three enabled models: 2/3 required. Two enabled: both must agree. One enabled: explicitly
         single-model. Multi-Model OFF uses the first enabled provider (GPT, then Claude, then
-        Gemini). Disabled models are not called. Billing failure never silently falls back.
+        Gemini). Disabled models are not called. Retryable provider/output failures get 3 attempts.
+        GPT-only may use explicitly labelled OpenAI gpt-4.1-mini fallback after retry exhaustion.
+        Authentication/billing failures do not fall back.
       </p>
       <Button disabled={busy} onClick={() => void run("all")}>
         {busy ? "Working..." : "Test All Models"}
@@ -130,13 +132,19 @@ export function AiControlPanel() {
           {label}
           <Switch
             aria-label={label}
-            checked={settings[key]}
-            disabled={busy}
+            checked={settings[key] && (key !== "email_share_enabled" || query.data.emailAvailable)}
+            disabled={
+              busy ||
+              (key === "email_share_enabled" && !query.data.emailAvailable) ||
+              (key === "whatsapp_share_enabled" && !query.data.whatsappAvailable)
+            }
             onCheckedChange={(value) => void persist({ ...storedSettings, [key]: value })}
           />
         </label>
       ))}
       <p className="text-xs">
+        {!query.data.emailAvailable &&
+          "Email Share automatically unavailable: verified SMTP not configured. "}
         Share switches do not configure SMTP or WhatsApp delivery. WhatsApp opens a share link, not
         an automatic message. Auto-PDF OFF retains report data and manual PDF export. Legal OFF does
         not suppress basic policy-risk analysis.

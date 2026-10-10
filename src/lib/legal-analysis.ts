@@ -49,6 +49,24 @@ export const LEGAL_CITATIONS = [
     description:
       "Assess deliberately attacking or provocative content in context; a disputed account of customer experience is not itself evidence that an allegation is unsubstantiated.",
   },
+  {
+    type: "Prohibited Content",
+    section: "Personal information",
+    description:
+      "Assess disclosed private information about an identifiable living person and risk of harm. Public-facing business contact details or a commonly known business name alone are not prohibited personal information.",
+  },
+  {
+    type: "Prohibited Content",
+    section: "Obscenity & profanity",
+    description:
+      "Assess obscene or profane content used to offend or emphasize criticism in context; do not classify inoffensive uses or ordinary criticism as violations.",
+  },
+  {
+    type: "Off-topic",
+    section: "Off-topic",
+    description:
+      "Assess general political/social commentary unrelated to the specific location experience. A genuine detailed complaint about the business is on-topic even when strongly negative.",
+  },
 ];
 
 export const LEGAL_TEMPLATES = Object.entries(LEGAL_POLICIES).map(([key, policy]) => ({

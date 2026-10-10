@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+const cid = vi.hoisted(() => ({ resolve: vi.fn() }));
+vi.mock("./google-cid.server", () => ({ resolveCidBusinessName: cid.resolve }));
 import { parseMapsUrl, resolveAndFetchPlace, searchBusinesses } from "./google-places.server";
 
 const url = "https://www.google.com/maps/search/?api=1&query_place_id=test-place&query=test";
@@ -85,13 +87,37 @@ describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("rejects unsupported CID-only links instead of guessing a business", async () => {
+  it("rejects unresolved CID-only identity instead of guessing a business", async () => {
+    cid.resolve.mockRejectedValueOnce(
+      Object.assign(new Error("Identity unavailable"), { code: "UNSUPPORTED_LINK" }),
+    );
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
     await expect(
       resolveAndFetchPlace("test-key", "https://www.google.com/maps?cid=123"),
     ).rejects.toMatchObject({ code: "UNSUPPORTED_LINK" });
     expect(fetch).not.toHaveBeenCalled();
+  });
+  it("resolves CID-only identity from official Maps and still requires exact CID match in Places", async () => {
+    cid.resolve.mockResolvedValueOnce("Exact Apartment Name");
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          places: [
+            { id: "wrong", googleMapsUri: "https://www.google.com/maps?cid=999" },
+            { id: "right", googleMapsUri: "https://www.google.com/maps?cid=123" },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({ id: "right", displayName: { text: "Exact Apartment Name" } }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const result = await resolveAndFetchPlace("fixture", "https://www.google.com/maps?cid=123");
+    expect(result.placeId).toBe("right");
+    expect(JSON.parse(fetch.mock.calls[0]![1].body).textQuery).toBe("Exact Apartment Name");
+    expect(fetch.mock.calls[1]![0]).toContain("/places/right");
   });
 
   it("preserves business identity and prefers place coordinates over the camera centre", () => {

@@ -6,7 +6,6 @@ import { scansQuery, scanRisk, fmtDate, riskyCount } from "@/lib/data";
 import { PageHeader, EmptyState, StatusPill } from "@/components/app-shell";
 import { Stars, RiskBadge, DevTag, ratingTone } from "@/components/review-ui";
 import { Button } from "@/components/ui/button";
-import shield from "@/assets/icon-shield.png";
 import scanIcon from "@/assets/icon-scan.png";
 import reportIcon from "@/assets/icon-report.png";
 import alertIcon from "@/assets/icon-alert.png";
@@ -14,6 +13,7 @@ import { RemovalAnalytics } from "@/components/removal-workflow";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
 import { SmartAlerts } from "@/components/smart-alerts";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -29,6 +29,22 @@ function Dashboard() {
   const features = useFeatureSettings();
   const access = useQuery(reportAccessQuery());
   const { data: scans = [], isLoading, error } = useQuery(scansQuery());
+  const outcomes = useQuery({
+    queryKey: ["dashboard-outcome-counts"],
+    enabled: access.data === "super_admin" && features.data?.appeal_tracking_enabled === true,
+    queryFn: async () => {
+      const [approved, rejected] = await Promise.all(
+        (["approved", "rejected"] as const).map((outcome) =>
+          supabase
+            .from("removal_outcomes")
+            .select("id", { count: "exact", head: true })
+            .eq("outcome", outcome)
+            .throwOnError(),
+        ),
+      );
+      return { approved: approved!.count ?? 0, rejected: rejected!.count ?? 0 };
+    },
+  });
   const done = scans.filter((s) => s.status === "complete");
   const sum = (k: "high_count" | "medium_count" | "normal_count" | "requires_review_count") =>
     done.reduce((a, s) => a + s[k], 0);
@@ -40,12 +56,20 @@ function Dashboard() {
   const kpis = [
     { label: "Total Scans", value: scans.length, img: scanIcon },
     {
-      label: "Businesses Scanned",
-      value: new Set(done.map((s) => s.business_id ?? s.business_name)).size,
-      img: shield,
+      label: "Flagged Reviews",
+      value: high + med,
+      img: alertIcon,
+      accent: true,
     },
-    { label: "Reviews Analyzed", value: total, img: reportIcon },
-    { label: "Potentially Risky Reviews", value: high + med, accent: true, img: alertIcon },
+    { label: "Approved", value: outcomes.data?.approved ?? null, img: reportIcon },
+    {
+      label: "Success Rate",
+      value:
+        outcomes.data && outcomes.data.approved + outcomes.data.rejected > 0
+          ? `${Math.round((outcomes.data.approved / (outcomes.data.approved + outcomes.data.rejected)) * 100)}%`
+          : null,
+      img: reportIcon,
+    },
   ];
   const rated = done.filter((s) => s.rating != null);
   const buckets = [
@@ -82,8 +106,6 @@ function Dashboard() {
           </Button>
         }
       />
-      {features.data?.appeal_tracking_enabled && <RemovalAnalytics />}
-      <SmartAlerts />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((k, i) => (
           <div
@@ -101,10 +123,20 @@ function Dashboard() {
             />
             <div className="text-sm text-muted-foreground">{k.label}</div>
             <div
-              className={`mt-2 font-mono text-3xl font-semibold tabular ${k.accent ? "text-risk-high" : ""}`}
+              className={`mt-2 font-mono text-4xl font-semibold tabular ${k.accent ? "text-risk-high" : ""}`}
             >
-              {isLoading ? "—" : k.value.toLocaleString()}
+              {isLoading ? "—" : (k.value?.toLocaleString() ?? "Not available")}
             </div>
+            {outcomes.error && (
+              <p role="alert">Outcome counts unavailable: {outcomes.error.message}</p>
+            )}
+            <p className="mt-2 text-sm text-muted-foreground">
+              {total} assessments across completed scan runs (repeat scans may include the same
+              reviews); {new Set(done.map((scan) => scan.business_id ?? scan.id)).size} businesses.
+              Success rate uses recorded approved/rejected decisions only; pending excluded.
+            </p>
+            {features.data?.appeal_tracking_enabled && <RemovalAnalytics />}
+            <SmartAlerts />
           </div>
         ))}
       </div>

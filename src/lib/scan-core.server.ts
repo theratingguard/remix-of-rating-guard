@@ -101,6 +101,9 @@ export async function track(
 const MODULE: Record<string, string> = {
   INVALID_URL: "google",
   RESOLVE_FAILED: "google",
+  UNSUPPORTED_LINK: "google",
+  INVALID_PROVIDER_DATA: "google",
+  AI_INVALID_RESPONSE: "ai",
   NOT_FOUND: "google",
   RATE_LIMIT: "google",
   API_UNAVAILABLE: "google",
@@ -138,6 +141,15 @@ export async function recordError(
     route?: string;
   },
 ) {
+  console.error(
+    "[scan-failure]",
+    JSON.stringify({
+      code: e.code,
+      scan_id: e.scanId ?? null,
+      business: e.business ?? null,
+      message: e.message,
+    }),
+  );
   const recorded = await supabase.from("error_events").insert({
     user_id: userId,
     module: MODULE[e.code] ?? "app",
@@ -605,7 +617,7 @@ export async function scanAnalyzeCore(
       scan.id,
       "ANALYSIS_COMPLETED",
       t,
-      `${todo.length} analyzed, ${reviews.length - todo.length} reused from cache, ${controls.multi_model_enabled ? `${enabled.length} enabled-provider assessment` : `${toVerify.length} verified by second model`}`,
+      `${todo.length} analyzed, ${reviews.length - todo.length} reused from cache, ${enabled.length} enabled-provider assessment; validated source ballots`,
     );
 
     const analysis = final.map((f) => f.a);

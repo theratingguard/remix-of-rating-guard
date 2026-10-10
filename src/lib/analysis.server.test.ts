@@ -27,7 +27,7 @@ describe("Analysis integrity (unit fixtures, not real AI results)", () => {
       "fetch",
       vi.fn().mockResolvedValue(
         Response.json({
-          choices: [{ message: { tool_calls: [{ function: { arguments: '{"results":[]}' } }] } }],
+          choices: [{ message: { content: '{"results":[]}' } }],
         }),
       ),
     );
@@ -50,15 +50,7 @@ describe("Analysis integrity (unit fixtures, not real AI results)", () => {
         Response.json({
           choices: [
             {
-              message: {
-                tool_calls: [
-                  {
-                    function: {
-                      arguments: JSON.stringify({ results: [result, result] }),
-                    },
-                  },
-                ],
-              },
+              message: { content: JSON.stringify({ results: [result, result] }) },
             },
           ],
         }),

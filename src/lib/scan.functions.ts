@@ -7,6 +7,7 @@ import { scanFetchCore, scanAnalyzeCore, audit, type StageResponse } from "./sca
 import { searchBusinesses } from "./google-places.server";
 import { getSettings } from "./settings.server";
 import { enabledModelIndices, modelNames } from "./settings";
+import { modelStatusSchema } from "./model-test.server";
 
 export const findBusinesses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -52,6 +53,38 @@ export const getSystemStatus = createServerFn({ method: "GET" })
       active.every((index) =>
         Boolean(process.env[["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY"][index]!]),
       );
+    const [googleChecks, modelChecks, latestScan] = await Promise.all([
+      context.supabase
+        .from("service_checks")
+        .select("*")
+        .eq("service", "google")
+        .maybeSingle()
+        .throwOnError(),
+      context.supabase.from("ai_model_status").select("result").throwOnError(),
+      context.supabase
+        .from("scans")
+        .select("completed_at")
+        .eq("status", "complete")
+        .eq("is_seed", false)
+        .order("completed_at", { ascending: false })
+        .limit(1)
+        .throwOnError(),
+    ]);
+    const tested = modelChecks.data.map((row) => modelStatusSchema.parse(row.result));
+    const fresh = (date: string) => Date.now() - Date.parse(date) < 86400000;
+    const latestVerified = latestScan.data[0]?.completed_at;
+    const liveVerified = latestVerified && fresh(latestVerified);
+    const aiTestsActive =
+      active.length > 0 &&
+      active.every((index) =>
+        tested.some(
+          (item) =>
+            item.model === (["gpt", "claude", "gemini"] as const)[index] &&
+            item.status === "active" &&
+            fresh(item.checked_at),
+        ),
+      );
+    const googleVerified = googleChecks.data?.success && fresh(googleChecks.data.checked_at);
     const checks: { name: string; status: Health; detail: string }[] = [
       { name: "Application", status: "healthy", detail: `Version ${APP_VERSION} responding` },
       {
@@ -61,16 +94,16 @@ export const getSystemStatus = createServerFn({ method: "GET" })
       },
       {
         name: "Google API",
-        status: "warning",
+        status: googleConfigured && (googleVerified || liveVerified) ? "healthy" : "warning",
         detail: googleConfigured
-          ? "Places API (New) key configured; live provider health is checked during a scan"
+          ? `Last verified: ${googleVerified ? googleChecks.data?.checked_at : liveVerified ? latestVerified : "Not recently verified"}. Use Test Google API for a fresh paid diagnostic.`
           : "Configuration required — GOOGLE_PLACES_API_KEY not set",
       },
       {
         name: "AI service",
-        status: aiConfigured ? "warning" : "unavailable",
+        status: aiConfigured ? (aiTestsActive ? "healthy" : "warning") : "unavailable",
         detail: aiConfigured
-          ? `${active.map((index) => modelNames[index]).join(" + ")}; keys configured, not live-verified by this check`
+          ? `${active.map((index) => modelNames[index]).join(" + ")}. Last verified: ${aiTestsActive ? "See each model's persisted test date" : "No recent successful test of every currently enabled provider"}. Use Test All Models for current provider health.`
           : "All models disabled or an enabled provider credential is missing",
       },
       {

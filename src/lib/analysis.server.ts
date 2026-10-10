@@ -7,6 +7,7 @@ import { analyzeWithThreeModels, type Consensus } from "./multi-model.server";
 import { assessReviewQuality } from "./review-quality";
 import { getSettings } from "./settings.server";
 import { enabledModelIndices } from "./settings";
+import { requireProviderResponse, ProviderHttpError } from "./ai-retry.server";
 import {
   LEGAL_VERSION,
   LEGAL_DISCLAIMER,
@@ -49,12 +50,12 @@ export async function generateLegalAnalysis(
         "Legal Expert Mode requires the configured AI provider.",
       );
     let correction: { previous_output: string; validation_error: string } | null = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       let response: Response;
       try {
         response = await fetch("https://api.openai.com/v1/responses", {
           method: "POST",
-          signal: AbortSignal.timeout(60000),
+          signal: AbortSignal.timeout(20000),
           headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "gpt-4o",
@@ -78,29 +79,35 @@ export async function generateLegalAnalysis(
         });
       } catch (error) {
         console.error("[legal-analysis] AI connection failed", error);
+        if (attempt < 2) continue;
         throw new ScanError(
           "AI_UNAVAILABLE",
           "Legal analysis provider is unreachable or timed out.",
         );
       }
-      if (!response.ok)
+      try {
+        await requireProviderResponse(response);
+      } catch (error) {
+        if (!(error instanceof ProviderHttpError && error.permanent) && attempt < 2) continue;
         throw new ScanError(
           "AI_UNAVAILABLE",
           `Legal analysis provider failed [${response.status}].`,
         );
-      const text = await readOpenAIStream(response);
+      }
+      let text = "";
       try {
+        text = await readOpenAIStream(response);
         results = validateLegalReviews(
           JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, "")),
           flagged,
         );
         break;
       } catch (error) {
-        if (attempt === 0) {
+        if (attempt < 2) {
           const validationError =
             error instanceof Error ? error.message : "Invalid structured output";
           console.warn(
-            "[legal-analysis] Retrying invalid structured output once:",
+            `[legal-analysis] Retrying invalid structured output (attempt ${attempt + 1}/3):`,
             validationError,
           );
           correction = { previous_output: text, validation_error: validationError };
@@ -129,19 +136,6 @@ export async function generateLegalAnalysis(
 }
 
 const riskSchema = z.enum(["high", "medium", "normal", "requires_review"]);
-const analysisOutputSchema = z.object({
-  results: z.array(
-    z.object({
-      index: z.number().int().nonnegative(),
-      risk: riskSchema,
-      category: z.string().nullable().optional(),
-      signals: z.array(z.string()).max(6),
-      reason: z.string().min(1),
-      evidence: z.string().nullable().optional(),
-      confidence: z.number().int().min(0).max(100),
-    }),
-  ),
-});
 const verificationOutputSchema = z.object({
   results: z.array(
     z.object({
@@ -210,119 +204,10 @@ export async function analyzeReviews(
   }
   const controls = await getSettings();
   const enabled = enabledModelIndices(controls);
-  if (controls.multi_model_enabled || enabled[0] !== 0)
-    return analyzeWithThreeModels(apiKey, businessName, category, reviews, enabled);
-  if (!apiKey)
-    throw new ScanError("AI_UNAVAILABLE", "Enabled GPT model is missing its server credential.");
-  let res: Response;
-  try {
-    res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: SYSTEM },
-          {
-            role: "user",
-            content: JSON.stringify({
-              businessName,
-              category,
-              reviews: reviews.map((r, index) => ({
-                index,
-                rating: r.rating,
-                relativeTime: r.relativeTime,
-                text: r.text,
-              })),
-            }),
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "report",
-              parameters: {
-                type: "object",
-                properties: {
-                  results: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        index: { type: "integer" },
-                        risk: {
-                          type: "string",
-                          enum: ["high", "medium", "normal", "requires_review"],
-                        },
-                        category: { type: ["string", "null"] },
-                        signals: { type: "array", items: { type: "string" } },
-                        reason: { type: "string" },
-                        evidence: { type: ["string", "null"] },
-                        confidence: { type: "integer" },
-                      },
-                      required: ["index", "risk", "signals", "reason", "confidence"],
-                    },
-                  },
-                },
-                required: ["results"],
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "report" } },
-      }),
-    });
-  } catch {
-    throw new ScanError("AI_UNAVAILABLE", "AI analysis is unavailable (network error). Try again.");
-  }
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`OpenAI request failed [${res.status}]`);
-    if (res.status === 429 && body.includes("insufficient_quota"))
-      throw new ScanError(
-        "AI_QUOTA",
-        "OpenAI quota or billing limit reached. Add credit to your OpenAI account, then resume the queue.",
-      );
-    if (res.status === 429)
-      throw new ScanError("RATE_LIMIT", "OpenAI rate limit reached. Retrying shortly.");
-    if (res.status === 401 || res.status === 403)
-      throw new ScanError(
-        "AI_AUTH",
-        "OpenAI rejected the API key. Update OPENAI_API_KEY in project secrets.",
-      );
-    throw new ScanError("AI_UNAVAILABLE", `AI analysis is unavailable [${res.status}].`);
-  }
-  const json = await res.json();
-  const args = json?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-  const output = analysisOutputSchema.safeParse(parseToolArguments(args));
-  if (
-    !output.success ||
-    output.data.results.length !== reviews.length ||
-    new Set(output.data.results.map((r) => r.index)).size !== reviews.length ||
-    output.data.results.some((r) => r.index >= reviews.length)
-  ) {
-    throw new ScanError(
-      "AI_INVALID_RESPONSE",
-      "AI returned incomplete or invalid analysis. Saved reviews remain available; retry analysis.",
-    );
-  }
-  const results = output.data.results;
-  return reviews.map((_, i) => {
-    const r = results.find((x) => x.index === i);
-    if (!r) throw new ScanError("AI_INVALID_RESPONSE", "AI omitted a review analysis.");
-    return {
-      risk: r.risk,
-      category: r.category ?? null,
-      signals: Array.isArray(r.signals) ? r.signals.slice(0, 6).map(String) : [],
-      reason: String(r.reason ?? ""),
-      evidence: r.evidence ?? null,
-      confidence: Math.max(0, Math.min(100, Number(r.confidence) || 0)),
-    };
-  });
+  return analyzeWithThreeModels(apiKey, businessName, category, reviews, enabled);
 }
 
-export const PROMPT_VERSION = THREE_MODEL_MODE ? "risk-consensus-v1" : "risk-v3";
+export const PROMPT_VERSION = "risk-consensus-v2-retry";
 export const VERIFY_MODEL = "gpt-4o-mini";
 
 /** Explainable guard: a flag must be backed by a quote or signal; a low star rating alone is never a violation. */

@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { scansQuery, scanRisk, fmtDate, riskyCount, analyzedCount, savedPdfUrl } from "@/lib/data";
+import { scansQuery, scanRisk, riskyCount, analyzedCount, savedPdfUrl } from "@/lib/data";
+import { compactDate, shortScanError, pageSlice } from "@/lib/operations-ui";
 import { PageHeader, EmptyState, StatusPill } from "@/components/app-shell";
 import { RiskBadge, DevTag } from "@/components/review-ui";
 import { Input } from "@/components/ui/input";
@@ -32,12 +33,15 @@ function HistoryPage() {
   const [status, setStatus] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [page, setPage] = useState(1);
   const rows = useMemo(
     () =>
       scans.filter((s) => {
         if (
           q &&
-          !`${s.business_name ?? ""} ${s.source_url}`.toLowerCase().includes(q.toLowerCase())
+          !`${s.business_name ?? ""} ${s.source_url} ${s.error ?? ""} ${s.id} ${s.reports?.report_number ?? ""}`
+            .toLowerCase()
+            .includes(q.toLowerCase())
         )
           return false;
         if (status !== "all" && s.status !== status) return false;
@@ -49,6 +53,7 @@ function HistoryPage() {
       }),
     [scans, q, risk, status, from, to],
   );
+  const paging = pageSlice(rows, page);
 
   if (access.error)
     return <p role="alert">Could not verify report access: {access.error.message}</p>;
@@ -62,9 +67,12 @@ function HistoryPage() {
         <label className="flex-1 min-w-48">
           <span className="sr-only">Search</span>
           <Input
-            placeholder="Search business name or URL…"
+            placeholder="Search business, URL, scan ID or error…"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
           />
         </label>
         <label className="text-xs text-muted-foreground">
@@ -73,7 +81,10 @@ function HistoryPage() {
             type="date"
             className={`${sel} ml-1`}
             value={from}
-            onChange={(e) => setFrom(e.target.value)}
+            onChange={(e) => {
+              setFrom(e.target.value);
+              setPage(1);
+            }}
           />
         </label>
         <label className="text-xs text-muted-foreground">
@@ -82,12 +93,22 @@ function HistoryPage() {
             type="date"
             className={`${sel} ml-1`}
             value={to}
-            onChange={(e) => setTo(e.target.value)}
+            onChange={(e) => {
+              setTo(e.target.value);
+              setPage(1);
+            }}
           />
         </label>
         <label>
           <span className="sr-only">Risk</span>
-          <select className={sel} value={risk} onChange={(e) => setRisk(e.target.value)}>
+          <select
+            className={sel}
+            value={risk}
+            onChange={(e) => {
+              setRisk(e.target.value);
+              setPage(1);
+            }}
+          >
             <option value="all">Any risk</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
@@ -97,13 +118,33 @@ function HistoryPage() {
         </label>
         <label>
           <span className="sr-only">Status</span>
-          <select className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
+          <select
+            className={sel}
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              setPage(1);
+            }}
+          >
             <option value="all">Any status</option>
             <option value="complete">Complete</option>
             <option value="failed">Failed</option>
             <option value="running">Running</option>
           </select>
         </label>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setQ("");
+            setRisk("all");
+            setStatus("all");
+            setFrom("");
+            setTo("");
+            setPage(1);
+          }}
+        >
+          Reset filters
+        </Button>
       </div>
       {!isLoading && scans.length === 0 ? (
         <EmptyState
@@ -136,7 +177,7 @@ function HistoryPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((s) => (
+              {paging.rows.map((s) => (
                 <tr key={s.id} className="border-t hover:bg-muted/50">
                   <td className="px-5 py-3 font-medium">
                     {s.business_name ?? (
@@ -159,11 +200,18 @@ function HistoryPage() {
                       "—"
                     )}
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{fmtDate(s.created_at)}</td>
+                  <td className="whitespace-nowrap px-5 py-4 text-muted-foreground">
+                    {compactDate(s.created_at)}
+                  </td>
                   <td className="px-5 py-3">
                     <StatusPill status={s.status} error={s.error} />
                     {s.status === "failed" && s.error && (
-                      <div className="mt-1 max-w-56 text-xs text-muted-foreground">{s.error}</div>
+                      <div
+                        title={s.error}
+                        className="mt-1 max-w-56 truncate text-sm text-muted-foreground"
+                      >
+                        {shortScanError(s.error)}
+                      </div>
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
@@ -201,6 +249,27 @@ function HistoryPage() {
               )}
             </tbody>
           </table>
+          <div className="flex items-center justify-between gap-3 border-t p-4 text-sm">
+            <span>
+              {rows.length} matching scans · Page {paging.page}/{paging.pages}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={paging.page === 1}
+                onClick={() => setPage(paging.page - 1)}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                disabled={paging.page === paging.pages}
+                onClick={() => setPage(paging.page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </>

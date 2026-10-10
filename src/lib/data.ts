@@ -51,14 +51,24 @@ export const scansQuery = () =>
   queryOptions({
     queryKey: ["scans"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("scans")
-        .select(
-          "*, reports!reports_scan_id_fkey(id, report_number, status, created_at, report_data)",
-        )
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const scans = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase
+          .from("scans")
+          .select(
+            "*, reports!reports_scan_id_fkey(id, report_number, status, created_at, report_data)",
+          )
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(offset, offset + 499);
+        if (error) throw error;
+        scans.push(...data);
+        if (data.length < 500) return scans;
+        if (scans.length >= 50000)
+          throw new Error(
+            "History exceeds 50,000 scans; narrow server-side history before loading.",
+          );
+      }
     },
   });
 

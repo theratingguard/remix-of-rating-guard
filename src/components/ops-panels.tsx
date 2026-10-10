@@ -13,11 +13,14 @@ import {
   setErrorStatus,
   getSystemQuality,
   getScanEvents,
+  retryErrorScan,
 } from "@/lib/ops.functions";
 import { ACTION_STATUSES, ACTION_LABEL, recommend, type ActionStatus } from "@/lib/actions";
 import { fmtDate } from "@/lib/data";
 import { RiskBadge, DevTag, Confidence } from "@/components/review-ui";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { compactDate, groupErrors } from "@/lib/operations-ui";
 
 const Kpi = ({ l, v, tone }: { l: string; v: React.ReactNode; tone?: string }) => (
   <div className="surface p-4">
@@ -87,8 +90,17 @@ export function OperationsPanel() {
         <Kpi l="Medium risk" v={k.medium} tone="text-risk-medium" />
         <Kpi l="Normal" v={k.normal} tone="text-risk-normal" />
         <Kpi l="Rating mismatches" v={k.ratingMismatches} />
-        <Kpi l="Google API failures" v={k.apiFailures} />
-        <Kpi l="AI failures" v={k.aiFailures} />
+        <Link
+          to="/settings"
+          hash="error-center"
+          className="block"
+          title="Inspect Google error details"
+        >
+          <Kpi l="Google API failures — details" v={k.apiFailures} />
+        </Link>
+        <Link to="/settings" hash="error-center" className="block" title="Inspect AI error details">
+          <Kpi l="AI failures — details" v={k.aiFailures} />
+        </Link>
       </div>
       <div className="surface mt-4 overflow-x-auto">
         <div className="border-b px-4 py-3 text-sm font-semibold">Live activity</div>
@@ -522,8 +534,23 @@ const STATUS_TONE: Record<string, string> = {
 export function ErrorCenter() {
   const fn = useServerFn(getErrorCenter);
   const save = useServerFn(setErrorStatus);
+  const retry = useServerFn(retryErrorScan);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["errors"], queryFn: () => fn() });
+  const [severity, setSeverity] = useState("all"),
+    [from, setFrom] = useState(""),
+    [to, setTo] = useState(""),
+    [filter, setFilter] = useState(""),
+    [busy, setBusy] = useState<string | null>(null);
+  const filtered = (q.data ?? []).filter(
+    (row) =>
+      (severity === "all" || row.severity === severity) &&
+      (!from || row.created_at.slice(0, 10) >= from) &&
+      (!to || row.created_at.slice(0, 10) <= to) &&
+      `${row.code} ${row.business ?? ""} ${row.message} ${row.status}`
+        .toLowerCase()
+        .includes(filter.toLowerCase()),
+  );
   async function change(id: string, status: "OPEN" | "INVESTIGATING" | "FIXED" | "VERIFIED") {
     try {
       await save({ data: { id, status } });
@@ -533,68 +560,178 @@ export function ErrorCenter() {
     }
   }
   return (
-    <section className="surface mt-6 overflow-x-auto">
+    <section id="error-center" className="surface mt-6 overflow-x-auto text-sm">
       <div className="border-b px-5 py-4">
         <h2 className="font-semibold">System error center</h2>
         <p className="text-xs text-muted-foreground">
           Every Google, AI, database and report failure from real scans is recorded here.
         </p>
       </div>
+      <div className="flex flex-wrap gap-3 border-b p-4">
+        <Input
+          aria-label="Search errors"
+          placeholder="Search code, business, message or status"
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+          className="max-w-sm"
+        />
+        <select
+          aria-label="Error severity"
+          value={severity}
+          onChange={(event) => setSeverity(event.target.value)}
+          className="rounded border bg-background p-2"
+        >
+          {["all", "CRITICAL", "HIGH", "MEDIUM", "LOW"].map((value) => (
+            <option key={value} value={value}>
+              {value === "all" ? "All severities" : value}
+            </option>
+          ))}
+        </select>
+        <label>
+          From{" "}
+          <input
+            type="date"
+            value={from}
+            onChange={(event) => setFrom(event.target.value)}
+            className="rounded border bg-background p-2"
+          />
+        </label>
+        <label>
+          To{" "}
+          <input
+            type="date"
+            value={to}
+            onChange={(event) => setTo(event.target.value)}
+            className="rounded border bg-background p-2"
+          />
+        </label>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setFilter("");
+            setSeverity("all");
+            setFrom("");
+            setTo("");
+          }}
+        >
+          Reset filters
+        </Button>
+      </div>
       {q.isLoading ? (
         <Loading />
       ) : q.error ? (
         <Fail e={q.error} />
       ) : (
-        <table className="w-full text-sm">
-          <Th
-            cols={[
-              "Error ID",
-              "Time",
-              "Module",
-              "Route",
-              "Scan",
-              "Business",
-              "Code",
-              "Message",
-              "Severity",
-              "Status",
-            ]}
-          />
-          <tbody>
-            {(q.data ?? []).length === 0 && (
-              <tr>
-                <td colSpan={10} className="px-4 py-6 text-center text-muted-foreground">
-                  No errors recorded.
-                </td>
-              </tr>
-            )}
-            {(q.data ?? []).map((e) => (
-              <tr key={e.id} className="border-t align-top">
-                <td className="px-4 py-2 font-mono text-xs">{e.id.slice(0, 8)}</td>
-                <td className="whitespace-nowrap px-4 py-2 text-xs">{fmtDate(e.created_at)}</td>
-                <td className="px-4 py-2 text-xs">{e.module}</td>
-                <td className="px-4 py-2 text-xs">{e.route}</td>
-                <td className="px-4 py-2 font-mono text-xs">{e.scan_id?.slice(0, 8) ?? "—"}</td>
-                <td className="px-4 py-2 text-xs">{e.business ?? "—"}</td>
-                <td className="px-4 py-2 font-mono text-xs">{e.code}</td>
-                <td className="min-w-[200px] px-4 py-2 text-xs">{e.message}</td>
-                <td className="px-4 py-2 text-xs font-semibold">{e.severity}</td>
-                <td className="px-4 py-2">
-                  <select
-                    aria-label="Error status"
-                    className={`rounded border bg-background px-1 text-xs font-semibold ${STATUS_TONE[e.status]}`}
-                    value={e.status}
-                    onChange={(ev) => change(e.id, ev.target.value as "OPEN")}
-                  >
-                    {["OPEN", "INVESTIGATING", "FIXED", "VERIFIED"].map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div>
+          {groupErrors(filtered).map((group) => (
+            <details key={group.key} className="border-b p-4">
+              <summary className="cursor-pointer font-semibold">
+                {group.code} × {group.errors.length} · {group.errors[0]?.module}
+              </summary>
+              <table className="w-full text-sm [&_td]:p-4 [&_td]:text-sm">
+                <Th
+                  cols={[
+                    "Error ID",
+                    "Time",
+                    "Module",
+                    "Route",
+                    "Scan",
+                    "Business",
+                    "Code",
+                    "Message",
+                    "Severity",
+                    "Status",
+                    "Actions",
+                  ]}
+                />
+                <tbody>
+                  {filtered.length === 0 && (
+                    <tr>
+                      <td colSpan={11} className="px-4 py-6 text-center text-muted-foreground">
+                        No errors recorded.
+                      </td>
+                    </tr>
+                  )}
+                  {group.errors.map((e) => (
+                    <tr key={e.id} className="border-t align-top">
+                      <td className="px-4 py-2 font-mono text-xs">{e.id.slice(0, 8)}</td>
+                      <td className="whitespace-nowrap px-4 py-2 text-xs">
+                        {compactDate(e.created_at)}
+                        <br />
+                        {new Date(e.created_at).toLocaleTimeString("en-GB", { hour12: false })}
+                      </td>
+                      <td className="px-4 py-2 text-xs">{e.module}</td>
+                      <td className="px-4 py-2 text-xs">{e.route}</td>
+                      <td className="px-4 py-2 font-mono text-xs">
+                        {e.scan_id?.slice(0, 8) ?? "—"}
+                      </td>
+                      <td className="px-4 py-2 text-xs">{e.business ?? "—"}</td>
+                      <td className="px-4 py-2 font-mono text-xs">{e.code}</td>
+                      <td className="min-w-[200px] px-4 py-2 text-xs">{e.message}</td>
+                      <td className="px-4 py-2 text-xs font-semibold">{e.severity}</td>
+                      <td className="px-4 py-2">
+                        <select
+                          aria-label="Error status"
+                          className={`rounded border bg-background px-1 text-xs font-semibold ${STATUS_TONE[e.status]}`}
+                          value={e.status}
+                          onChange={(ev) => change(e.id, ev.target.value as "OPEN")}
+                        >
+                          {["OPEN", "INVESTIGATING", "FIXED", "VERIFIED"].map((s) => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title={
+                              !e.scan_id
+                                ? "No associated scan; inspect integration details"
+                                : "Retry this failed scan; bulk pauses stay unchanged"
+                            }
+                            disabled={!e.scan_id || busy !== null}
+                            onClick={async () => {
+                              setBusy(e.id);
+                              try {
+                                const result = await retry({ data: { errorId: e.id } });
+                                toast.success(result.message);
+                                await qc.invalidateQueries({ queryKey: ["scans"] });
+                                await qc.invalidateQueries({ queryKey: ["errors"] });
+                              } catch (error) {
+                                toast.error(
+                                  error instanceof Error ? error.message : "Retry failed.",
+                                );
+                              } finally {
+                                setBusy(null);
+                              }
+                            }}
+                          >
+                            Retry
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy !== null || ["FIXED", "VERIFIED"].includes(e.status)}
+                            onClick={() => void change(e.id, "FIXED")}
+                          >
+                            Mark as Resolved
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          ))}
+          {filtered.length === 0 && <p className="p-4">No errors match these filters.</p>}
+          <p className="p-4 text-muted-foreground">
+            Latest 200 errors shown. Groups reflect current filters. Mark as Resolved is a manual
+            acknowledgement, not automatic verification.
+          </p>
+        </div>
       )}
     </section>
   );

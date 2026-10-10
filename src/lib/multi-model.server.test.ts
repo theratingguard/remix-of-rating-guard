@@ -162,7 +162,49 @@ describe("Evidence-grounded three-model consensus", () => {
     await expect(analyzeWithThreeModels("fixture", "Fixture", null, reviews)).rejects.toMatchObject(
       { code: "AI_UNAVAILABLE" },
     );
-    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(fetch).toHaveBeenCalledTimes(5);
     for (const [, init] of fetch.mock.calls) expect(init.body).not.toContain("firstAssessment");
+  });
+  it("retries malformed GPT output and succeeds on the third attempt with no duplicate ballots", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({ choices: [{ message: { content: '{"results":[]}' } }] }),
+      )
+      .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: "invalid" } }] }))
+      .mockResolvedValueOnce(
+        Response.json({ choices: [{ message: { content: JSON.stringify({ results: [yes] }) } }] }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const result = await analyzeWithThreeModels("fixture", "Fixture", null, reviews, [0]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(result[0]?.risk).toBe("medium");
+    expect(result[0]?.consensus.votes).toHaveLength(1);
+  });
+  it("labels same-provider GPT fallback after 3 transient failures, without calling disabled providers", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("", { status: 503 }))
+      .mockResolvedValueOnce(new Response("", { status: 503 }))
+      .mockResolvedValueOnce(new Response("", { status: 503 }))
+      .mockResolvedValueOnce(
+        Response.json({ choices: [{ message: { content: JSON.stringify({ results: [yes] }) } }] }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const result = await analyzeWithThreeModels("fixture", "Fixture", null, reviews, [0]);
+    expect(result[0]?.consensus.model).toBe("gpt-4.1-mini");
+    expect(result[0]?.consensus.fallback).toContain("exhausted");
+    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(fetch.mock.calls.every(([url]) => String(url).includes("openai"))).toBe(true);
+  });
+  it("does not retry or fall back on provider authentication or exhausted quota", async () => {
+    for (const status of [401, 402, 429]) {
+      const fetch = vi.fn().mockResolvedValue(new Response("insufficient_quota", { status }));
+      vi.stubGlobal("fetch", fetch);
+      await expect(
+        analyzeWithThreeModels("fixture", "Fixture", null, reviews, [0]),
+      ).rejects.toMatchObject({ code: status === 401 ? "AI_AUTH" : "AI_QUOTA" });
+      expect(fetch).toHaveBeenCalledTimes(1);
+    }
   });
 });

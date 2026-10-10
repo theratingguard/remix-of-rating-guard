@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getSettings, invalidateSettings } from "./settings.server";
 import { settingsSchema } from "./settings";
 import { testModel, modelStatusSchema } from "./model-test.server";
+import { smtpConfigured } from "./email.server";
 
 export const getFeatureSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -17,6 +18,8 @@ export const getAiControlPanel = createServerFn({ method: "GET" })
     return {
       settings: await getSettings(),
       statuses: statuses.data.map((row) => modelStatusSchema.parse(row.result)),
+      emailAvailable: smtpConfigured(),
+      whatsappAvailable: true,
     };
   });
 export const saveAiSettings = createServerFn({ method: "POST" })
@@ -24,6 +27,8 @@ export const saveAiSettings = createServerFn({ method: "POST" })
   .inputValidator((input) => settingsSchema.parse(input))
   .handler(async ({ context, data }) => {
     try {
+      if (data.email_share_enabled && !smtpConfigured())
+        throw new Error("Configure verified SMTP before enabling Email Share.");
       await context.supabase.rpc("update_app_settings", { _settings: data }).throwOnError();
       invalidateSettings();
       return await getSettings();

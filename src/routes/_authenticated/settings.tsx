@@ -11,6 +11,7 @@ import { RefreshCw, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getSystemStatus, getAuditLog, logAudit } from "@/lib/scan.functions";
 import { getQueueState, resumeQueue } from "@/lib/queue.functions";
+import { getIntegrationChecks, testGoogleIntegration } from "@/lib/integration-checks.functions";
 import { PageHeader } from "@/components/app-shell";
 import { APP_DOMAIN } from "@/lib/config";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,15 @@ function SettingsPage() {
   const sysQ = useQuery({ queryKey: ["system-status"], queryFn: () => status() });
   const auditQ = useQuery({ queryKey: ["audit"], queryFn: () => auditFn() });
   const sys = sysQ.data;
+  const integrations = useServerFn(getIntegrationChecks),
+    testGoogle = useServerFn(testGoogleIntegration);
+  const integrationsQ = useQuery({
+    queryKey: ["integration-checks"],
+    queryFn: () => integrations(),
+    enabled: access.data === "super_admin",
+  });
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const googleCheck = integrationsQ.data?.checks.find((check) => check.service === "google");
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [cur, setCur] = useState("");
@@ -203,6 +213,39 @@ function SettingsPage() {
               </span>
             }
           />
+          {access.data === "super_admin" && (
+            <div className="space-y-2 text-sm">
+              <button className="text-brand underline" onClick={() => setCfgOpen(true)}>
+                View Google API status and configuration details
+              </button>
+              <p>
+                Last verified / tested:{" "}
+                {googleCheck ? new Date(googleCheck.checked_at).toLocaleString() : "Not tested"}
+                {googleCheck
+                  ? ` — ${googleCheck.success ? "Verified" : "Failed"}: ${googleCheck.detail}`
+                  : ""}
+              </p>
+              <Button
+                disabled={googleBusy}
+                variant="outline"
+                onClick={async () => {
+                  setGoogleBusy(true);
+                  try {
+                    const result = await testGoogle();
+                    await integrationsQ.refetch();
+                    if (result.success) toast.success(result.detail);
+                    else toast.error(result.detail);
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Google test failed.");
+                  } finally {
+                    setGoogleBusy(false);
+                  }
+                }}
+              >
+                {googleBusy ? "Testing..." : "Test Google API"}
+              </Button>
+            </div>
+          )}
           <Row k="API health" v={<HBadge s={check("Google API")?.status} />} />
           <Row k="Review limit" v={`Up to ${sys?.reviewLimit ?? 5} reviews per business`} />
           <Button variant="outline" onClick={() => setCfgOpen(true)}>
@@ -213,6 +256,14 @@ function SettingsPage() {
         <Card title="AI Analysis">
           {access.data === "super_admin" && <AiControlPanel />}
           <Row k="AI provider" v={sys?.aiProvider ?? "—"} />
+          <Row
+            k="Last verified scan"
+            v={
+              integrationsQ.data?.lastScanVerified
+                ? new Date(integrationsQ.data.lastScanVerified).toLocaleString()
+                : "No completed live scan recorded"
+            }
+          />
           <Row
             k="AI status"
             v={
@@ -245,6 +296,19 @@ function SettingsPage() {
             }
           />
           <Row k="Last backup" v="Not verified; check Supabase project backup settings" />
+          <Button variant="outline" asChild>
+            <a
+              href="https://supabase.com/dashboard/project/bdudkvrsbznpmyfzsahm/database/backups"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Set up / verify database backups
+            </a>
+          </Button>
+          <p className="text-sm">
+            Opens Supabase backup configuration. No backup is claimed until configured and verified
+            there.
+          </p>
           <Row
             k="Health"
             v={
@@ -280,15 +344,20 @@ function SettingsPage() {
               Health check failed: the application server did not respond.
             </p>
           )}
+          {integrationsQ.error && (
+            <p role="alert">Integration diagnostics failed: {integrationsQ.error.message}</p>
+          )}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {(sys?.checks ?? []).map((c) => (
-              <div key={c.name} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{c.name}</span>
-                  <HBadge s={c.status} />
-                </div>
+              <details key={c.name} className="rounded-lg border p-4">
+                <summary className="cursor-pointer">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{c.name}</span>
+                    <HBadge s={c.status} />
+                  </div>
+                </summary>
                 <p className="mt-2 text-xs text-muted-foreground">{c.detail}</p>
-              </div>
+              </details>
             ))}
           </div>
         </section>

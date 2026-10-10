@@ -306,12 +306,102 @@ export const setErrorStatus = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    if ((await context.supabase.rpc("report_access_level").throwOnError()).data !== "super_admin")
+      throw new Error("Access Denied: Super Admin errors only.");
+    const { error, data: updated } = await context.supabase
       .from("error_events")
       .update({ status: data.status, resolution: data.resolution ?? null })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .select("id")
+      .maybeSingle();
     if (error) throw new Error("Could not update the error.");
+    if (!updated) throw new Error("Error not found or Access Denied.");
+    await context.supabase
+      .from("audit_log")
+      .insert({
+        user_id: context.userId,
+        action: "error.status_changed",
+        resource: "error",
+        resource_id: data.id,
+        detail: { status: data.status },
+      })
+      .throwOnError();
     return { ok: true };
+  });
+
+export const retryErrorScan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ errorId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    if ((await context.supabase.rpc("report_access_level").throwOnError()).data !== "super_admin")
+      throw new Error("Access Denied: Super Admin retry only.");
+    const error = (
+      await context.supabase
+        .from("error_events")
+        .select("scan_id")
+        .eq("id", data.errorId)
+        .maybeSingle()
+        .throwOnError()
+    ).data;
+    if (!error?.scan_id)
+      throw new Error("Error has no scan to retry; inspect its integration details.");
+    const scan = (
+      await context.supabase
+        .from("scans")
+        .select("source_url,status,batch_id,reviews_retrieved")
+        .eq("id", error.scan_id)
+        .eq("user_id", context.userId)
+        .eq("is_seed", false)
+        .maybeSingle()
+        .throwOnError()
+    ).data;
+    if (!scan || scan.status !== "failed")
+      throw new Error("Only your failed real scans can be retried.");
+    if (scan.batch_id) {
+      const batch = (
+        await context.supabase
+          .from("scan_batches")
+          .select("control_status")
+          .eq("id", scan.batch_id)
+          .maybeSingle()
+          .throwOnError()
+      ).data;
+      if (!batch || batch.control_status === "cancelled")
+        throw new Error("Cancelled batches cannot be retried.");
+      const job = (
+        await context.supabase
+          .from("scan_jobs")
+          .select("id")
+          .eq("scan_id", error.scan_id)
+          .eq("user_id", context.userId)
+          .maybeSingle()
+          .throwOnError()
+      ).data;
+      if (!job) throw new Error("Bulk job not found.");
+      const { retryJob } = await import("./queue.functions");
+      const result = await retryJob({ data: { jobId: job.id } });
+      if (!result.ok) throw new Error("Job could not be queued for retry.");
+      return {
+        scanId: error.scan_id,
+        message:
+          "Job queued for retry. Existing batch/global pause is preserved; resume intentionally from Bulk.",
+      };
+    }
+    const { scanFetchCore, scanAnalyzeCore } = await import("./scan-core.server");
+    let scanId = error.scan_id;
+    if (scan.reviews_retrieved === 0) {
+      const fetched = await scanFetchCore(context.supabase, context.userId, {
+        url: scan.source_url,
+      });
+      if (!fetched.ok) throw new Error(`${fetched.code}: ${fetched.message}`);
+      scanId = fetched.scanId;
+    }
+    const result = await scanAnalyzeCore(context.supabase, context.userId, { scanId });
+    if (!result.ok) throw new Error(`${result.code}: ${result.message}`);
+    return {
+      scanId,
+      message: "Retry completed. Review its new assessment before marking this error resolved.",
+    };
   });
 
 export const getSystemQuality = createServerFn({ method: "GET" })

@@ -2,13 +2,15 @@ import { ActionCenter, QualityCenter } from "@/components/ops-panels";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Eye } from "lucide-react";
-import { scansQuery, fmtDate, reportNumber, riskyCount } from "@/lib/data";
+import { Eye } from "lucide-react";
+import { scansQuery, reportNumber, riskyCount } from "@/lib/data";
 import { PageHeader, EmptyState } from "@/components/app-shell";
 import { DevTag } from "@/components/review-ui";
 import { Button } from "@/components/ui/button";
 import { BatchInsightsPanel } from "@/components/batch-insights";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { groupReports, compactDate } from "@/lib/operations-ui";
+import { ReportListActions } from "@/components/report-list-actions";
 
 export const Route = createFileRoute("/_authenticated/reports/")({
   head: () => ({
@@ -49,65 +51,60 @@ function ReportsPage() {
           {!isLoading && reports.length === 0 ? (
             <EmptyState title="No reports generated." />
           ) : (
-            <div className="surface overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    {[
-                      "Report ID",
-                      "Business",
-                      "Risky Reviews",
-                      "Rating",
-                      "Created",
-                      "Status",
-                      "Actions",
-                    ].map((h) => (
-                      <th key={h} className="px-5 py-3 font-medium">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {reports.map((s) => (
-                    <tr key={s.id} className="border-t hover:bg-muted/50">
-                      <td className="px-5 py-3 font-mono text-xs">{reportNumber(s, s.reports)}</td>
-                      <td className="px-5 py-3 font-medium">
-                        {s.business_name}
-                        {s.is_seed && <DevTag />}
-                      </td>
-                      <td className="px-5 py-3 font-mono">{riskyCount(s)}</td>
-                      <td className="px-5 py-3 font-mono">
-                        {s.rating != null ? Number(s.rating).toFixed(1) : "—"}
-                      </td>
-                      <td className="px-5 py-3 text-muted-foreground">
-                        {fmtDate(s.reports?.created_at ?? s.created_at)}
-                      </td>
-                      <td className="px-5 py-3 text-xs font-semibold capitalize">
-                        {s.is_seed ? (
-                          <span className="text-risk-medium">Development</span>
-                        ) : (
-                          <span className="text-risk-normal">{s.reports?.status ?? "ready"}</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link to="/reports/$id" params={{ id: s.id }}>
-                              <Eye /> View
-                            </Link>
-                          </Button>
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link to="/reports/$id" params={{ id: s.id }} search={{ print: true }}>
-                              <Download /> Download
-                            </Link>
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3 text-sm [&_button]:text-sm [&_a]:text-sm">
+              {groupReports(reports).map((group) => (
+                <details key={group.id} className="surface p-4" open={group.scans.length === 1}>
+                  <summary className="cursor-pointer p-4 font-semibold">
+                    {group.name} ({group.scans.length} scans)
+                  </summary>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-left">
+                        <tr>
+                          {[
+                            "Report ID",
+                            "Flagged Reviews",
+                            "Rating",
+                            "Created",
+                            "Status",
+                            "Actions",
+                          ].map((label) => (
+                            <th key={label} className="p-4 font-medium">
+                              {label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.scans.map((scan) => (
+                          <tr key={scan.id} className="border-t hover:bg-muted/50">
+                            <td className="p-4 font-mono">
+                              {reportNumber(scan, scan.reports)}
+                              {scan.is_seed && <DevTag />}
+                            </td>
+                            <td className="p-4 font-mono text-lg">{riskyCount(scan)}</td>
+                            <td className="p-4">{scan.rating ?? "—"}</td>
+                            <td className="whitespace-nowrap p-4">
+                              {compactDate(scan.reports?.created_at ?? scan.created_at)}
+                            </td>
+                            <td className="p-4 font-semibold text-risk-normal">
+                              {scan.is_seed ? "Development" : (scan.reports?.status ?? "ready")}
+                            </td>
+                            <td className="p-4">
+                              <Button size="sm" variant="ghost" asChild>
+                                <Link to="/reports/$id" params={{ id: scan.id }}>
+                                  <Eye /> View
+                                </Link>
+                              </Button>
+                              {!scan.is_seed && <ReportListActions scanId={scan.id} />}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              ))}
             </div>
           )}
         </TabsContent>
