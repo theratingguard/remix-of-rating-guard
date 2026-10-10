@@ -127,19 +127,17 @@ function Dashboard() {
             >
               {isLoading ? "—" : (k.value?.toLocaleString() ?? "Not available")}
             </div>
-            {outcomes.error && (
-              <p role="alert">Outcome counts unavailable: {outcomes.error.message}</p>
-            )}
-            <p className="mt-2 text-sm text-muted-foreground">
-              {total} assessments across completed scan runs (repeat scans may include the same
-              reviews); {new Set(done.map((scan) => scan.business_id ?? scan.id)).size} businesses.
-              Success rate uses recorded approved/rejected decisions only; pending excluded.
-            </p>
-            {features.data?.appeal_tracking_enabled && <RemovalAnalytics />}
-            <SmartAlerts />
           </div>
         ))}
       </div>
+      {outcomes.error && <p role="alert">Outcome counts unavailable: {outcomes.error.message}</p>}
+      <p className="mt-2 text-sm text-muted-foreground">
+        {total} assessments across completed scan runs (repeat scans may include the same reviews);{" "}
+        {new Set(done.map((scan) => scan.business_id ?? scan.id)).size} businesses. Success rate
+        uses recorded approved/rejected decisions only; pending excluded.
+      </p>
+      {features.data?.appeal_tracking_enabled && <RemovalAnalytics />}
+      <SmartAlerts />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
         <section className="surface overflow-hidden">

@@ -483,7 +483,11 @@ export async function scanAnalyzeCore(
       if (retry.error)
         throw new ScanError("DB_UNAVAILABLE", "Could not start the saved scan analysis retry.");
       if (!retry.data)
-        return { ok: false, code: "SCAN_IN_PROGRESS", message: "This scan is already being retried." };
+        return {
+          ok: false,
+          code: "SCAN_IN_PROGRESS",
+          message: "This scan is already being retried.",
+        };
     }
     const { data: reviews, error } = await supabase
       .from("reviews")
@@ -650,7 +654,10 @@ export async function scanAnalyzeCore(
       })
       .eq("id", scan.id);
     if (assessmentSaved.error)
-      throw new ScanError("DB_UNAVAILABLE", "Could not persist validated review assessment counts.");
+      throw new ScanError(
+        "DB_UNAVAILABLE",
+        "Could not persist validated review assessment counts.",
+      );
 
     t = Date.now();
     await track(supabase, userId, scan.id, "REPORT_GENERATING", t);
