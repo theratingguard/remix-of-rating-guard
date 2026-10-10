@@ -8,6 +8,79 @@ export type Database = {
   };
   public: {
     Tables: {
+      removal_outcomes: {
+        Row: {
+          id: string;
+          review_id: string;
+          scan_id: string;
+          user_id: string;
+          policy_type: string;
+          business_type: string;
+          submitted_at: string;
+          outcome: "approved" | "rejected" | "pending";
+          response_at: string | null;
+          verification_reference: string;
+          evidence_used: Json;
+          request_text: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          review_id: string;
+          scan_id: string;
+          user_id?: string;
+          policy_type: string;
+          business_type: string;
+          submitted_at: string;
+          outcome?: "approved" | "rejected" | "pending";
+          response_at?: string | null;
+          verification_reference: string;
+          evidence_used?: Json;
+          request_text: string;
+          created_at?: string;
+        };
+        Update: {
+          outcome?: "approved" | "rejected" | "pending";
+          response_at?: string | null;
+          verification_reference?: string;
+          evidence_used?: Json;
+          request_text?: string;
+          policy_type?: string;
+          business_type?: string;
+        };
+        Relationships: [];
+      };
+      appeal_tracking: {
+        Row: {
+          id: string;
+          removal_request_id: string;
+          submitted_at: string | null;
+          response_at: string | null;
+          response: string | null;
+          appeal_draft: string | null;
+          status: "pending" | "needed" | "draft" | "submitted" | "closed";
+          due_at: string;
+        };
+        Insert: {
+          id?: string;
+          removal_request_id: string;
+          submitted_at?: string | null;
+          response_at?: string | null;
+          response?: string | null;
+          appeal_draft?: string | null;
+          status?: "pending" | "needed" | "draft" | "submitted" | "closed";
+          due_at: string;
+        };
+        Update: {
+          submitted_at?: string | null;
+          response_at?: string | null;
+          response?: string | null;
+          appeal_draft?: string | null;
+          status?: "pending" | "needed" | "draft" | "submitted" | "closed";
+          due_at?: string;
+        };
+        Relationships: [];
+      };
       audit_log: {
         Row: {
           action: string;

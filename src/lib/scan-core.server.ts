@@ -9,6 +9,7 @@ import {
   ANALYSIS_MODEL,
   AI_PROVIDER,
   PROMPT_VERSION,
+  THREE_MODEL_MODE,
   type ReviewAnalysis,
   type Verification,
 } from "./analysis.server";
@@ -497,7 +498,10 @@ export async function scanAnalyzeCore(
     );
 
     // Second-model verification for new high/medium flags.
-    const toVerify = todo.filter((r) => ["high", "medium"].includes(freshById.get(r.id)!.risk));
+    const toVerify = todo.filter(
+      (r) =>
+        !freshById.get(r.id)!.consensus && ["high", "medium"].includes(freshById.get(r.id)!.risk),
+    );
     const verdicts = await verifyFlags(
       aiKey,
       toVerify.map((r) => ({ text: r.text ?? "", rating: r.rating, first: freshById.get(r.id)! })),
@@ -534,7 +538,8 @@ export async function scanAnalyzeCore(
           risk: "requires_review",
           reason: `${a.reason} Independent verification unavailable: ${v.error}`,
         };
-      return { review: r, a, verification: v ?? null, cached: false };
+      const { consensus, ...storedAnalysis } = a;
+      return { review: r, a: storedAnalysis, verification: consensus ?? v ?? null, cached: false };
     });
     const ins = await supabase.from("review_analyses").upsert(
       final.map((f) => ({
@@ -576,7 +581,7 @@ export async function scanAnalyzeCore(
       scan.id,
       "ANALYSIS_COMPLETED",
       t,
-      `${todo.length} analyzed, ${reviews.length - todo.length} reused from cache, ${toVerify.length} verified by second model`,
+      `${todo.length} analyzed, ${reviews.length - todo.length} reused from cache, ${THREE_MODEL_MODE ? "three-provider consensus required" : `${toVerify.length} verified by second model`}`,
     );
 
     const analysis = final.map((f) => f.a);
@@ -610,6 +615,7 @@ export async function scanAnalyzeCore(
           analysis_version: APP_VERSION,
           prompt_version: PROMPT_VERSION,
           model: ANALYSIS_MODEL,
+          analysis_mode: THREE_MODEL_MODE ? "three" : "single",
         },
       },
       { onConflict: "scan_id" },

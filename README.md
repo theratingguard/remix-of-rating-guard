@@ -209,7 +209,62 @@ estimable. Scores remain uncalibrated AI estimates, never removal guarantees.
 PDFs include the breakdown, color-coded details and a manual prioritized
 action plan without invented timelines.
 
-### Private reports
+### Removal-quality workflow
+
+Apply `20261010230000_removal_quality_workflow.sql` before deploying this upgrade,
+then run `supabase/tests/removal-quality.sql` (transaction-only fixtures).
+Outcome and appeal records are Super Admin-only; no test outcomes are seeded
+into production. The dashboard shows actual manually recorded submissions,
+approval/rejection/pending counts, policy/category groups and seven-day
+follow-ups. A submitted date and case reference are required. Pending cases
+are excluded from the decided-case success denominator.
+
+`REVIEW_ANALYSIS_MODE=single` (default/unset) preserves existing OpenAI scans.
+For optional three-provider analysis, configure `REVIEW_ANALYSIS_MODE=three`,
+`ANTHROPIC_API_KEY` and `GEMINI_API_KEY` in the private server environment;
+retain the existing `OPENAI_API_KEY`. Models are GPT-4o, Claude Sonnet 4.6 and
+Gemini 2.5 Flash. All three independently receive the original source; two
+validated positive votes flag a concern. Every positive vote requires an
+exact source quote and an allowed policy heading. Missing keys, invalid
+responses or provider failures explicitly fail the analysis; no silent
+single-model fallback or fabricated consensus. Cache versions separate modes.
+This mode costs three provider requests per fresh review batch and is **not
+live-verified** until all credentials are configured. Model agreement is
+not proof of a violation or a calibrated removal probability.
+
+New full/legal/selected PDFs include a five-component evidence-readiness
+score and limited-sample evidence findings. Unknown precedent, jurisdictional
+legal grounds and removal history remain unavailable, not invented scores.
+Text-only policy concerns currently establish at most 30/100 (20 policy
+clarity plus 10 source-quote evidence), assessed across 2/5 components.
+Readiness colors use 90/70/50 thresholds, separately from the existing
+uncalibrated removal bands; no "almost certain" label is used.
+An upgrade button regenerates older reports with these sections.
+
+Duplicate text/token overlap and same-day timing cover only the fetched
+sample. They do not prove fake accounts or bot authorship. Places does not
+provide reviewer-wide history, competitor activity, renovation records,
+Google decision precedents or a complete review population. Obtain authentic
+supporting records and qualified legal review separately.
+
+Policy groups with at least ten manually recorded decisions provide aggregate
+strategy context to future legal drafting. This is contextual feedback, not
+model fine-tuning, causal evidence or business-specific removal history.
+Only aggregates are added; policy applicability must still be supported by
+the original review.
+
+Google's [Reviews Management Tool](https://support.google.com/business/answer/4596773)
+supports a **one-time appeal** after rejection. Seven days schedules a local
+status-check reminder, not automatic rejection detection. Draft adaptation
+reuses the original submitted policy request, requires recorded rejection and
+does not add allegations or make a new AI call. The database prevents a second
+appeal submission timestamp. Google status polling, automatic Google
+submission, legal notices, background email and WhatsApp delivery are not
+implemented or claimed; no supported Google status integration or messaging
+credentials are currently configured. The UI refreshes local database records
+every minute and links to official status/support tools.
+
+### Private report deployment
 
 Apply `20261010210000_private_reports.sql`, followed by
 `20261010220000_super_admin_only_reports.sql`, and run

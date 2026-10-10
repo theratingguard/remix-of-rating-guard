@@ -10,6 +10,8 @@ import shield from "@/assets/icon-shield.png";
 import scanIcon from "@/assets/icon-scan.png";
 import reportIcon from "@/assets/icon-report.png";
 import alertIcon from "@/assets/icon-alert.png";
+import { RemovalAnalytics } from "@/components/removal-workflow";
+import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -22,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
+  const access = useQuery(reportAccessQuery());
   const { data: scans = [], isLoading, error } = useQuery(scansQuery());
   const done = scans.filter((s) => s.status === "complete");
   const sum = (k: "high_count" | "medium_count" | "normal_count" | "requires_review_count") =>
@@ -57,6 +60,10 @@ function Dashboard() {
     { l: "Below 3.0", n: rated.filter((s) => Number(s.rating) < 3).length, c: "bg-risk-high" },
   ];
   const avg = rated.length ? rated.reduce((a, s) => a + Number(s.rating), 0) / rated.length : null;
+  if (access.error)
+    return <p role="alert">Could not verify report access: {access.error.message}</p>;
+  if (access.isPending) return <p>Verifying report access...</p>;
+  if (access.data !== "super_admin") return <RestrictedReportSummary />;
   if (error) return <p role="alert">Could not load dashboard: {error.message}</p>;
 
   return (
@@ -72,6 +79,7 @@ function Dashboard() {
           </Button>
         }
       />
+      <RemovalAnalytics />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((k, i) => (
           <div

@@ -13,6 +13,8 @@ import { saveReportPdf } from "@/lib/report-pdf.functions";
 import { Button } from "@/components/ui/button";
 import { RemovalBadge } from "./removal-summary";
 import { PrivatePdfButton } from "./private-pdf-button";
+import { ReviewQualityPanel } from "./review-quality";
+import { RemovalSubmissionForm } from "./removal-workflow";
 
 export function LegalAnalysisPanel({
   scan,
@@ -58,10 +60,17 @@ export function LegalAnalysisPanel({
     <section className="surface my-6 p-5">
       <h2 className="text-lg font-bold">Legal Expert Analysis</h2>
       <p className="my-2 text-sm text-muted-foreground">{LEGAL_DISCLAIMER}</p>
+      <p className="my-2 text-sm">
+        Analysis provider: {legal?.model ?? "Not generated"}. Three-provider consensus is available
+        only when the server explicitly enables it with all three credentials; this panel does not
+        claim Claude/Gemini checks for single-provider reports.
+      </p>
       <div className="no-print flex flex-wrap gap-2">
-        {!url && (
+        {(!url || legal?.reviews.some((item) => !item.quality)) && (
           <Button disabled={busy} onClick={prepare}>
-            {busy ? "Generating legal analysis and PDFs..." : "Generate Legal Expert Analysis"}
+            {busy
+              ? "Generating legal analysis and PDFs..."
+              : "Generate / Upgrade Legal Expert Analysis"}
           </Button>
         )}
         {url && (
@@ -90,6 +99,17 @@ export function LegalAnalysisPanel({
           <p className="my-3 text-xs text-muted-foreground">
             Generated: {new Date(legal.generated_at).toLocaleString()} · {legal.model}
           </p>
+          {legal.outcome_context?.length ? (
+            <ul className="my-2 list-disc pl-5">
+              {legal.outcome_context.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm">
+              Insufficient decided outcomes for strategy feedback. No model retraining claimed.
+            </p>
+          )}
           {legal.reviews.map((item) => (
             <article key={item.review_id} className="my-3 rounded border p-4">
               <RemovalBadge item={item} />
@@ -123,6 +143,7 @@ export function LegalAnalysisPanel({
                   : "Not estimable (0 score; insufficient evidence)"}
               </p>
               <p className="my-2">{item.reasoning}</p>
+              {item.quality && <ReviewQualityPanel quality={item.quality} />}
               {item.supporting_docs.length > 0 && (
                 <div>
                   <h4>Supporting documents to obtain (not supplied)</h4>
@@ -146,6 +167,13 @@ export function LegalAnalysisPanel({
                 </>
               ) : (
                 <p>No removal request drafted without supported evidence.</p>
+              )}
+              {reviews.find((review) => review.id === item.review_id) && (
+                <RemovalSubmissionForm
+                  scan={scan}
+                  legal={item}
+                  review={reviews.find((review) => review.id === item.review_id)!}
+                />
               )}
             </article>
           ))}

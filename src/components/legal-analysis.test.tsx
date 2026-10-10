@@ -6,6 +6,7 @@ import type { Scan, Report, AnalyzedReview } from "@/lib/data";
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => vi.fn() }));
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useQuery: () => ({ data: { outcomes: [], appeals: [] }, isPending: false, error: null }),
 }));
 vi.mock("@/lib/report-pdf.functions", () => ({ saveReportPdf: {} }));
 vi.mock("@/lib/private-report.functions", () => ({ downloadPrivateReport: {} }));

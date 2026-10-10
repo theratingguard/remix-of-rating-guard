@@ -142,6 +142,12 @@ export function ReviewCard({
       </p>
       <div className="mt-2">
         <RemovalBadge item={review.legal} />
+        {review.legal?.quality && (
+          <p className="mt-2 text-sm font-semibold">
+            Evidence readiness: {review.legal.quality.total}/100 ({review.legal.quality.assessed}/5
+            parameters assessed; not removal probability)
+          </p>
+        )}
       </div>
       {a && risk !== "normal" && (
         <div className="mt-4 grid gap-3 rounded-lg bg-muted p-3 text-sm sm:grid-cols-[1fr_auto]">

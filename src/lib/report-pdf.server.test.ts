@@ -60,6 +60,7 @@ function database(options: { owner?: boolean; status?: string; updateFailure?: b
   const writes: unknown[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : input.toString());
+    if (url.pathname.endsWith("/removal_outcomes")) return Response.json([]);
     if (url.pathname.endsWith("/reviews")) {
       expect(url.searchParams.get("scan_id")).toBe(`eq.${scanId}`);
       return Response.json([

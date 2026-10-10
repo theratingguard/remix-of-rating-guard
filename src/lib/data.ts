@@ -19,6 +19,7 @@ export type AnalyzedReview = {
   text: string | null;
   review_uri: string | null;
   analysis: {
+    verification?: import("@/integrations/supabase/types").Json;
     risk: Risk;
     category: string | null;
     signals: string[];
@@ -74,7 +75,7 @@ export const scanQuery = (id: string) =>
         supabase
           .from("reviews")
           .select(
-            "id, author, rating, published_at, relative_time, text, review_uri, user_selected, review_url, review_analyses!review_analyses_review_id_fkey(risk, category, signals, reason, evidence, confidence, model)",
+            "id, author, rating, published_at, relative_time, text, review_uri, user_selected, review_url, review_analyses!review_analyses_review_id_fkey(risk, category, signals, reason, evidence, confidence, model, verification)",
           )
           .eq("scan_id", id),
         supabase.from("reports").select("*").eq("scan_id", id).maybeSingle(),

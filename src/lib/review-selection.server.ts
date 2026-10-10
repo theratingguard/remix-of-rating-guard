@@ -6,6 +6,7 @@ import { renderReportPdf, saveReportToVPS, reportPdfHtml, escapeHtml } from "./r
 import { reviewGoogleLink, validateSelectionOutput } from "./review-selection";
 import { readOpenAIStream } from "./openai-stream.server";
 import { generateLegalAnalysis } from "./analysis.server";
+import { loadOutcomeStrategyNotes } from "./removal-workflow.server";
 
 export async function createSelectedReport(
   db: SupabaseClient<Database>,
@@ -19,7 +20,7 @@ export async function createSelectedReport(
     db
       .from("reviews")
       .select(
-        "id, author, rating, text, review_uri, published_at, relative_time, review_analyses!review_analyses_review_id_fkey(risk, category, signals, reason, evidence, confidence, model)",
+        "id, author, rating, text, review_uri, published_at, relative_time, review_analyses!review_analyses_review_id_fkey(risk, category, signals, reason, evidence, confidence, model, verification)",
       )
       .eq("scan_id", scanId)
       .in("id", reviewIds),
@@ -69,7 +70,12 @@ export async function createSelectedReport(
   );
   const section = `<h2>Selected review requests (${reviews.length})</h2>${requests.map((request) => `<section class="review"><b>${escapeHtml(request.assessment)}</b><p>Review: ${escapeHtml(request.review_id)}</p><p>Policy: ${escapeHtml(request.policy)}</p><p class="text">${escapeHtml(request.request_text)}</p><p class="text">Evidence: ${escapeHtml(request.evidence)}</p><p>${escapeHtml(request.policy_reference)}</p><p>Submit manually using Google's review reporting tools. Nothing has been submitted.</p></section>`).join("")}`;
   const pdfId = randomUUID();
-  const legal = await generateLegalAnalysis(ownedScan.business_name || "Business", reviews);
+  const outcomeContext = await loadOutcomeStrategyNotes(db);
+  const legal = await generateLegalAnalysis(
+    ownedScan.business_name || "Business",
+    reviews,
+    outcomeContext,
+  );
   const reportMetadata = report.data.report_data;
   const selectedHtml = reportPdfHtml(
     scan.data,

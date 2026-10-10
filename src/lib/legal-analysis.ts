@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { AnalyzedReview } from "./data";
 import type { Json } from "@/integrations/supabase/types";
+import { reviewQualitySchema } from "./review-quality";
 
 export const LEGAL_VERSION = "legal-v1";
 export const LEGAL_POLICY_URL = "https://support.google.com/contributionpolicy/answer/7400114";
@@ -67,6 +68,7 @@ Respectfully,
 }));
 
 const legalItemSchema = z.object({
+  quality: reviewQualitySchema.optional(),
   review_id: z.string().uuid(),
   violates_policy: z.boolean(),
   policy_type: z.string().max(200),
@@ -80,6 +82,7 @@ const legalItemSchema = z.object({
   reasoning: z.string().min(1).max(4000),
 });
 export const legalAnalysisSchema = z.object({
+  outcome_context: z.array(z.string().max(2000)).max(500).optional(),
   version: z.literal(LEGAL_VERSION),
   generated_at: z.string().datetime(),
   model: z.string().min(1),

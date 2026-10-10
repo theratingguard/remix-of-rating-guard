@@ -26,6 +26,7 @@ vi.mock("./analysis.server", () => ({
   ANALYSIS_MODEL: "unit-model",
   AI_PROVIDER: "unit-provider",
   PROMPT_VERSION: "unit-version",
+  THREE_MODEL_MODE: false,
 }));
 
 function database(failure?: "report" | "completion") {

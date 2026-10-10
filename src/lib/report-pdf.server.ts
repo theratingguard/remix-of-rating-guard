@@ -10,6 +10,8 @@ import puppeteer from "puppeteer";
 import { generateLegalAnalysis } from "./analysis.server";
 import { savedLegalAnalysis, type LegalAnalysis } from "./legal-analysis";
 import { starBreakdown, removalBand, removalSummary } from "./review-metrics";
+import { readinessBand, type ReviewQuality } from "./review-quality";
+import { loadOutcomeStrategyNotes } from "./removal-workflow.server";
 
 export const MAX_REPORT_PDF_BYTES = 24 * 1024 * 1024;
 const reportIdSchema = z.string().uuid();
@@ -54,9 +56,22 @@ export async function saveReportToVPS(
   return `https://ratingguard.online/reports/${subdirectory ? subdirectory + "/" : ""}${reportId}${typeof evidence === "string" ? `_${evidence}` : evidence ? "_evidence" : ""}.pdf`;
 }
 
+export function reviewQualityHtml(quality: ReviewQuality) {
+  const band = readinessBand(quality.total);
+  return `<h3 style="padding:8px;background:${band.color}">Legal strength / evidence readiness: ${quality.total}/100 — ${band.label}</h3>
+<p>Partial assessment: ${quality.assessed}/5 parameters assessed. Not a removal probability or guarantee; unknown parameters remain unavailable.</p>
+<table>${quality.components.map((component) => `<tr><td>${escapeHtml(component.name)}</td><td>${component.score === null ? "Unavailable" : `${component.score}/20`}</td><td>${escapeHtml(component.basis)}</td></tr>`).join("")}</table>
+<h3>Deep evidence collection — fetched sample only (${quality.sample_size} reviews)</h3>
+<ul>${quality.findings.map((finding) => `<li>${escapeHtml(finding)}</li>`).join("")}</ul>
+<p class="note">${escapeHtml(quality.unavailable.join(" "))}</p>`;
+}
+
 export function legalAnalysisHtml(analysis: LegalAnalysis, reviews: AnalyzedReview[]) {
   return `<h2>Legal Expert Analysis</h2><p class="note">${escapeHtml(analysis.disclaimer)}</p>
-${analysis.reviews
+<p class="note">Preparation priority is descending evidence readiness, not automatic submission or a predicted Google result.</p>
+${analysis.outcome_context?.length ? `<h3>Recorded outcome strategy context</h3><ul>${analysis.outcome_context.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>` : '<p class="note">Insufficient recorded decisions for strategy feedback (minimum 10 decided cases per policy).</p>'}
+${[...analysis.reviews]
+  .sort((a, b) => (b.quality?.total ?? 0) - (a.quality?.total ?? 0))
   .map(
     (item) => `<section class="review">
 <h3>${escapeHtml(reviews.find((review) => review.id === item.review_id)?.author || item.review_id)}</h3>
@@ -67,6 +82,7 @@ ${analysis.reviews
 <p class="text">Legal grounds: ${escapeHtml(item.legal_grounds)}</p>
 <p>Removal likelihood: ${item.violates_policy ? `${item.removal_likelihood}% (uncalibrated AI estimate, not a verified probability)` : "Not estimable (0 score; insufficient evidence)"}</p>
 <p class="text">Reasoning: ${escapeHtml(item.reasoning)}</p>
+${item.quality ? reviewQualityHtml(item.quality) : ""}
 <p class="text">Supporting documents to obtain (not supplied): ${escapeHtml(item.supporting_docs.join("; ") || "None established")}</p>
 ${item.removal_request_text ? `<h3>Formal policy removal request draft</h3><p class="text">${escapeHtml(item.removal_request_text)}</p>` : "<p>No removal request drafted without supported evidence.</p>"}
 </section>`,
@@ -210,7 +226,7 @@ export async function generateOwnedReportPdf(
   const reviewRows = await supabase
     .from("reviews")
     .select(
-      "id, author, rating, published_at, relative_time, text, review_uri, review_analyses!review_analyses_review_id_fkey(risk, category, signals, reason, evidence, confidence, model)",
+      "id, author, rating, published_at, relative_time, text, review_uri, review_analyses!review_analyses_review_id_fkey(risk, category, signals, reason, evidence, confidence, model, verification)",
     )
     .eq("scan_id", scanId);
   if (reviewRows.error) throw new Error("Could not load report reviews for PDF generation.");
@@ -228,7 +244,12 @@ export async function generateOwnedReportPdf(
         : null,
     };
   });
-  const legal = await generateLegalAnalysis(scan.data.business_name || "Business", reviews);
+  const outcomeContext = await loadOutcomeStrategyNotes(supabase);
+  const legal = await generateLegalAnalysis(
+    scan.data.business_name || "Business",
+    reviews,
+    outcomeContext,
+  );
   const metadata = report.data.report_data;
   const newMetadata = {
     ...(metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {}),
