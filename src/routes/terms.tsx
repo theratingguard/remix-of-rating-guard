@@ -3,10 +3,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "Terms of Service — Review Command Center" },
-      { name: "description", content: "The terms that govern use of the Review Command Center." },
-      { property: "og:title", content: "Terms of Service — Review Command Center" },
-      { property: "og:description", content: "The terms that govern use of the Review Command Center." },
+      { title: "Terms of Service — Rating Guard Remix" },
+      { name: "description", content: "The terms that govern use of Rating Guard Remix." },
+      { property: "og:title", content: "Terms of Service — Rating Guard Remix" },
+      { property: "og:description", content: "The terms that govern use of Rating Guard Remix." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -18,7 +18,7 @@ const sections: { h: string; body: string[] }[] = [
   {
     h: "1. The Service",
     body: [
-      "Review Command Center (“the Service”), operated by Removal Work Solution, helps you retrieve publicly available Google review data, analyse it for policy-relevant risk, and prepare reports and reply drafts.",
+      "Rating Guard Remix (“the Service”), helps you retrieve publicly available Google review data, analyse it for policy-relevant risk, and prepare reports and reply drafts.",
       "The Service is independent and is not affiliated with, endorsed by, or sponsored by Google. “Google” and related marks belong to Google LLC.",
     ],
   },
@@ -59,7 +59,7 @@ const sections: { h: string; body: string[] }[] = [
   {
     h: "7. Intellectual property",
     body: [
-      "The Service, its design and its software belong to Removal Work Solution. Reviews remain the content of their authors. Your reports and drafts are yours to use.",
+      "The Service, its design and its software are provided by the service operator. Reviews remain the content of their authors. Your reports and drafts are yours to use.",
     ],
   },
   {
@@ -71,12 +71,12 @@ const sections: { h: string; body: string[] }[] = [
   {
     h: "9. Changes and termination",
     body: [
-      "We may update these terms; the current version is always on this page. You may stop using the Service at any time and request account deletion via removalwork59@gmail.com.",
+      "We may update these terms; the current version is always on this page. You may stop using the Service at any time and request account deletion via theratingguard@gmail.com.",
     ],
   },
   {
     h: "10. Contact",
-    body: ["Questions about these terms: removalwork59@gmail.com."],
+    body: ["Questions about these terms: theratingguard@gmail.com."],
   },
 ];
 
@@ -85,8 +85,12 @@ function TermsPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-card-border bg-card/60">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link to="/" className="font-bold text-primary">Review Intelligence</Link>
-          <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground">Privacy Policy</Link>
+          <Link to="/" className="font-bold text-primary">
+            Rating Guard Remix
+          </Link>
+          <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
+            Privacy Policy
+          </Link>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-10">
@@ -97,7 +101,9 @@ function TermsPage() {
             <section key={s.h} className="surface p-6">
               <h2 className="text-lg font-semibold">{s.h}</h2>
               <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-                {s.body.map((p, i) => <p key={i}>{p}</p>)}
+                {s.body.map((p, i) => (
+                  <p key={i}>{p}</p>
+                ))}
               </div>
             </section>
           ))}

@@ -54,12 +54,21 @@
   --color-scanner-accent: var(--scanner-accent);
   --color-scanner-deep: var(--scanner-deep);
   --color-scanner-surface: var(--scanner-surface);
-  --shadow-soft: 0 1px 2px oklch(0.25 0.05 260 / 0.06), 0 10px 28px -10px oklch(0.25 0.06 260 / 0.14), inset 0 1px 0 color-mix(in oklab, var(--foreground) 8%, transparent);
-  --shadow-lift: 0 2px 6px oklch(0.25 0.05 260 / 0.08), 0 24px 48px -14px oklch(0.25 0.07 260 / 0.24), inset 0 1px 0 color-mix(in oklab, var(--foreground) 10%, transparent);
-  --shadow-glow: 0 0 0 1px oklch(0.82 0.15 175 / 0.25), 0 12px 40px -8px oklch(0.82 0.15 175 / 0.35);
-  --shadow-scanner-glow: 0 0 0 1px oklch(0.82 0.15 175 / 0.22), 0 12px 40px -8px oklch(0.6 0.12 185 / 0.22);
-  --shadow-btn: inset 0 1px 0 oklch(1 0 0 / 0.16), inset 0 -2px 3px oklch(0.1 0.03 262 / 0.22), 0 1px 2px oklch(0.2 0.05 260 / 0.25), 0 8px 18px -8px oklch(0.3 0.1 260 / 0.4);
-  --shadow-btn-active: inset 0 2px 5px oklch(0.1 0.03 262 / 0.35), 0 1px 2px oklch(0.2 0.05 260 / 0.15);
+  --shadow-soft:
+    0 1px 2px oklch(0.25 0.05 260 / 0.06), 0 10px 28px -10px oklch(0.25 0.06 260 / 0.14),
+    inset 0 1px 0 color-mix(in oklab, var(--foreground) 8%, transparent);
+  --shadow-lift:
+    0 2px 6px oklch(0.25 0.05 260 / 0.08), 0 24px 48px -14px oklch(0.25 0.07 260 / 0.24),
+    inset 0 1px 0 color-mix(in oklab, var(--foreground) 10%, transparent);
+  --shadow-glow:
+    0 0 0 1px oklch(0.82 0.15 175 / 0.25), 0 12px 40px -8px oklch(0.82 0.15 175 / 0.35);
+  --shadow-scanner-glow:
+    0 0 0 1px oklch(0.82 0.15 175 / 0.22), 0 12px 40px -8px oklch(0.6 0.12 185 / 0.22);
+  --shadow-btn:
+    inset 0 1px 0 oklch(1 0 0 / 0.16), inset 0 -2px 3px oklch(0.1 0.03 262 / 0.22),
+    0 1px 2px oklch(0.2 0.05 260 / 0.25), 0 8px 18px -8px oklch(0.3 0.1 260 / 0.4);
+  --shadow-btn-active:
+    inset 0 2px 5px oklch(0.1 0.03 262 / 0.35), 0 1px 2px oklch(0.2 0.05 260 / 0.15);
 }
 
 :root {
@@ -105,10 +114,15 @@
   --scanner-deep: oklch(0.6 0.12 185);
   --scanner-surface: oklch(0.22 0.045 255);
   --shadow-soft: inset 0 1px 0 oklch(1 0 0 / 0.06), 0 10px 30px -12px oklch(0 0 0 / 0.55);
-  --shadow-lift: inset 0 1px 0 oklch(1 0 0 / 0.08), 0 0 0 1px oklch(0.82 0.15 175 / 0.25), 0 24px 50px -18px oklch(0.82 0.15 175 / 0.35);
-  --shadow-scanner-glow: 0 0 0 1px oklch(0.82 0.15 175 / 0.3), 0 12px 40px -8px oklch(0.82 0.15 175 / 0.3);
+  --shadow-lift:
+    inset 0 1px 0 oklch(1 0 0 / 0.08), 0 0 0 1px oklch(0.82 0.15 175 / 0.25),
+    0 24px 50px -18px oklch(0.82 0.15 175 / 0.35);
+  --shadow-scanner-glow:
+    0 0 0 1px oklch(0.82 0.15 175 / 0.3), 0 12px 40px -8px oklch(0.82 0.15 175 / 0.3);
   --gradient-aqua: linear-gradient(135deg, oklch(0.86 0.15 170), oklch(0.72 0.13 195));
-  --neon: 0 0 0 1px oklch(0.82 0.15 175 / 0.55), 0 0 18px oklch(0.82 0.15 175 / 0.35), 0 0 60px -10px oklch(0.82 0.15 175 / 0.4);
+  --neon:
+    0 0 0 1px oklch(0.82 0.15 175 / 0.55), 0 0 18px oklch(0.82 0.15 175 / 0.35),
+    0 0 60px -10px oklch(0.82 0.15 175 / 0.4);
 }
 
 .dark {
@@ -154,15 +168,24 @@
   --scanner-deep: oklch(0.6 0.12 185);
   --scanner-surface: oklch(0.22 0.045 255);
   --shadow-soft: inset 0 1px 0 oklch(1 0 0 / 0.06), 0 10px 30px -12px oklch(0 0 0 / 0.55);
-  --shadow-lift: inset 0 1px 0 oklch(1 0 0 / 0.08), 0 0 0 1px oklch(0.82 0.15 175 / 0.25), 0 24px 50px -18px oklch(0.82 0.15 175 / 0.35);
-  --shadow-scanner-glow: 0 0 0 1px oklch(0.82 0.15 175 / 0.3), 0 12px 40px -8px oklch(0.82 0.15 175 / 0.3);
+  --shadow-lift:
+    inset 0 1px 0 oklch(1 0 0 / 0.08), 0 0 0 1px oklch(0.82 0.15 175 / 0.25),
+    0 24px 50px -18px oklch(0.82 0.15 175 / 0.35);
+  --shadow-scanner-glow:
+    0 0 0 1px oklch(0.82 0.15 175 / 0.3), 0 12px 40px -8px oklch(0.82 0.15 175 / 0.3);
   --gradient-aqua: linear-gradient(135deg, oklch(0.86 0.15 170), oklch(0.72 0.13 195));
-  --neon: 0 0 0 1px oklch(0.82 0.15 175 / 0.55), 0 0 18px oklch(0.82 0.15 175 / 0.35), 0 0 60px -10px oklch(0.82 0.15 175 / 0.4);
+  --neon:
+    0 0 0 1px oklch(0.82 0.15 175 / 0.55), 0 0 18px oklch(0.82 0.15 175 / 0.35),
+    0 0 60px -10px oklch(0.82 0.15 175 / 0.4);
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html { color-scheme: dark; }
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    color-scheme: dark;
+  }
   body {
     background:
       radial-gradient(60% 50% at 85% -10%, oklch(0.82 0.15 175 / 0.13), transparent 60%),
@@ -173,7 +196,13 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0.02em; }
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
 }
 
 @utility surface {
@@ -184,8 +213,15 @@
   backdrop-filter: blur(14px);
 }
 @utility surface-hover {
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color .3s;
-  &:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); border-color: oklch(0.82 0.15 175 / 0.4); }
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s;
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+    border-color: oklch(0.82 0.15 175 / 0.4);
+  }
 }
 @utility glass {
   background: oklch(0.22 0.045 255 / 0.45);
@@ -198,9 +234,13 @@
 }
 @utility text-gradient {
   background: var(--gradient-aqua);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-@utility bg-aqua { background: var(--gradient-aqua); }
+@utility bg-aqua {
+  background: var(--gradient-aqua);
+}
 @utility bg-scanner {
   background:
     radial-gradient(120% 80% at 100% 0%, oklch(0.82 0.15 175 / 0.25), transparent 55%),
@@ -225,26 +265,98 @@
     linear-gradient(90deg, oklch(1 0 0 / 0.04) 1px, transparent 1px);
   background-size: 32px 32px;
 }
-@utility tabular { font-variant-numeric: tabular-nums; }
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
 @utility icon-3d {
   filter: drop-shadow(0 12px 18px oklch(0.82 0.15 175 / 0.35));
-  transition: transform .4s ease;
+  transition: transform 0.4s ease;
 }
 
-@keyframes scan-sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 oklch(0.82 0.15 175 / 0.5); } 100% { box-shadow: 0 0 0 12px oklch(0.82 0.15 175 / 0); } }
-@keyframes float { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
-@keyframes slide-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
-@keyframes scan { 0% { top: -4rem; } 100% { top: 100%; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
-.animate-sweep { animation: scan-sweep 1.6s ease-in-out infinite; }
-.animate-rise { animation: rise 0.5s ease both; }
-.animate-pulse-ring { animation: pulse-ring 1.4s ease-out infinite; }
-.animate-float { animation: float 6s ease-in-out infinite; }
-.animate-slide-in { animation: slide-in .6s ease both; }
+@keyframes scan-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.82 0.15 175 / 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 12px oklch(0.82 0.15 175 / 0);
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(2deg);
+  }
+}
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes scan {
+  0% {
+    top: -4rem;
+  }
+  100% {
+    top: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+.animate-sweep {
+  animation: scan-sweep 1.6s ease-in-out infinite;
+}
+.animate-rise {
+  animation: rise 0.5s ease both;
+}
+.animate-pulse-ring {
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+.animate-slide-in {
+  animation: slide-in 0.6s ease both;
+}
 
 @media print {
-  .no-print { display: none !important; }
-  body { background: white; color: black; }
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+    color: black;
+  }
 }

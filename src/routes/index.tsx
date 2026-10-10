@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { z } from "zod";
 import { HomePage } from "@/components/home-page";
 import { DEFAULT_CONTENT, loadSiteContent } from "@/lib/site-content";
@@ -8,8 +8,13 @@ export const Route = createFileRoute("/")({
   validateSearch: (s) => z.object({ preview: z.enum(["draft"]).optional() }).parse(s),
   loaderDeps: ({ search }) => ({ preview: search.preview }),
   loader: async ({ deps }) => {
-    try { return (await loadSiteContent(deps.preview === "draft" ? "draft" : "published")).content; }
-    catch { return DEFAULT_CONTENT; }
+    if (deps.preview === "draft") throw redirect({ to: "/homepage-preview" });
+    try {
+      return (await loadSiteContent("published")).content;
+    } catch (error) {
+      console.error("[homepage] Published content unavailable", error);
+      return DEFAULT_CONTENT;
+    }
   },
   head: ({ loaderData }) => {
     const c = loaderData ?? DEFAULT_CONTENT;
@@ -26,7 +31,20 @@ export const Route = createFileRoute("/")({
         { name: "twitter:description", content: c.seoDescription },
       ],
       links: APP_URL ? [{ rel: "canonical", href: APP_URL }] : [],
-      scripts: [{ type: "application/ld+json", children: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }) }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: faq.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          }),
+        },
+      ],
     };
   },
   component: Home,

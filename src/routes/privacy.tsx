@@ -3,10 +3,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
-      { title: "Privacy Policy — Review Command Center" },
-      { name: "description", content: "How the Review Command Center collects, uses, stores and protects your data." },
-      { property: "og:title", content: "Privacy Policy — Review Command Center" },
-      { property: "og:description", content: "How the Review Command Center collects, uses, stores and protects your data." },
+      { title: "Privacy Policy — Rating Guard Remix" },
+      {
+        name: "description",
+        content: "How Rating Guard Remix collects, uses, stores and protects your data.",
+      },
+      { property: "og:title", content: "Privacy Policy — Rating Guard Remix" },
+      {
+        property: "og:description",
+        content: "How Rating Guard Remix collects, uses, stores and protects your data.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -18,7 +24,7 @@ const sections: { h: string; body: string[] }[] = [
   {
     h: "1. Who we are",
     body: [
-      "Review Command Center (“the Service”) is operated by Removal Work Solution, reachable at removalwork59@gmail.com. This policy explains what data we handle when you use the Service.",
+      "Rating Guard Remix (“the Service”) is operated by its service administrator, reachable at theratingguard@gmail.com. This policy explains what data we handle when you use the Service.",
       "The Service is an independent tool. It is not affiliated with, endorsed by, or sponsored by Google.",
     ],
   },
@@ -58,13 +64,13 @@ const sections: { h: string; body: string[] }[] = [
     h: "6. Data retention and deletion",
     body: [
       "Scan data, analyses and reports are kept until you delete them or close your account.",
-      "You may request deletion of your account and associated data at any time by contacting removalwork59@gmail.com.",
+      "You may request deletion of your account and associated data at any time by contacting theratingguard@gmail.com.",
     ],
   },
   {
     h: "7. Security",
     body: [
-      "Passwords are stored only as secure hashes and are never visible to anyone, including us. Access to the Service is restricted to authenticated users, and database access is protected by row-level security rules.",
+      "Passwords are stored by the authentication provider using secure password hashing. The Service requires authenticated sessions for protected operations. Database row-level security must be verified in the configured Supabase project before production use.",
     ],
   },
   {
@@ -81,7 +87,7 @@ const sections: { h: string; body: string[] }[] = [
   },
   {
     h: "10. Contact",
-    body: ["Questions about this policy: removalwork59@gmail.com."],
+    body: ["Questions about this policy: theratingguard@gmail.com."],
   },
 ];
 
@@ -90,8 +96,12 @@ function PrivacyPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-card-border bg-card/60">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link to="/" className="font-bold text-primary">Review Intelligence</Link>
-          <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground">Terms of Service</Link>
+          <Link to="/" className="font-bold text-primary">
+            Rating Guard Remix
+          </Link>
+          <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground">
+            Terms of Service
+          </Link>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-10">
@@ -102,7 +112,9 @@ function PrivacyPage() {
             <section key={s.h} className="surface p-6">
               <h2 className="text-lg font-semibold">{s.h}</h2>
               <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-                {s.body.map((p, i) => <p key={i}>{p}</p>)}
+                {s.body.map((p, i) => (
+                  <p key={i}>{p}</p>
+                ))}
               </div>
             </section>
           ))}

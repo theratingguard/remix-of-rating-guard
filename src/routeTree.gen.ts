@@ -18,9 +18,11 @@ import { Route as ResponsibleUseRouteImport } from './routes/responsible-use'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
+import { Route as AuthenticatedHomepagePreviewRouteImport } from './routes/_authenticated/homepage-preview'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedScanRouteImport } from './routes/_authenticated/scan'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
 import { Route as AuthenticatedReportsIdRouteImport } from './routes/_authenticated/reports.$id'
 import { Route as ApiPublicHooksScanWorkerRouteImport } from './routes/api/public/hooks/scan-worker'
@@ -69,6 +71,12 @@ const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHomepagePreviewRoute =
+  AuthenticatedHomepagePreviewRouteImport.update({
+    id: '/homepage-preview',
+    path: '/homepage-preview',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -83,6 +91,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedReportsIndexRoute =
   AuthenticatedReportsIndexRouteImport.update({
@@ -111,9 +124,11 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
+  '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
@@ -127,9 +142,11 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
+  '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
@@ -145,9 +162,11 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/_authenticated/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/scan': typeof AuthenticatedScanRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/_authenticated/reports/$id': typeof AuthenticatedReportsIdRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
@@ -163,9 +182,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/dashboard'
     | '/history'
+    | '/homepage-preview'
     | '/profile'
     | '/scan'
     | '/settings'
+    | '/api/health'
     | '/reports/$id'
     | '/reports/'
     | '/api/public/hooks/scan-worker'
@@ -179,9 +200,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/dashboard'
     | '/history'
+    | '/homepage-preview'
     | '/profile'
     | '/scan'
     | '/settings'
+    | '/api/health'
     | '/reports/$id'
     | '/reports'
     | '/api/public/hooks/scan-worker'
@@ -196,9 +219,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_authenticated/dashboard'
     | '/_authenticated/history'
+    | '/_authenticated/homepage-preview'
     | '/_authenticated/profile'
     | '/_authenticated/scan'
     | '/_authenticated/settings'
+    | '/api/health'
     | '/_authenticated/reports/$id'
     | '/_authenticated/reports/'
     | '/api/public/hooks/scan-worker'
@@ -212,6 +237,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ResponsibleUseRoute: typeof ResponsibleUseRoute
   TermsRoute: typeof TermsRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiPublicHooksScanWorkerRoute: typeof ApiPublicHooksScanWorkerRoute
 }
 
@@ -280,6 +306,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/homepage-preview': {
+      id: '/_authenticated/homepage-preview'
+      path: '/homepage-preview'
+      fullPath: '/homepage-preview'
+      preLoaderRoute: typeof AuthenticatedHomepagePreviewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -300,6 +333,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/reports/': {
       id: '/_authenticated/reports/'
@@ -328,6 +368,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
+  AuthenticatedHomepagePreviewRoute: typeof AuthenticatedHomepagePreviewRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedScanRoute: typeof AuthenticatedScanRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -338,6 +379,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
+  AuthenticatedHomepagePreviewRoute: AuthenticatedHomepagePreviewRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedScanRoute: AuthenticatedScanRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
@@ -356,6 +398,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ResponsibleUseRoute: ResponsibleUseRoute,
   TermsRoute: TermsRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiPublicHooksScanWorkerRoute: ApiPublicHooksScanWorkerRoute,
 }
 export const routeTree = rootRouteImport
