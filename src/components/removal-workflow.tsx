@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { generateAppealDraft } from "@/lib/appeal.functions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -185,6 +187,7 @@ function OutcomeFollowup({
   outcome: RemovalOutcome;
   appeal: Appeal | undefined;
 }) {
+  const generate = useServerFn(generateAppealDraft);
   const cache = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState(appeal?.appeal_draft ?? "");
@@ -266,6 +269,20 @@ function OutcomeFollowup({
               .throwOnError();
             await cache.invalidateQueries({ queryKey: ["removal-workflow"] });
             toast.success("Manually verified decision recorded.");
+            if (value === "rejected" && outcome.outcome !== "rejected" && !appeal?.submitted_at) {
+              try {
+                const result = await generate({ data: { outcomeId: outcome.id } });
+                setDraft(result.draft);
+                await cache.invalidateQueries({ queryKey: ["removal-workflow"] });
+                toast.success(
+                  "AI appeal draft generated and saved. Review it before manual submission.",
+                );
+              } catch (error) {
+                toast.error(
+                  `Decision saved, but AI appeal draft failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+                );
+              }
+            }
           } catch (error) {
             toast.error(error instanceof Error ? error.message : "Could not record decision.");
           } finally {
@@ -320,12 +337,33 @@ function OutcomeFollowup({
         appeal.status !== "submitted" &&
         appeal.status !== "closed" && (
           <div className="my-3">
+            <Button
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const result = await generate({ data: { outcomeId: outcome.id } });
+                  setDraft(result.draft);
+                  await cache.invalidateQueries({ queryKey: ["removal-workflow"] });
+                  toast.success("AI appeal draft saved. Not submitted to Google.");
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error ? error.message : "AI appeal generation failed.",
+                  );
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Generate AI Appeal Draft
+            </Button>
             <Button variant="outline" onClick={() => setDraft(draftAppeal(outcome))}>
               Adapt Original Request into Appeal Draft
             </Button>
             <p className="text-sm">
-              Reuses your submitted policy draft. No new AI call or legal finding; review every fact
-              before Google's one-time appeal.
+              AI generation requires a recorded rejection and source-validated policy evidence. The
+              adaptation option makes no AI call. Neither establishes a legal violation; review
+              every fact before Google's one-time appeal.
             </p>
             <textarea
               aria-label="Editable appeal draft"

@@ -10,6 +10,7 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 vi.mock("@/lib/report-pdf.functions", () => ({ saveReportPdf: {} }));
 vi.mock("@/lib/private-report.functions", () => ({ downloadPrivateReport: {} }));
+vi.mock("@/lib/appeal.functions", () => ({ generateAppealDraft: {} }));
 const scan = {
   id: "d8bdb357-60db-4a05-92c4-38020ec52eda",
   status: "complete",

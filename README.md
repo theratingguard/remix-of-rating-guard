@@ -255,9 +255,14 @@ the original review.
 
 Google's [Reviews Management Tool](https://support.google.com/business/answer/4596773)
 supports a **one-time appeal** after rejection. Seven days schedules a local
-status-check reminder, not automatic rejection detection. Draft adaptation
-reuses the original submitted policy request, requires recorded rejection and
-does not add allegations or make a new AI call. The database prevents a second
+status-check reminder, not automatic rejection detection. Recording a new rejection
+attempts an OpenAI appeal draft automatically; the dashboard also provides an
+explicit retry button. This requires an existing source-validated policy concern,
+exact quote and verified policy heading. Structured output validation enforces
+200-300 words and verbatim citation/evidence before saving; unsupported cases
+fail explicitly instead of inventing grounds. Failure preserves the recorded
+decision and displays a separate draft error. The optional draft adaptation
+reuses the original submitted request without an AI call. The database prevents a second
 appeal submission timestamp. Google status polling, automatic Google
 submission, legal notices, background email and WhatsApp delivery are not
 implemented or claimed; no supported Google status integration or messaging
