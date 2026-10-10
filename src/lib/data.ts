@@ -35,7 +35,7 @@ export const scansQuery = () =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("scans")
-        .select("*, reports(id, report_number, status, created_at)")
+        .select("*, reports!reports_scan_id_fkey(id, report_number, status, created_at)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -55,7 +55,7 @@ export const scanQuery = (id: string) =>
         supabase
           .from("reviews")
           .select(
-            "id, author, rating, published_at, relative_time, text, review_uri, review_analyses(risk, category, signals, reason, evidence, confidence, model)",
+            "id, author, rating, published_at, relative_time, text, review_uri, review_analyses!review_analyses_review_id_fkey(risk, category, signals, reason, evidence, confidence, model)",
           )
           .eq("scan_id", id),
         supabase.from("reports").select("*").eq("scan_id", id).maybeSingle(),

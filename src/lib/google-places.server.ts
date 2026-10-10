@@ -31,7 +31,11 @@ const placeSchema = z.object({
     .max(5)
     .optional(),
 });
-const searchSchema = z.object({ places: z.array(z.object({ id: z.string().min(1) })).optional() });
+const searchSchema = z.object({
+  places: z
+    .array(z.object({ id: z.string().min(1), googleMapsUri: z.string().optional() }))
+    .optional(),
+});
 
 export class ScanError extends Error {
   constructor(
@@ -202,22 +206,29 @@ export function parseMapsUrl(raw: string): Parsed {
   const p = url.searchParams;
   const pid = p.get("query_place_id") || p.get("place_id") || p.get("cid_place_id");
   if (pid) return { placeId: pid };
-  // Review-share links (maps.app.goo.gl → /maps/reviews/data=…) carry the
-  // business as a hex CID like !1s0x0:0x31fa1495830fb5a — convert to decimal.
-  const hexCid = raw.match(/!1s0x[0-9a-f]+:0x([0-9a-f]+)/i)?.[1];
-  if (hexCid) return { cid: BigInt(`0x${hexCid}`).toString(10) };
-  const cidParam = p.get("cid");
-  if (cidParam && /^\d+$/.test(cidParam)) return { cid: cidParam };
   const q = p.get("q") || p.get("query");
   if (q?.startsWith("place_id:")) return { placeId: q.slice(9) };
   const out: Parsed = {};
+  const decodedPath = decodeURIComponent(url.pathname);
+  const embeddedId = decodedPath.match(/!1s(ChIJ[A-Za-z0-9_-]+)/)?.[1];
+  if (embeddedId) return { placeId: embeddedId };
+  const hexCid = decodedPath.match(/!1s0x[0-9a-f]+:0x([0-9a-f]+)/i)?.[1];
+  const cidParam = p.get("cid");
+  if (hexCid) out.cid = BigInt(`0x${hexCid}`).toString(10);
+  else if (cidParam && /^\d+$/.test(cidParam)) out.cid = cidParam;
   const placeMatch = url.pathname.match(/\/maps\/place\/([^/]+)/);
   if (placeMatch) out.query = decodeURIComponent((placeMatch[1] ?? "").replace(/\+/g, " "));
   else if (q) out.query = q;
-  const at = url.pathname.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  // Place coordinates identify the business; @ coordinates may only be the camera centre.
+  const number = "(-?\\d+(?:\\.\\d+)?)";
+  const at =
+    decodedPath.match(new RegExp(`!3d${number}!4d${number}`)) ??
+    decodedPath.match(new RegExp(`@${number},${number}`));
   if (at) {
     out.lat = Number(at[1]);
     out.lng = Number(at[2]);
+    if (Math.abs(out.lat) > 90 || Math.abs(out.lng) > 180)
+      throw new ScanError("INVALID_URL", "Google Maps coordinates are outside their valid range.");
   }
   return out;
 }
@@ -246,7 +257,7 @@ export async function resolveAndFetchPlace(
     // Known business: Google's own googleMapsUri (stored earlier) carries this CID.
     placeId = (await cidLookup(parsed.cid)) ?? undefined;
   }
-  if (!placeId && parsed.cid) {
+  if (!placeId && parsed.cid && !parsed.query) {
     throw new ScanError(
       "UNSUPPORTED_LINK",
       "This link only contains an internal Google CID. Paste the business's Maps place link or a link with query_place_id; we will not guess a nearby business.",
@@ -258,7 +269,10 @@ export async function resolveAndFetchPlace(
         "INVALID_URL",
         "Couldn't find a business in that link. Open the business on Google Maps and copy its link.",
       );
-    const body: Record<string, unknown> = { textQuery: parsed.query, pageSize: 1 };
+    const body: Record<string, unknown> = {
+      textQuery: parsed.query,
+      pageSize: parsed.cid ? 5 : 1,
+    };
     if (parsed.lat != null && parsed.lng != null) {
       body["locationBias"] = {
         circle: { center: { latitude: parsed.lat, longitude: parsed.lng }, radius: 2000 },
@@ -268,7 +282,7 @@ export async function resolveAndFetchPlace(
       await googleFetch(apiKey, "/places:searchText", {
         method: "POST",
         body: JSON.stringify(body),
-        fieldMask: "places.id",
+        fieldMask: "places.id,places.googleMapsUri",
       }),
     );
     if (!parsedSearch.success)
@@ -277,7 +291,21 @@ export async function resolveAndFetchPlace(
         "Google returned an unsupported search response. No business was selected.",
       );
     const search = parsedSearch.data;
-    placeId = search?.places?.[0]?.id;
+    if (parsed.cid) {
+      placeId = search.places?.find((candidate) => {
+        if (!candidate.googleMapsUri) return false;
+        try {
+          return parseMapsUrl(candidate.googleMapsUri).cid === parsed.cid;
+        } catch {
+          return false;
+        }
+      })?.id;
+      if (!placeId)
+        throw new ScanError(
+          "NOT_FOUND",
+          "Google search did not return the business identified by this link. No nearby business was substituted.",
+        );
+    } else placeId = search.places?.[0]?.id;
     if (!placeId)
       throw new ScanError("NOT_FOUND", "Business not found on Google. Try a different link.");
   }

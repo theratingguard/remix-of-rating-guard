@@ -588,7 +588,9 @@ export async function scanAnalyzeCore(
     const recommended =
       high + medium > 0
         ? `Review the ${high + medium} flagged review(s) and, where you believe Google policy is violated, report each one through the official Google reporting path with the evidence below.`
-        : "No potentially risky reviews detected among the available reviews. No reporting action recommended.";
+        : n("requires_review") > 0
+          ? `${n("requires_review")} review(s) require manual assessment. No clean-result conclusion or reporting recommendation is available until they are reviewed.`
+          : "No potentially risky reviews detected among the available reviews. No reporting action recommended.";
     const rep = await supabase.from("reports").upsert(
       {
         scan_id: scan.id,

@@ -3,6 +3,7 @@ import { scanAnalyzeCore } from "./scan-core.server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
+import { analyzeReviews } from "./analysis.server";
 
 vi.mock("./analysis.server", () => ({
   analyzeReviews: vi.fn(async () => [
@@ -25,6 +26,7 @@ vi.mock("./analysis.server", () => ({
 
 function database(failure?: "report" | "completion") {
   const updates: Record<string, unknown>[] = [];
+  const reportWrites: Record<string, unknown>[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : input.toString());
     const table = url.pathname.split("/").at(-1);
@@ -60,6 +62,7 @@ function database(failure?: "report" | "completion") {
         : null;
     const status = patch?.success ? patch.data["status"] : null;
     if (table === "scans" && patch?.success) updates.push(patch.data);
+    if (table === "reports" && patch?.success) reportWrites.push(patch.data);
     if (
       (table === "reports" && failure === "report") ||
       (table === "scans" && status === "complete" && failure === "completion")
@@ -79,7 +82,7 @@ function database(failure?: "report" | "completion") {
       auth: { persistSession: false, autoRefreshToken: false },
     },
   );
-  return { client, updates };
+  return { client, updates, reportWrites };
 }
 
 describe("Durable scan completion (unit fixtures only)", () => {
@@ -110,5 +113,24 @@ describe("Durable scan completion (unit fixtures only)", () => {
       ok: true,
     });
     expect(db.updates.at(-1)).toMatchObject({ status: "complete", error: null });
+  });
+  it("does not recommend a clean result when model assessments require manual review", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
+    vi.mocked(analyzeReviews).mockResolvedValueOnce([
+      {
+        risk: "requires_review",
+        category: null,
+        signals: [],
+        reason: "Ambiguous unit fixture",
+        evidence: null,
+        confidence: 50,
+      },
+    ]);
+    const db = database();
+    expect(await scanAnalyzeCore(db.client, "owner", { scanId: "scan-fixture" })).toMatchObject({
+      ok: true,
+    });
+    expect(db.reportWrites[0]?.["recommended_action"]).toContain("require manual assessment");
+    expect(db.updates.at(-1)?.["requires_review_count"]).toBe(1);
   });
 });

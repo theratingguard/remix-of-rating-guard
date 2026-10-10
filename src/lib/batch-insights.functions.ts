@@ -24,7 +24,7 @@ export const listCompletedBatches = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("scan_batches")
-      .select("id, batch_number, total, created_at, scans(status)")
+      .select("id, batch_number, total, created_at, scans!scans_batch_id_fkey(status)")
       .order("created_at", { ascending: false })
       .limit(50)
       .throwOnError();
@@ -82,7 +82,7 @@ export const generateBatchInsights = createServerFn({ method: "POST" })
       const { data: scans, error } = await supabase
         .from("scans")
         .select(
-          "id, business_name, category, rating, total_reviews, high_count, medium_count, normal_count, requires_review_count, reviews(rating, text, review_analyses(risk, category, reason))",
+          "id, business_name, category, rating, total_reviews, high_count, medium_count, normal_count, requires_review_count, reviews!reviews_scan_id_fkey(rating, text, review_analyses!review_analyses_review_id_fkey(risk, category, reason))",
         )
         .eq("batch_id", data.batchId)
         .eq("status", "complete");

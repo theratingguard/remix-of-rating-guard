@@ -53,6 +53,15 @@ Google link admission accepts HTTPS Maps links on the enumerated Google domains
 and official short-link hosts; unsupported country domains must use google.com
 or an official short link. Reviews are the up-to-five reviews supplied by Places,
 not a full-review export.
+Full `/maps/place/NAME/` links retain their business name and `!3dLAT!4dLNG`
+coordinates even when they contain a hexadecimal CID. Text search must return
+the same CID before that business is selected. CID-only review-share links
+require an existing owner-scoped business mapping: first scan the full business
+place link, then reopen its review-share links. Coordinate-only links do not
+select an arbitrary nearby business.
+Embedded PostgREST queries specify the single-column foreign-key relationship
+explicitly; owner-consistency composite foreign keys must remain enabled and
+must not make dashboard, report or review queries ambiguous.
 
 Configure `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `SCAN_WORKER_SECRET`
 only on the server. Bulk admission remains disabled unless

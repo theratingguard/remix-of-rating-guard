@@ -49,7 +49,7 @@ export const suggestReply = createServerFn({ method: "POST" })
       const { data: r, error } = await supabase
         .from("reviews")
         .select(
-          "id, scan_id, author, rating, text, review_analyses(risk, category, reason, evidence), scans(business_name, category)",
+          "id, scan_id, author, rating, text, review_analyses!review_analyses_review_id_fkey(risk, category, reason, evidence), scans!reviews_scan_id_fkey(business_name, category)",
         )
         .eq("id", data.reviewId)
         .maybeSingle();

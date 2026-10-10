@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolveAndFetchPlace } from "./google-places.server";
+import { parseMapsUrl, resolveAndFetchPlace } from "./google-places.server";
 
 const url = "https://www.google.com/maps/search/?api=1&query_place_id=test-place&query=test";
 const dns = vi.hoisted(() => ({ lookup: vi.fn() }));
@@ -51,6 +51,83 @@ describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
       resolveAndFetchPlace("test-key", "https://www.google.com/maps?cid=123"),
     ).rejects.toMatchObject({ code: "UNSUPPORTED_LINK" });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("preserves business identity and prefers place coordinates over the camera centre", () => {
+    expect(
+      parseMapsUrl(
+        "https://www.google.com/maps/place/The+Hudson/@1,2,17z/data=!1s0x123:0x7b!3d42.6894729!4d-73.8181503",
+      ),
+    ).toEqual({ query: "The Hudson", cid: "123", lat: 42.6894729, lng: -73.8181503 });
+  });
+
+  it("extracts encoded embedded place IDs", () => {
+    expect(parseMapsUrl("https://www.google.com/maps/place/Test/data=!1sChIJtest%2Did")).toEqual({
+      placeId: "ChIJtest-id",
+    });
+  });
+
+  it("rejects invalid place coordinates", () => {
+    expect(() => parseMapsUrl("https://www.google.com/maps/place/Test/data=!3d91!4d2")).toThrow(
+      "coordinates",
+    );
+  });
+
+  it("selects the CID-matching search result rather than the first nearby business", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          places: [
+            { id: "wrong", googleMapsUri: "https://maps.google.com/?cid=456" },
+            { id: "correct", googleMapsUri: "https://maps.google.com/?cid=123" },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({ id: "correct", displayName: { text: "Unit test fixture" } }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const result = await resolveAndFetchPlace(
+      "test-key",
+      "https://www.google.com/maps/place/Test/data=!1s0x123:0x7b!3d42!4d-73",
+    );
+    expect(result.placeId).toBe("correct");
+    expect(JSON.parse(fetch.mock.calls[0]![1].body)).toMatchObject({
+      textQuery: "Test",
+      locationBias: { circle: { center: { latitude: 42, longitude: -73 } } },
+    });
+    expect(fetch.mock.calls[1]![0]).toContain("/places/correct");
+  });
+
+  it("rejects unmatched CID search results without fetching another business's reviews", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        places: [{ id: "wrong", googleMapsUri: "https://maps.google.com/?cid=456" }],
+      }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    await expect(
+      resolveAndFetchPlace("test-key", "https://www.google.com/maps/place/Test/data=!1s0x123:0x7b"),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves a review-share CID using an existing verified business mapping", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ id: "known-place", displayName: { text: "Unit test fixture" } }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const lookup = vi.fn().mockResolvedValue("known-place");
+    const result = await resolveAndFetchPlace(
+      "test-key",
+      "https://www.google.com/maps/reviews/data=!1s0x0:0x7b",
+      lookup,
+    );
+    expect(lookup).toHaveBeenCalledWith("123");
+    expect(result.placeId).toBe("known-place");
   });
 
   it("returns an honest empty review list", async () => {

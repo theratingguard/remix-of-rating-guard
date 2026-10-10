@@ -135,7 +135,7 @@ function ReportDetail() {
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             Summary
           </h2>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {(
               [
                 ["Reviews retrieved", scan.reviews_retrieved, ""],
@@ -143,6 +143,7 @@ function ReportDetail() {
                 ["High risk", scan.high_count, "text-risk-high"],
                 ["Medium risk", scan.medium_count, "text-risk-medium"],
                 ["Normal", scan.normal_count, "text-risk-normal"],
+                ["Requires review", scan.requires_review_count, "text-muted-foreground"],
               ] as const
             ).map(([l, v, c]) => (
               <div key={l} className="rounded-lg bg-muted p-4">
@@ -213,8 +214,10 @@ function ReportDetail() {
             Recommended action
           </h2>
           <p className="mt-3 text-sm">
-            {report?.recommended_action ??
-              "Review flagged items and use the official Google reporting path where appropriate."}
+            {flagged.length === 0 && (scan.requires_review_count > 0 || analyzed !== reviews.length)
+              ? "Manually assess the unresolved reviews. No clean-result conclusion or reporting recommendation is available until they are reviewed."
+              : (report?.recommended_action ??
+                "Review flagged items and use the official Google reporting path where appropriate.")}
           </p>
           <h2 className="mt-6 text-sm font-bold uppercase tracking-wider text-muted-foreground">
             Official Google reporting path
