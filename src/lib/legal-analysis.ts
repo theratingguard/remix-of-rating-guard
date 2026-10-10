@@ -133,7 +133,9 @@ export function validateLegalReviews(value: unknown, reviews: AnalyzedReview[]) 
     if (!policy) throw new Error("Legal analysis cited an unverified Google policy section.");
     const words = item.removal_request_text.trim().split(/\s+/).length;
     if (words < 200 || words > 300)
-      throw new Error("Legal removal request must contain 200-300 words.");
+      throw new Error(
+        `Legal removal request must contain 200-300 words; received ${words} whitespace-separated words. Revise the request to 240-260 words without inventing facts.`,
+      );
     return { ...item, legal_grounds: LEGAL_GROUNDS };
   });
 }

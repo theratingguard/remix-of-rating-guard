@@ -150,7 +150,9 @@ route must permit `_legal` in addition to `_selected` and `_evidence`.
 Flagged (high/medium) reviews receive a structured AI assessment with
 validated review IDs, verbatim evidence, an allowlisted Google policy heading
 and a 200-300 word formal draft when supported. Invalid evidence, citations,
-length or provider failures stop publication explicitly. Non-flagged reviews
+length triggers one logged, bounded correction pass with measured validation
+feedback; a second invalid result or provider failure stops publication
+explicitly. Non-flagged reviews
 receive an insufficient-evidence assessment, not invented allegations.
 Policy headings were verified against Google's prohibited/restricted content
 page on 2026-10-10: Fake Engagement, Rating Manipulation, Advertising &

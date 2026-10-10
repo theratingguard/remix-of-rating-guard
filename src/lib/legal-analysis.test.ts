@@ -98,6 +98,22 @@ describe("Legal Expert evidence boundaries", () => {
     expect(output.reviews[0]?.legal_grounds).toBe(LEGAL_GROUNDS);
     expect(output.disclaimer).toContain("not legal advice");
   });
+  it("repairs an invalid word count once using measured validation feedback", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "unit-secret");
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json({}));
+    vi.stubGlobal("fetch", fetch);
+    vi.mocked(readOpenAIStream)
+      .mockResolvedValueOnce(
+        JSON.stringify({ reviews: [{ ...request, removal_request_text: "Too short" }] }),
+      )
+      .mockResolvedValueOnce(JSON.stringify({ reviews: [request] }));
+    const output = await generateLegalAnalysis("Unit Business", [review]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(fetch.mock.calls[1]?.[1]?.body)).input[0].content).toContain(
+      "received 2 whitespace-separated words",
+    );
+    expect(output.reviews[0]?.removal_request_text.split(/\s+/)).toHaveLength(220);
+  });
   it("fails explicitly on provider errors and invented AI evidence", async () => {
     vi.stubEnv("OPENAI_API_KEY", "unit-secret");
     vi.stubGlobal(
