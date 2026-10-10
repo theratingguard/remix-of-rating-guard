@@ -29,13 +29,29 @@ export type AnalyzedReview = {
 export const riskOf = (r: AnalyzedReview): Risk => r.analysis?.risk ?? "requires_review";
 export const isFlagged = (r: AnalyzedReview) => ["high", "medium"].includes(riskOf(r));
 
+export function savedPdfUrl(metadata: import("@/integrations/supabase/types").Json | undefined) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const url = metadata["pdf_url"];
+  const date = metadata["pdf_saved_at"];
+  if (
+    typeof url !== "string" ||
+    typeof date !== "string" ||
+    !Number.isFinite(Date.parse(date)) ||
+    Date.now() - Date.parse(date) >= 90 * 86400000
+  )
+    return null;
+  return /^https:\/\/ratingguard\.online\/reports\/[0-9a-f-]{36}\.pdf$/.test(url) ? url : null;
+}
+
 export const scansQuery = () =>
   queryOptions({
     queryKey: ["scans"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("scans")
-        .select("*, reports!reports_scan_id_fkey(id, report_number, status, created_at)")
+        .select(
+          "*, reports!reports_scan_id_fkey(id, report_number, status, created_at, report_data)",
+        )
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;

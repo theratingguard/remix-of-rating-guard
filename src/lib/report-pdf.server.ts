@@ -11,8 +11,14 @@ import puppeteer from "puppeteer";
 export const MAX_REPORT_PDF_BYTES = 24 * 1024 * 1024;
 const reportIdSchema = z.string().uuid();
 
-export async function saveReportToVPS(reportId: string, pdfBuffer: Buffer) {
+export async function saveReportToVPS(
+  reportId: string,
+  pdfBuffer: Buffer,
+  subdirectory?: string,
+  evidence = false,
+) {
   reportIdSchema.parse(reportId);
+  if (subdirectory && subdirectory !== "shared") reportIdSchema.parse(subdirectory);
   if (
     pdfBuffer.length === 0 ||
     pdfBuffer.length > MAX_REPORT_PDF_BYTES ||
@@ -24,17 +30,19 @@ export async function saveReportToVPS(reportId: string, pdfBuffer: Buffer) {
   if (document.getPageCount() < 1 || document.getPageCount() > 100)
     throw new Error("A report PDF must contain between 1 and 100 pages.");
 
-  const directory = process.env["REPORT_PDF_DIRECTORY"] || "/opt/rating-guard/public/reports";
+  const root = process.env["REPORT_PDF_DIRECTORY"] || "/opt/rating-guard/public/reports";
+  const directory = subdirectory ? join(root, subdirectory) : root;
   await mkdir(directory, { recursive: true, mode: 0o755 });
+  await chmod(directory, 0o755);
   const temporary = join(directory, `.${reportId}-${randomUUID()}.tmp`);
   try {
     await writeFile(temporary, pdfBuffer, { flag: "wx", mode: 0o600 });
     await chmod(temporary, 0o644);
-    await rename(temporary, join(directory, `${reportId}.pdf`));
+    await rename(temporary, join(directory, `${reportId}${evidence ? "_evidence" : ""}.pdf`));
   } finally {
     await rm(temporary, { force: true });
   }
-  return `https://ratingguard.online/reports/${reportId}.pdf`;
+  return `https://ratingguard.online/reports/${subdirectory ? subdirectory + "/" : ""}${reportId}${evidence ? "_evidence" : ""}.pdf`;
 }
 
 function escapeHtml(value: string | number | null | undefined) {
@@ -79,8 +87,8 @@ td { padding:7px; border-bottom:1px solid #e1e5eb; } .note { font-size:10px; col
 <tr><td>Scan date</td><td>${escapeHtml(scan.created_at)}</td></tr>
 <tr><td>Google Maps</td><td class="text">${escapeHtml(scan.maps_uri || scan.source_url)}</td></tr></table>
 <h2>Summary</h2><p>Reviews retrieved: ${reviews.length} &middot; Analyzed: ${analyzed}
-&middot; High risk: ${scan.high_count} &middot; Medium risk: ${scan.medium_count}
-&middot; Normal: ${scan.normal_count} &middot; Requires review: ${unresolved}</p>
+&middot; High risk: ${reviews.filter((review) => review.analysis?.risk === "high").length} &middot; Medium risk: ${reviews.filter((review) => review.analysis?.risk === "medium").length}
+&middot; Normal: ${reviews.filter((review) => review.analysis?.risk === "normal").length} &middot; Requires review: ${unresolved}</p>
 <p class="note">Source: Google Places API (New). The official API provides up to 5 reviews per business, not all reviews.</p>
 <h2>Review details and AI assessments</h2>
 ${reviews
@@ -145,6 +153,7 @@ export async function generateOwnedReportPdf(
   supabase: SupabaseClient<Database>,
   userId: string,
   scanId: string,
+  completingScan = false,
 ) {
   reportIdSchema.parse(scanId);
   const [scan, report] = await Promise.all([
@@ -152,7 +161,13 @@ export async function generateOwnedReportPdf(
     supabase.from("reports").select("*").eq("scan_id", scanId).eq("user_id", userId).maybeSingle(),
   ]);
   if (scan.error || report.error) throw new Error("Could not verify report ownership.");
-  if (!scan.data || !report.data || scan.data.status !== "complete" || scan.data.is_seed)
+  if (
+    !scan.data ||
+    !report.data ||
+    (scan.data.status !== "complete" &&
+      !(completingScan && scan.data.status === "running" && scan.data.stage === "analyze")) ||
+    scan.data.is_seed
+  )
     throw new Error("Only your completed, saved live reports can be published as PDFs.");
 
   const reviewRows = await supabase
@@ -178,6 +193,16 @@ export async function generateOwnedReportPdf(
   });
   const pdfBuffer = await renderReportPdf(reportPdfHtml(scan.data, report.data, reviews));
   const url = await saveReportToVPS(scanId, pdfBuffer);
+  if (scan.data.business_id) {
+    await saveReportToVPS(scanId, pdfBuffer, scan.data.business_id);
+    const evidenceHtml = reportPdfHtml(scan.data, report.data, reviews).replace(
+      "Google Review Risk Report</h1>",
+      "Review Evidence Appendix</h1>",
+    );
+    const evidencePdf = await renderReportPdf(evidenceHtml);
+    await saveReportToVPS(scanId, evidencePdf, scan.data.business_id, true);
+  }
+  await saveReportToVPS(scanId, pdfBuffer, "shared");
   const metadata = report.data.report_data;
   const updated = await supabase
     .from("reports")
@@ -186,6 +211,8 @@ export async function generateOwnedReportPdf(
         ...(metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {}),
         pdf_url: url,
         pdf_saved_at: new Date().toISOString(),
+        pdf_status: "ready",
+        report_url: url,
       },
     })
     .eq("id", report.data.id)

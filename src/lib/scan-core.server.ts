@@ -17,6 +17,7 @@ import { isGoogleMapsUrl, normalizeGoogleUrl } from "./google-url";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables, Json } from "@/integrations/supabase/types";
 import { z } from "zod";
+import { generateOwnedReportPdf } from "./report-pdf.server";
 
 type ScanClient = SupabaseClient<Database>;
 type QualityScan = Pick<
@@ -648,6 +649,17 @@ export async function scanAnalyzeCore(
         throw new ScanError("DB_UNAVAILABLE", "Could not save recommended review actions.");
     }
 
+    const pdfStarted = Date.now();
+    await track(
+      supabase,
+      userId,
+      scan.id,
+      "PDF_GENERATING",
+      pdfStarted,
+      "Generating and saving PDF on the VPS",
+    );
+    await generateOwnedReportPdf(supabase, userId, scan.id, true);
+    await track(supabase, userId, scan.id, "PDF_SAVED", pdfStarted, "PDF saved and indexed");
     const completed = await supabase
       .from("scans")
       .update({

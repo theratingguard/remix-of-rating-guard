@@ -139,6 +139,8 @@ describe("VPS PDF persistence", () => {
           business: "Unit fixture",
           pdf_url: result.url,
           pdf_saved_at: expect.any(String),
+          pdf_status: "ready",
+          report_url: result.url,
         },
       },
     ]);
@@ -149,6 +151,7 @@ describe("VPS PDF persistence", () => {
     expect(html).toContain("&lt;script&gt;attack&lt;/script&gt;");
     expect(html).toContain("No clean-result conclusion");
     expect(html).not.toContain("No reporting action recommended.");
+    expect(await readdir(join(directory, "shared"))).toEqual([`${scanId}.pdf`]);
   });
   it.each([{ owner: false }, { status: "failed" }, { status: "running" }])(
     "does not publish unauthorized or incomplete reports: %j",

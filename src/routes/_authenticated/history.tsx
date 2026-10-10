@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { scansQuery, scanRisk, fmtDate, riskyCount, analyzedCount } from "@/lib/data";
+import { scansQuery, scanRisk, fmtDate, riskyCount, analyzedCount, savedPdfUrl } from "@/lib/data";
 import { PageHeader, EmptyState, StatusPill } from "@/components/app-shell";
 import { RiskBadge, DevTag } from "@/components/review-ui";
 import { Input } from "@/components/ui/input";
@@ -158,6 +158,16 @@ function HistoryPage() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
+                    {s.status === "complete" && savedPdfUrl(s.reports?.report_data) && (
+                      <a
+                        href={savedPdfUrl(s.reports?.report_data) ?? undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mr-3 text-brand hover:underline"
+                      >
+                        PDF
+                      </a>
+                    )}
                     {s.status === "complete" && (
                       <Link
                         to="/reports/$id"

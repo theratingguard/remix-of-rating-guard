@@ -5,13 +5,22 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft, Download, Flag } from "lucide-react";
-import { scanQuery, fmtDate, reportNumber, GOOGLE_REPORT_URL, riskOf, isFlagged } from "@/lib/data";
+import {
+  scanQuery,
+  fmtDate,
+  reportNumber,
+  GOOGLE_REPORT_URL,
+  riskOf,
+  isFlagged,
+  savedPdfUrl,
+} from "@/lib/data";
 import { logAudit } from "@/lib/scan.functions";
 import { Stars, RiskBadge, SeedBadge } from "@/components/review-ui";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { downloadReportPdf } from "@/lib/report-pdf";
-import { saveReportPdf } from "@/lib/report-pdf.functions";
+import { saveReportPdf, emailReport, reportEmailStatus } from "@/lib/report-pdf.functions";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated/reports/$id")({
   validateSearch: z.object({ print: z.boolean().optional() }),
@@ -29,6 +38,14 @@ function ReportDetail() {
   const { print } = Route.useSearch();
   const audit = useServerFn(logAudit);
   const savePdf = useServerFn(saveReportPdf);
+  const sendEmail = useServerFn(emailReport);
+  const emailStatus = useServerFn(reportEmailStatus);
+  const { data: smtp, error: smtpError } = useQuery({
+    queryKey: ["report-email-status"],
+    queryFn: () => emailStatus(),
+  });
+  const [clientEmail, setClientEmail] = useState("");
+  const [sending, setSending] = useState(false);
   const queryClient = useQueryClient();
   const { data, isLoading, error: queryError } = useQuery(scanQuery(id));
   const articleRef = useRef<HTMLElement>(null);
@@ -54,9 +71,12 @@ function ReportDetail() {
         await downloadReportPdf(articleRef.current, `${reportNumber(data.scan, data.report)}.pdf`);
         return;
       }
-      const result = await savePdf({
-        data: { scanId: id },
-      });
+      const existing = savedPdfUrl(data.report.report_data);
+      const result = existing
+        ? { url: existing }
+        : await savePdf({
+            data: { scanId: id },
+          });
       await queryClient.invalidateQueries({ queryKey: ["scan", id] });
       const anchor = document.createElement("a");
       anchor.href = result.url;
@@ -108,14 +128,30 @@ function ReportDetail() {
   const { scan, reviews, report } = data;
   const flagged = reviews.filter(isFlagged);
   const analyzed = reviews.filter((r) => r.analysis).length;
-  const metadata = report.report_data;
-  const pdfUrl =
-    metadata &&
-    typeof metadata === "object" &&
-    !Array.isArray(metadata) &&
-    typeof metadata["pdf_url"] === "string"
-      ? metadata["pdf_url"]
-      : null;
+  const pdfUrl = savedPdfUrl(report.report_data);
+  async function copyLink() {
+    if (!pdfUrl) return;
+    try {
+      await navigator.clipboard.writeText(pdfUrl);
+      toast.success("Report link copied.");
+    } catch (error) {
+      console.error("[report] Link copy failed", error);
+      toast.error("Could not copy the link. Copy the displayed PDF URL manually.");
+    }
+  }
+  async function submitEmail(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (sending) return;
+    setSending(true);
+    try {
+      await sendEmail({ data: { scanId: id, email: clientEmail } });
+      toast.success("SMTP server accepted the email. Inbox delivery is not yet confirmed.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not send report email.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <>
@@ -127,17 +163,31 @@ function ReportDetail() {
         </Button>
         <div className="flex gap-2">
           <Button variant="outline" onClick={download} disabled={exporting}>
-            <Download /> {exporting ? "Generating PDF..." : "Download PDF"}
+            <Download /> {exporting ? "Preparing PDF..." : "Save PDF"}
           </Button>
           <Button variant="outline" onClick={printReport}>
             Print / Save PDF
           </Button>
           {pdfUrl && (
-            <Button variant="outline" asChild>
-              <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                Open saved PDF
-              </a>
-            </Button>
+            <>
+              <Button variant="outline" asChild>
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                  Open saved PDF
+                </a>
+              </Button>
+              <Button variant="outline" onClick={copyLink}>
+                Copy Link
+              </Button>
+              <Button variant="outline" asChild>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`Your Rating Guard report: ${pdfUrl}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  WhatsApp
+                </a>
+              </Button>
+            </>
           )}
           {!scan.is_seed && (
             <Button asChild>
@@ -153,11 +203,42 @@ function ReportDetail() {
         </div>
         {!scan.is_seed && (
           <p className="no-print mb-4 text-sm text-muted-foreground">
-            Download PDF publishes a snapshot on ratingguard.online. Anyone with its PDF URL can
+            Reports are automatically published on ratingguard.online. Anyone with the PDF URL can
             open it.
           </p>
         )}
       </div>
+      {!scan.is_seed && (
+        <section className="no-print surface mb-6 p-4">
+          <p>PDF Status: {pdfUrl ? "Ready" : "Not available or expired; Save PDF to regenerate"}</p>
+          {pdfUrl && <p className="break-all text-sm">{pdfUrl}</p>}
+          <form onSubmit={submitEmail} className="mt-3 flex flex-wrap items-center gap-2">
+            <label htmlFor="report-email">Email Report</label>
+            <Input
+              id="report-email"
+              type="email"
+              required
+              value={clientEmail}
+              onChange={(event) => setClientEmail(event.target.value)}
+              placeholder="Client email"
+              className="max-w-xs"
+              disabled={sending}
+            />
+            <Button type="submit" disabled={!pdfUrl || !smtp?.configured || sending}>
+              {sending ? "Sending..." : "Send Email"}
+            </Button>
+          </form>
+          {smtpError && (
+            <p role="alert">Could not verify email availability: {smtpError.message}</p>
+          )}
+          {smtp && !smtp.configured && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Email sharing is not configured. A verified SMTP App Password or provider credential
+              is required.
+            </p>
+          )}
+        </section>
+      )}
       <article ref={articleRef} className="surface mx-auto max-w-4xl p-8 sm:p-12">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
           <div>

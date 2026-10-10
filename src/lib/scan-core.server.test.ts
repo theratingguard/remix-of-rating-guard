@@ -4,6 +4,10 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
 import { analyzeReviews } from "./analysis.server";
+import { generateOwnedReportPdf } from "./report-pdf.server";
+vi.mock("./report-pdf.server", () => ({
+  generateOwnedReportPdf: vi.fn(async () => ({ url: "https://unit-fixture.invalid/report.pdf" })),
+}));
 
 vi.mock("./analysis.server", () => ({
   analyzeReviews: vi.fn(async () => [
@@ -86,7 +90,18 @@ function database(failure?: "report" | "completion") {
 }
 
 describe("Durable scan completion (unit fixtures only)", () => {
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.mocked(generateOwnedReportPdf).mockClear();
+  });
+  it("fails the scan explicitly when automatic PDF persistence fails", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "unit-key");
+    vi.mocked(generateOwnedReportPdf).mockRejectedValueOnce(new Error("Unit PDF save failure"));
+    const db = database();
+    const result = await scanAnalyzeCore(db.client, "owner", { scanId: "scan-fixture" });
+    expect(result.ok).toBe(false);
+    expect(db.updates.some((update) => update["status"] === "complete")).toBe(false);
+  });
   it("does not mark complete or return success when report persistence fails", async () => {
     vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
     const db = database("report");

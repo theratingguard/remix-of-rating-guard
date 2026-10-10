@@ -91,6 +91,30 @@ admitted; launch/content/PDF operations have explicit timeouts and browser clean
 Apply `20261010153000_vps_report_url.sql`
 additively; it retains the separate service-only `scan_history` permissions.
 
+Live scan completion now waits for server-generated PDFs to be saved and indexed;
+`REPORT_READY` is emitted only afterward. PDF failure fails the scan explicitly,
+not an untracked fire-and-forget background job. On a live scan, the UI explains
+that reports are automatically public to anyone with the PDF URL.
+Canonical `/reports/{scanId}.pdf` links remain compatible; copies are saved under
+`{businessId}/{scanId}.pdf` and `shared/{scanId}.pdf`, with an AI-evidence appendix
+`{businessId}/{scanId}_evidence.pdf`. Review assessments remain advisory.
+
+Report and history pages expose saved PDF links for 90 days. Install
+`scripts/cleanup-reports.sh` as a daily 03:00 root cron job to remove only PDF
+files older than 90 days, leaving database scan history intact. Expired PDFs can
+be regenerated from saved data. This is age-based retention, not the alternative
+1 GB eviction policy. Backups have independent retention.
+
+Sharing supports Copy Link, WhatsApp, direct Save PDF and authenticated Email
+Report. WhatsApp opens a prefilled message; it never sends automatically.
+Save PDF reuses a saved URL and never regenerates unnecessarily. Browsers control
+download destinations and "ask where to save"; an app cannot override that setting.
+SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_FROM must be set server-side,
+using an authorized App Password or provider credential, never in Git/frontend.
+SMTP acceptance is not proof of inbox delivery. Email is explicitly unavailable
+when SMTP is unconfigured; owner access is checked and attachments are read from
+validated local report filenames, never fetched from arbitrary URLs.
+
 The report's **Report Google** button opens the saved business Google Maps URL
 in a new tab. If no Maps URL is saved, it opens Google's review-reporting help
 page at `https://support.google.com/business/answer/4596773`. Opening this link
