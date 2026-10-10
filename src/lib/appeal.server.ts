@@ -4,8 +4,12 @@ import type { Database } from "@/integrations/supabase/types";
 import { savedLegalAnalysis, validateLegalReviews, LEGAL_POLICY_URL } from "./legal-analysis";
 import { readOpenAIStream } from "./openai-stream.server";
 import type { AnalyzedReview } from "./data";
+import { requireFeature } from "./settings.server";
 
 export async function generateRejectedAppeal(db: SupabaseClient<Database>, outcomeId: string) {
+  const controls = await requireFeature("appeal_tracking_enabled");
+  if (!controls.gpt_enabled || !controls.legal_expert_enabled)
+    throw new Error("GPT/Legal Expert generation disabled in Settings.");
   const access = await db.rpc("report_access_level").throwOnError();
   if (access.data !== "super_admin")
     throw new Error("Access Denied: only Super Admin can generate appeals.");

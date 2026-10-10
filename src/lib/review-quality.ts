@@ -75,7 +75,8 @@ export function collectSampleEvidence(review: AnalyzedReview, sample: AnalyzedRe
             response_ms: z.number().nonnegative().optional(),
           }),
         )
-        .length(3),
+        .min(1)
+        .max(3),
     })
     .safeParse(review.analysis?.verification);
   if (consensus.success) {

@@ -5,6 +5,10 @@ import { createSelectedReport } from "./review-selection.server";
 import { readOpenAIStream } from "./openai-stream.server";
 import { renderReportPdf, saveReportToVPS } from "./report-pdf.server";
 vi.mock("./openai-stream.server", () => ({ readOpenAIStream: vi.fn() }));
+vi.mock("./settings.server", async () => {
+  const { defaultSettings } = await import("./settings");
+  return { requireFeature: async () => defaultSettings, getSettings: async () => defaultSettings };
+});
 vi.mock("./report-pdf.server", () => ({
   renderReportPdf: vi.fn(async () => Buffer.from("%PDF-fixture")),
   saveReportToVPS: vi.fn(

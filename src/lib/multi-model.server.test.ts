@@ -85,6 +85,36 @@ describe("Evidence-grounded three-model consensus", () => {
     });
     expect(consensusReviews([[no], [no], [no]], reviews)[0]?.risk).toBe("normal");
   });
+  it("uses both enabled votes for two models and labels a single opinion honestly", () => {
+    const two = consensusReviews([[yes], [no]], reviews, [20, 0, 40], [0, 2])[0]!;
+    expect(two.consensus.agrees).toBe(false);
+    expect(two.confidence).toBe(70);
+    expect(two.consensus.votes.map((v) => v.response_ms)).toEqual([20, 40]);
+    expect(consensusReviews([[yes], [yes]], reviews, [], [0, 2])[0]?.consensus.agrees).toBe(true);
+    const one = consensusReviews([[yes]], reviews, [], [1])[0]!;
+    expect(one.reason).toContain("Single-model");
+    expect(one.confidence).toBe(70);
+    expect(one.consensus.votes).toHaveLength(1);
+  });
+  it("never calls disabled Claude and requires only the enabled credentials", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("GEMINI_API_KEY", "fixture");
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({ choices: [{ message: { content: JSON.stringify({ results: [yes] }) } }] }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          candidates: [{ content: { parts: [{ text: JSON.stringify({ results: [yes] }) }] } }],
+        }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const result = await analyzeWithThreeModels("fixture", "Fixture", null, reviews, [0, 2]);
+    expect(result[0]?.consensus.enabled_models).toBe(2);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch.mock.calls.every(([url]) => !String(url).includes("anthropic"))).toBe(true);
+  });
   it("rejects invented evidence, policy headings and duplicate indices", () => {
     expect(() =>
       validateBallots({ results: [{ ...yes, evidence_quote: "fake" }] }, reviews),

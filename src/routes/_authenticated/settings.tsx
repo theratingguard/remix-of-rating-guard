@@ -1,5 +1,7 @@
 import { SystemQuality, ErrorCenter } from "@/components/ops-panels";
 import { HomepageEditor } from "@/components/homepage-editor";
+import { AiControlPanel } from "@/components/ai-control-panel";
+import { reportAccessQuery } from "@/components/restricted-report-summary";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -69,6 +71,7 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
 }
 
 function SettingsPage() {
+  const access = useQuery(reportAccessQuery());
   const { user } = Route.useRouteContext();
   const status = useServerFn(getSystemStatus);
   const auditFn = useServerFn(getAuditLog);
@@ -208,13 +211,14 @@ function SettingsPage() {
         </Card>
 
         <Card title="AI Analysis">
+          {access.data === "super_admin" && <AiControlPanel />}
           <Row k="AI provider" v={sys?.aiProvider ?? "—"} />
           <Row
             k="AI status"
             v={
               <HBadge
                 s={check("AI service")?.status}
-                label={sys?.aiConfigured ? "Active" : undefined}
+                label={sys?.aiConfigured ? "Key configured (not a health test)" : undefined}
               />
             }
           />

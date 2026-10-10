@@ -5,6 +5,10 @@ import { generateRejectedAppeal } from "./appeal.server";
 import { readOpenAIStream } from "./openai-stream.server";
 import { LEGAL_DISCLAIMER, LEGAL_POLICY_URL, LEGAL_VERSION } from "./legal-analysis";
 vi.mock("./openai-stream.server", () => ({ readOpenAIStream: vi.fn() }));
+vi.mock("./settings.server", async () => {
+  const { defaultSettings } = await import("./settings");
+  return { requireFeature: async () => defaultSettings };
+});
 const id = "00000000-0000-4000-8000-000000000001";
 const quote = "Buy our discount packages";
 const legal = {

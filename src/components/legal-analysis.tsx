@@ -15,6 +15,7 @@ import { RemovalBadge } from "./removal-summary";
 import { PrivatePdfButton } from "./private-pdf-button";
 import { ReviewQualityPanel } from "./review-quality";
 import { RemovalSubmissionForm } from "./removal-workflow";
+import { useFeatureSettings } from "@/lib/use-feature-settings";
 
 export function LegalAnalysisPanel({
   scan,
@@ -25,6 +26,7 @@ export function LegalAnalysisPanel({
   report: Report | null;
   reviews: AnalyzedReview[];
 }) {
+  const features = useFeatureSettings();
   const generate = useServerFn(saveReportPdf);
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -32,6 +34,10 @@ export function LegalAnalysisPanel({
   const legal = savedLegalAnalysis(report?.report_data);
   const url = savedLegalPdfUrl(report?.report_data);
   if (scan.is_seed || scan.status !== "complete") return null;
+  if (features.error)
+    return <p role="alert">Could not load feature controls: {features.error.message}</p>;
+  if (!features.data?.legal_expert_enabled)
+    return <p>Legal Expert Mode disabled or loading Settings.</p>;
   async function prepare() {
     setBusy(true);
     try {
@@ -61,13 +67,12 @@ export function LegalAnalysisPanel({
       <h2 className="text-lg font-bold">Legal Expert Analysis</h2>
       <p className="my-2 text-sm text-muted-foreground">{LEGAL_DISCLAIMER}</p>
       <p className="my-2 text-sm">
-        Analysis provider: {legal?.model ?? "Not generated"}. Three-provider consensus is available
-        only when the server explicitly enables it with all three credentials; this panel does not
-        claim Claude/Gemini checks for single-provider reports.
+        Legal drafting provider: {legal?.model ?? "Not generated"}. Risk-assessment votes use only
+        providers enabled in Settings. This section does not claim Claude/Gemini legal drafting.
       </p>
       <div className="no-print flex flex-wrap gap-2">
         {(!url || legal?.reviews.some((item) => !item.quality)) && (
-          <Button disabled={busy} onClick={prepare}>
+          <Button disabled={busy || !features.data.gpt_enabled} onClick={prepare}>
             {busy
               ? "Generating legal analysis and PDFs..."
               : "Generate / Upgrade Legal Expert Analysis"}
@@ -168,13 +173,14 @@ export function LegalAnalysisPanel({
               ) : (
                 <p>No removal request drafted without supported evidence.</p>
               )}
-              {reviews.find((review) => review.id === item.review_id) && (
-                <RemovalSubmissionForm
-                  scan={scan}
-                  legal={item}
-                  review={reviews.find((review) => review.id === item.review_id)!}
-                />
-              )}
+              {features.data.appeal_tracking_enabled &&
+                reviews.find((review) => review.id === item.review_id) && (
+                  <RemovalSubmissionForm
+                    scan={scan}
+                    legal={item}
+                    review={reviews.find((review) => review.id === item.review_id)!}
+                  />
+                )}
             </article>
           ))}
         </>

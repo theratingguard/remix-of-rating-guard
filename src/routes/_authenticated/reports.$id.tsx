@@ -29,6 +29,7 @@ import { PrivatePdfButton } from "@/components/private-pdf-button";
 import { downloadPrivateReport } from "@/lib/private-report.functions";
 import { savePrivatePdf } from "@/lib/private-report";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { useFeatureSettings } from "@/lib/use-feature-settings";
 
 export const Route = createFileRoute("/_authenticated/reports/$id")({
   validateSearch: z.object({ print: z.boolean().optional() }),
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/_authenticated/reports/$id")({
 });
 
 function ReportDetail() {
+  const features = useFeatureSettings();
   const access = useQuery(reportAccessQuery());
   const { id } = Route.useParams();
   const { print } = Route.useSearch();
@@ -187,15 +189,17 @@ function ReportDetail() {
               <Button variant="outline" onClick={copyLink}>
                 Copy Link
               </Button>
-              <Button variant="outline" asChild>
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`Your Rating Guard private report (authorized login required): https://ratingguard.online/reports/${id}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  WhatsApp
-                </a>
-              </Button>
+              {features.data?.whatsapp_share_enabled && (
+                <Button variant="outline" asChild>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`Your Rating Guard private report (authorized login required): https://ratingguard.online/reports/${id}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    WhatsApp
+                  </a>
+                </Button>
+              )}
             </>
           )}
           {!scan.is_seed && (
@@ -229,22 +233,24 @@ function ReportDetail() {
               https://ratingguard.online/reports/{id} — authorized login required
             </p>
           )}
-          <form onSubmit={submitEmail} className="mt-3 flex flex-wrap items-center gap-2">
-            <label htmlFor="report-email">Email Report</label>
-            <Input
-              id="report-email"
-              type="email"
-              required
-              value={clientEmail}
-              onChange={(event) => setClientEmail(event.target.value)}
-              placeholder="Client email"
-              className="max-w-xs"
-              disabled={sending}
-            />
-            <Button type="submit" disabled={!pdfUrl || !smtp?.configured || sending}>
-              {sending ? "Sending..." : "Send Email"}
-            </Button>
-          </form>
+          {features.data?.email_share_enabled && (
+            <form onSubmit={submitEmail} className="mt-3 flex flex-wrap items-center gap-2">
+              <label htmlFor="report-email">Email Report</label>
+              <Input
+                id="report-email"
+                type="email"
+                required
+                value={clientEmail}
+                onChange={(event) => setClientEmail(event.target.value)}
+                placeholder="Client email"
+                className="max-w-xs"
+                disabled={sending}
+              />
+              <Button type="submit" disabled={!pdfUrl || !smtp?.configured || sending}>
+                {sending ? "Sending..." : "Send Email"}
+              </Button>
+            </form>
+          )}
           {smtpError && (
             <p role="alert">Could not verify email availability: {smtpError.message}</p>
           )}
@@ -411,7 +417,9 @@ function ReportDetail() {
           appropriate.
         </footer>
       </article>
-      <ReviewSelection key={scan.id} scan={scan} reviews={reviews} report={report} />
+      {features.data?.legal_expert_enabled && features.data.gpt_enabled && (
+        <ReviewSelection key={scan.id} scan={scan} reviews={reviews} report={report} />
+      )}
       <LegalAnalysisPanel scan={scan} reviews={reviews} report={report} />
       <ScanTimeline scanId={scan.id} isSeed={!!scan.is_seed} />
     </>

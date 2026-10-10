@@ -26,6 +26,7 @@ export type Consensus = {
   risk: "high" | "medium" | "normal" | "requires_review";
   reason: string;
   checked_at: string;
+  enabled_models?: number;
   votes: {
     response_ms?: number;
     model: string;
@@ -72,16 +73,18 @@ export function consensusReviews(
   ballots: ModelBallot[][],
   reviews: PlaceReview[],
   timings: number[] = [],
+  indices: number[] = [0, 1, 2],
 ) {
-  if (ballots.length !== 3) throw new Error("Three validated model results are required.");
+  if (!ballots.length || ballots.length !== indices.length)
+    throw new Error("All enabled models must return validated results.");
   return reviews.map((review, index): ReviewAnalysis & { consensus: Consensus } => {
     const votes = ballots.map((modelResults, modelIndex) => {
       const result = modelResults.find((item) => item.index === index);
       if (!result) throw new Error("Incomplete consensus results.");
-      return { ...result, model: models[modelIndex]! };
+      return { ...result, model: models[indices[modelIndex]!]! };
     });
     const positive = votes.filter((vote) => vote.violates_policy);
-    const supported = positive.length >= 2;
+    const supported = positive.length >= (indices.length === 1 ? 1 : 2);
     const chosen = supported ? positive[0]! : votes[0]!;
     const risk = supported
       ? positive.length === 3
@@ -92,17 +95,18 @@ export function consensusReviews(
         : review.text.trim()
           ? "normal"
           : "requires_review";
-    const reason = `${positive.length}/3 models found supported policy concerns. Agreement is not proof or a removal probability. ${chosen.reasoning}`;
+    const reason = `${positive.length}/${indices.length} enabled models found supported policy concerns. ${indices.length === 1 ? "Single-model assessment, not consensus." : "Agreement is not proof or a removal probability."} ${chosen.reasoning}`;
     return {
       risk,
       category: supported ? chosen.policy_type : null,
       signals: supported ? [chosen.policy_section] : [],
       evidence: supported ? chosen.evidence_quote : null,
-      confidence: Math.round(votes.reduce((sum, vote) => sum + vote.confidence, 0) / 3),
+      confidence: Math.round(votes.reduce((sum, vote) => sum + vote.confidence, 0) / votes.length),
       reason,
       consensus: {
-        model: models.join(" + "),
-        provider: "OpenAI + Anthropic + Google",
+        model: indices.map((index) => models[index]).join(" + "),
+        provider: indices.map((index) => ["OpenAI", "Anthropic", "Google"][index]).join(" + "),
+        enabled_models: indices.length,
         agrees: supported,
         risk,
         reason,
@@ -127,13 +131,14 @@ export async function analyzeWithThreeModels(
   businessName: string,
   category: string | null,
   reviews: PlaceReview[],
+  indices: number[] = [0, 1, 2],
 ) {
   const anthropic = process.env["ANTHROPIC_API_KEY"];
   const gemini = process.env["GEMINI_API_KEY"];
-  if (!apiKey || !anthropic || !gemini)
+  if (indices.some((index) => ![apiKey, anthropic, gemini][index]))
     throw new ScanError(
       "AI_UNAVAILABLE",
-      "Three-model mode requires OPENAI_API_KEY, ANTHROPIC_API_KEY and GEMINI_API_KEY. No single-model fallback was used.",
+      "An enabled AI model is missing its credential. Disable that model in Settings or configure its key; no silent fallback.",
     );
   const source = JSON.stringify({
     businessName,
@@ -163,7 +168,7 @@ export async function analyzeWithThreeModels(
     {
       url: "https://api.anthropic.com/v1/messages",
       headers: {
-        "x-api-key": anthropic,
+        "x-api-key": anthropic ?? "",
         "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
@@ -176,7 +181,7 @@ export async function analyzeWithThreeModels(
     },
     {
       url: `https://generativelanguage.googleapis.com/v1beta/models/${models[2]}:generateContent`,
-      headers: { "x-goog-api-key": gemini, "Content-Type": "application/json" },
+      headers: { "x-goog-api-key": gemini ?? "", "Content-Type": "application/json" },
       body: {
         systemInstruction: { parts: [{ text: prompt }] },
         contents: [{ role: "user", parts: [{ text: source }] }],
@@ -187,7 +192,8 @@ export async function analyzeWithThreeModels(
   const timings: number[] = [];
   const statuses: (number | null)[] = [];
   const settled = await Promise.allSettled(
-    requests.map(async (request, index) => {
+    indices.map(async (index) => {
+      const request = requests[index]!;
       const started = Date.now();
       try {
         const response = await fetch(request.url, {
@@ -246,17 +252,17 @@ export async function analyzeWithThreeModels(
     }),
   );
   const failures = settled.flatMap((result, index) =>
-    result.status === "rejected" ? [models[index]] : [],
+    result.status === "rejected" ? [models[indices[index]!]] : [],
   );
   if (failures.length) {
     console.error("[multi-model] Required models failed:", failures.join(", "));
     throw new ScanError(
       "AI_UNAVAILABLE",
-      `Three-model analysis incomplete: ${settled
+      `Enabled-model analysis incomplete: ${settled
         .flatMap((result, index) =>
           result.status === "rejected"
             ? [
-                `${models[index]} (${statuses[index] ? `HTTP ${statuses[index]}` : "network/output error"}, ${timings[index]}ms)`,
+                `${models[indices[index]!]} (${statuses[indices[index]!] ? `HTTP ${statuses[indices[index]!]}` : "network/output error"}, ${timings[indices[index]!]}ms)`,
               ]
             : [],
         )
@@ -270,5 +276,6 @@ export async function analyzeWithThreeModels(
     }),
     reviews,
     timings,
+    indices,
   );
 }

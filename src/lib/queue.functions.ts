@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { parseBulkInput, starBreakdown, removalSummary } from "./review-metrics";
 import { savedLegalAnalysis } from "./legal-analysis";
+import { requireFeature } from "./settings.server";
 
 const startOfDayUtc = () => {
   const d = new Date();
@@ -20,10 +21,16 @@ export const enqueueBatch = createServerFn({ method: "POST" })
     const access = await context.supabase.rpc("report_access_level").throwOnError();
     if (access.data !== "super_admin")
       throw new Error("Access Denied: summary-only accounts cannot queue detailed scans.");
+    const controls = await requireFeature("bulk_scan_enabled");
     if (!process.env["GOOGLE_PLACES_API_KEY"])
       return { ok: false as const, message: "Google Places API is not configured." };
-    if (!process.env["OPENAI_API_KEY"])
-      return { ok: false as const, message: "AI analysis is not configured on the server." };
+    const enabledKeys = [
+      controls.gpt_enabled && process.env["OPENAI_API_KEY"],
+      controls.claude_enabled && process.env["ANTHROPIC_API_KEY"],
+      controls.gemini_enabled && process.env["GEMINI_API_KEY"],
+    ];
+    if (!enabledKeys.some(Boolean))
+      return { ok: false as const, message: "No enabled AI provider is configured on the server." };
     if (!process.env["SUPABASE_SERVICE_ROLE_KEY"])
       return { ok: false as const, message: "Queue credentials are not configured on the server." };
     if (process.env["SCAN_WORKER_SCHEDULED"] !== "true")
@@ -34,6 +41,9 @@ export const enqueueBatch = createServerFn({ method: "POST" })
     const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
     const urls = parseBulkInput(data.urls.join("\n")).valid;
     if (!urls.length) throw new Error("No valid bulk inputs.");
+    await context.supabase
+      .rpc("reserve_scan_admission", { _kind: "bulk", _quantity: urls.length })
+      .throwOnError();
     const { data: state, error: stateError } = await admin
       .from("system_state")
       .select("daily_link_cap, queue_paused, pause_reason")

@@ -7,6 +7,7 @@ import { reviewGoogleLink, validateSelectionOutput } from "./review-selection";
 import { readOpenAIStream } from "./openai-stream.server";
 import { generateLegalAnalysis } from "./analysis.server";
 import { loadOutcomeStrategyNotes } from "./removal-workflow.server";
+import { requireFeature } from "./settings.server";
 
 export async function createSelectedReport(
   db: SupabaseClient<Database>,
@@ -14,6 +15,8 @@ export async function createSelectedReport(
   scanId: string,
   reviewIds: string[],
 ) {
+  const controls = await requireFeature("legal_expert_enabled");
+  if (!controls.gpt_enabled) throw new Error("GPT request generation disabled in Settings.");
   const [scan, report, rows] = await Promise.all([
     db.from("scans").select("*").eq("id", scanId).eq("user_id", userId).maybeSingle(),
     db.from("reports").select("*").eq("scan_id", scanId).eq("user_id", userId).maybeSingle(),

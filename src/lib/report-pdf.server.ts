@@ -12,6 +12,8 @@ import { savedLegalAnalysis, type LegalAnalysis } from "./legal-analysis";
 import { starBreakdown, removalBand, removalSummary } from "./review-metrics";
 import { readinessBand, type ReviewQuality } from "./review-quality";
 import { loadOutcomeStrategyNotes } from "./removal-workflow.server";
+import { getSettings } from "./settings.server";
+import { LEGAL_VERSION, LEGAL_DISCLAIMER } from "./legal-analysis";
 
 export const MAX_REPORT_PDF_BYTES = 24 * 1024 * 1024;
 const reportIdSchema = z.string().uuid();
@@ -245,11 +247,16 @@ export async function generateOwnedReportPdf(
     };
   });
   const outcomeContext = await loadOutcomeStrategyNotes(supabase);
-  const legal = await generateLegalAnalysis(
-    scan.data.business_name || "Business",
-    reviews,
-    outcomeContext,
-  );
+  const controls = await getSettings();
+  const legal: LegalAnalysis = controls.legal_expert_enabled
+    ? await generateLegalAnalysis(scan.data.business_name || "Business", reviews, outcomeContext)
+    : {
+        version: LEGAL_VERSION,
+        generated_at: new Date().toISOString(),
+        model: "Legal Expert Mode disabled in Settings",
+        disclaimer: LEGAL_DISCLAIMER,
+        reviews: [],
+      };
   const metadata = report.data.report_data;
   const newMetadata = {
     ...(metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {}),
@@ -260,11 +267,11 @@ export async function generateOwnedReportPdf(
   const pdfBuffer = await renderReportPdf(fullHtml);
   const url = await saveReportToVPS(scanId, pdfBuffer);
   const legalHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font:12px Arial;line-height:1.6;color:#13243b}.review{border:1px solid #ccd4df;padding:12px;margin:14px 0}.text{white-space:pre-wrap;overflow-wrap:anywhere}.note{font-size:10px}</style></head><body><h1>Legal Removal Request Assessment</h1><h2>${escapeHtml(scan.data.business_name)}</h2><p>${escapeHtml(report.data.report_number)} / ${escapeHtml(scan.data.created_at)}</p>${legalAnalysisHtml(legal, reviews)}<p>Nothing has been submitted to Google. Unsupported assessments are not removal requests.</p></body></html>`;
-  const legalPdf = await renderReportPdf(legalHtml);
-  const legalUrl = await saveReportToVPS(scanId, legalPdf, undefined, "legal");
+  const legalPdf = controls.legal_expert_enabled ? await renderReportPdf(legalHtml) : null;
+  const legalUrl = legalPdf ? await saveReportToVPS(scanId, legalPdf, undefined, "legal") : null;
   if (scan.data.business_id) {
     await saveReportToVPS(scanId, pdfBuffer, scan.data.business_id);
-    await saveReportToVPS(scanId, legalPdf, scan.data.business_id, "legal");
+    if (legalPdf) await saveReportToVPS(scanId, legalPdf, scan.data.business_id, "legal");
     const evidenceHtml = fullHtml.replace(
       "Google Review Risk Report</h1>",
       "Review Evidence Appendix</h1>",
@@ -273,7 +280,7 @@ export async function generateOwnedReportPdf(
     await saveReportToVPS(scanId, evidencePdf, scan.data.business_id, true);
   }
   await saveReportToVPS(scanId, pdfBuffer, "shared");
-  await saveReportToVPS(scanId, legalPdf, "shared", "legal");
+  if (legalPdf) await saveReportToVPS(scanId, legalPdf, "shared", "legal");
   const updated = await supabase
     .from("reports")
     .update({
@@ -284,7 +291,7 @@ export async function generateOwnedReportPdf(
         pdf_status: "ready",
         report_url: url,
         legal_pdf_url: legalUrl,
-        legal_pdf_saved_at: new Date().toISOString(),
+        legal_pdf_saved_at: legalUrl ? new Date().toISOString() : null,
       },
     })
     .eq("id", report.data.id)

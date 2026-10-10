@@ -11,6 +11,12 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("@/lib/report-pdf.functions", () => ({ saveReportPdf: {} }));
 vi.mock("@/lib/private-report.functions", () => ({ downloadPrivateReport: {} }));
 vi.mock("@/lib/appeal.functions", () => ({ generateAppealDraft: {} }));
+vi.mock("@/lib/use-feature-settings", () => ({
+  useFeatureSettings: () => ({
+    data: { legal_expert_enabled: true, appeal_tracking_enabled: true },
+    error: null,
+  }),
+}));
 const scan = {
   id: "d8bdb357-60db-4a05-92c4-38020ec52eda",
   status: "complete",

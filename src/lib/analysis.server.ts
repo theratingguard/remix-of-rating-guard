@@ -5,6 +5,8 @@ import type { AnalyzedReview } from "./data";
 import { readOpenAIStream } from "./openai-stream.server";
 import { analyzeWithThreeModels, type Consensus } from "./multi-model.server";
 import { assessReviewQuality } from "./review-quality";
+import { getSettings } from "./settings.server";
+import { enabledModelIndices } from "./settings";
 import {
   LEGAL_VERSION,
   LEGAL_DISCLAIMER,
@@ -36,9 +38,11 @@ export async function generateLegalAnalysis(
   const flagged = reviews.filter(
     (review) => review.analysis?.risk === "high" || review.analysis?.risk === "medium",
   );
+  const controls = await getSettings();
+  if (!controls.legal_expert_enabled) throw new Error("Legal Expert Mode disabled in Settings.");
   let results: LegalAnalysis["reviews"] = [];
   if (flagged.length) {
-    const key = process.env["OPENAI_API_KEY"];
+    const key = controls.gpt_enabled ? process.env["OPENAI_API_KEY"] : undefined;
     if (!key)
       throw new ScanError(
         "AI_UNAVAILABLE",
@@ -53,7 +57,7 @@ export async function generateLegalAnalysis(
           signal: AbortSignal.timeout(60000),
           headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: ANALYSIS_MODEL,
+            model: "gpt-4o",
             instructions: LEGAL_EXPERT_PROMPT,
             stream: true,
             store: false,
@@ -204,14 +208,19 @@ export async function analyzeReviews(
     console.error("[analysis] Invalid REVIEW_ANALYSIS_MODE");
     throw new ScanError("AI_UNAVAILABLE", "REVIEW_ANALYSIS_MODE must be single or three.");
   }
-  if (THREE_MODEL_MODE) return analyzeWithThreeModels(apiKey, businessName, category, reviews);
+  const controls = await getSettings();
+  const enabled = enabledModelIndices(controls);
+  if (controls.multi_model_enabled || enabled[0] !== 0)
+    return analyzeWithThreeModels(apiKey, businessName, category, reviews, enabled);
+  if (!apiKey)
+    throw new ScanError("AI_UNAVAILABLE", "Enabled GPT model is missing its server credential.");
   let res: Response;
   try {
     res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: ANALYSIS_MODEL,
+        model: "gpt-4o",
         messages: [
           { role: "system", content: SYSTEM },
           {
@@ -353,6 +362,8 @@ export async function verifyFlags(
   items: { text: string; rating: number; first: ReviewAnalysis }[],
 ): Promise<Verification[]> {
   if (!items.length) return [];
+  const controls = await getSettings();
+  if (!controls.gpt_enabled) throw new Error("GPT disabled in Settings.");
   const now = new Date().toISOString();
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {

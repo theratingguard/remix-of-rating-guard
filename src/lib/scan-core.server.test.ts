@@ -5,6 +5,10 @@ import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
 import { analyzeReviews } from "./analysis.server";
 import { generateOwnedReportPdf } from "./report-pdf.server";
+vi.mock("./settings.server", async () => {
+  const { defaultSettings } = await import("./settings");
+  return { getSettings: async () => ({ ...defaultSettings, multi_model_enabled: false }) };
+});
 vi.mock("./report-pdf.server", () => ({
   generateOwnedReportPdf: vi.fn(async () => ({ url: "https://unit-fixture.invalid/report.pdf" })),
 }));

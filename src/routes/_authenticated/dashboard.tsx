@@ -12,6 +12,7 @@ import reportIcon from "@/assets/icon-report.png";
 import alertIcon from "@/assets/icon-alert.png";
 import { RemovalAnalytics } from "@/components/removal-workflow";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { useFeatureSettings } from "@/lib/use-feature-settings";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
+  const features = useFeatureSettings();
   const access = useQuery(reportAccessQuery());
   const { data: scans = [], isLoading, error } = useQuery(scansQuery());
   const done = scans.filter((s) => s.status === "complete");
@@ -79,7 +81,7 @@ function Dashboard() {
           </Button>
         }
       />
-      <RemovalAnalytics />
+      {features.data?.appeal_tracking_enabled && <RemovalAnalytics />}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((k, i) => (
           <div

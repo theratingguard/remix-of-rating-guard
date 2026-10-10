@@ -12,6 +12,7 @@ import { RemovalSummary } from "@/components/removal-summary";
 import { BusinessHeader, RatingAnalysis, RiskAnalysis } from "@/components/scan-result";
 import { Button } from "@/components/ui/button";
 import { BulkScan } from "@/components/bulk-scan";
+import { useFeatureSettings } from "@/lib/use-feature-settings";
 import { isGoogleMapsUrl } from "@/lib/google-url";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 
@@ -40,6 +41,7 @@ function looksLikeGoogleUrl(v: string) {
 }
 
 function ScanPage() {
+  const features = useFeatureSettings();
   const access = useQuery(reportAccessQuery());
   const status = useServerFn(getSystemStatus);
   const fetchStage = useServerFn(scanFetch);
@@ -113,7 +115,11 @@ function ScanPage() {
         return;
       }
       setPhase("done");
-      toast.success("Report ready. PDF automatically saved on the VPS.");
+      toast.success(
+        features.data?.auto_pdf_enabled
+          ? "Report ready. PDF automatically saved on the VPS."
+          : "Report ready. Auto-PDF disabled in Settings.",
+      );
     } catch (error) {
       setFailedAt(requestStage);
       setError({
@@ -158,8 +164,11 @@ function ScanPage() {
             to analyze available rating and review information.
           </p>
           <p className="mt-2 text-xs opacity-75">
-            Scanning automatically saves a private PDF. Only Super Admin (theratingguard@gmail.com)
-            can view details and PDFs; every other account receives summaries only.
+            {features.data?.auto_pdf_enabled
+              ? "Scanning automatically saves a private PDF."
+              : "Auto-PDF is disabled or Settings are loading; manual PDF export remains available."}{" "}
+            Only Super Admin (theratingguard@gmail.com) can view details and PDFs; every other
+            account receives summaries only.
           </p>
 
           {keyMissing && (
@@ -189,7 +198,7 @@ function ScanPage() {
                 role="tab"
                 type="button"
                 aria-selected={mode === m}
-                disabled={running}
+                disabled={running || (m === "bulk" && !features.data?.bulk_scan_enabled)}
                 onClick={() => setMode(m)}
                 className={`rounded-full px-4 py-1.5 font-semibold transition-colors ${mode === m ? "bg-card text-foreground shadow-[var(--shadow-soft)]" : "opacity-70 hover:opacity-100"}`}
               >
@@ -198,7 +207,11 @@ function ScanPage() {
             ))}
           </div>
           {mode === "bulk" ? (
-            <BulkScan disabled={!!keyMissing} />
+            features.data?.bulk_scan_enabled ? (
+              <BulkScan disabled={!!keyMissing} />
+            ) : (
+              <p>Bulk Scan disabled in Settings.</p>
+            )
           ) : (
             <>
               <form
@@ -312,7 +325,11 @@ function ScanPage() {
 
           {mode === "single" && phase !== "idle" && (
             <ol className="mt-6 grid gap-2 text-left sm:grid-cols-5" aria-label="Scan progress">
-              {STEPS.map((s, i) => {
+              {STEPS.map((step, i) => {
+                const s =
+                  i === 4 && !features.data?.auto_pdf_enabled
+                    ? "Saving report data (Auto-PDF off)"
+                    : step;
                 const st = stepState(i);
                 return (
                   <li

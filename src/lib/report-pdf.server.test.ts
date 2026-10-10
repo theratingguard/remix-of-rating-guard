@@ -15,6 +15,10 @@ import {
 import { LEGAL_DISCLAIMER, LEGAL_VERSION, unsupportedLegalReview } from "./legal-analysis";
 import type { AnalyzedReview } from "./data";
 import puppeteer from "puppeteer";
+vi.mock("./settings.server", async () => {
+  const { defaultSettings } = await import("./settings");
+  return { getSettings: async () => defaultSettings };
+});
 
 const browserMock = vi.hoisted(() => ({
   pdf: vi.fn(),

@@ -11,6 +11,10 @@ import {
 import { generateLegalAnalysis } from "./analysis.server";
 import { readOpenAIStream } from "./openai-stream.server";
 vi.mock("./openai-stream.server", () => ({ readOpenAIStream: vi.fn() }));
+vi.mock("./settings.server", async () => {
+  const { defaultSettings } = await import("./settings");
+  return { getSettings: async () => defaultSettings };
+});
 const review: AnalyzedReview = {
   id: "d8bdb357-60db-4a05-92c4-38020ec52eda",
   author: "Unit Reviewer",

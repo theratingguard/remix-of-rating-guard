@@ -7,6 +7,10 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { readPrivateReportPdf } from "./private-report.server";
 import { saveReportToVPS } from "./report-pdf.server";
+vi.mock("./settings.server", async () => {
+  const { defaultSettings } = await import("./settings");
+  return { getSettings: async () => defaultSettings };
+});
 
 const scanId = "00000000-0000-4000-8000-000000000001";
 const otherId = "00000000-0000-4000-8000-000000000002";

@@ -5,6 +5,8 @@ import { ANALYSIS_MODEL, AI_PROVIDER } from "./analysis.server";
 import { APP_VERSION } from "./version";
 import { scanFetchCore, scanAnalyzeCore, audit, type StageResponse } from "./scan-core.server";
 import { searchBusinesses } from "./google-places.server";
+import { getSettings } from "./settings.server";
+import { enabledModelIndices, modelNames } from "./settings";
 
 export const findBusinesses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -38,7 +40,18 @@ export const getSystemStatus = createServerFn({ method: "GET" })
     );
     const migrationsOk = tables.every((r) => !r.error);
     const googleConfigured = Boolean(process.env["GOOGLE_PLACES_API_KEY"]);
-    const aiConfigured = Boolean(process.env["OPENAI_API_KEY"]);
+    const settings = await getSettings();
+    const enabled = [
+      settings.gpt_enabled,
+      settings.claude_enabled,
+      settings.gemini_enabled,
+    ].flatMap((on, index) => (on ? [index] : []));
+    const active = settings.multi_model_enabled ? enabled : enabled.slice(0, 1);
+    const aiConfigured =
+      active.length > 0 &&
+      active.every((index) =>
+        Boolean(process.env[["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY"][index]!]),
+      );
     const checks: { name: string; status: Health; detail: string }[] = [
       { name: "Application", status: "healthy", detail: `Version ${APP_VERSION} responding` },
       {
@@ -57,8 +70,8 @@ export const getSystemStatus = createServerFn({ method: "GET" })
         name: "AI service",
         status: aiConfigured ? "warning" : "unavailable",
         detail: aiConfigured
-          ? `${AI_PROVIDER} · ${ANALYSIS_MODEL}; configured, not live-verified by this check`
-          : "OPENAI_API_KEY missing",
+          ? `${active.map((index) => modelNames[index]).join(" + ")}; keys configured, not live-verified by this check`
+          : "All models disabled or an enabled provider credential is missing",
       },
       {
         name: "Storage",
@@ -74,8 +87,10 @@ export const getSystemStatus = createServerFn({ method: "GET" })
     return {
       googleConfigured,
       aiConfigured,
-      aiProvider: AI_PROVIDER,
-      aiModel: ANALYSIS_MODEL,
+      aiProvider: active.map((index) => modelNames[index]).join(" + "),
+      aiModel: settings.multi_model_enabled
+        ? `${active.length} enabled model(s)`
+        : "First enabled provider only",
       databaseOk: !db.error,
       migrationsOk,
       reviewLimit: 5,

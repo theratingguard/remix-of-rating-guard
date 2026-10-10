@@ -3,10 +3,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateOwnedReportPdf } from "./report-pdf.server";
 import { sendReportEmail, smtpConfigured } from "./email.server";
+import { getSettings, requireFeature } from "./settings.server";
 
 export const reportEmailStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(() => ({ configured: smtpConfigured() }));
+  .handler(async () => ({
+    configured: smtpConfigured() && (await getSettings()).email_share_enabled,
+  }));
 
 export const emailReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -15,6 +18,7 @@ export const emailReport = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     try {
+      await requireFeature("email_share_enabled");
       const [scan, report] = await Promise.all([
         context.supabase
           .from("scans")

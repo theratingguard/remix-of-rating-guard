@@ -8,6 +8,18 @@ export type Database = {
   };
   public: {
     Tables: {
+      app_settings: {
+        Row: { id: string; key: string; value: Json; updated_at: string };
+        Insert: { id?: string; key: string; value: Json; updated_at?: string };
+        Update: { value?: Json; updated_at?: string };
+        Relationships: [];
+      };
+      ai_model_status: {
+        Row: { model: string; result: Json; updated_at: string };
+        Insert: { model: string; result: Json; updated_at?: string };
+        Update: { result?: Json; updated_at?: string };
+        Relationships: [];
+      };
       removal_outcomes: {
         Row: {
           id: string;
@@ -913,6 +925,8 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      update_app_settings: { Args: { _settings: Json }; Returns: undefined };
+      reserve_scan_admission: { Args: { _kind: string; _quantity: number }; Returns: undefined };
       register_private_selected_artifact: {
         Args: { _artifact_id: string; _scan_id: string; _owner_id: string };
         Returns: undefined;

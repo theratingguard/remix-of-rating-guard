@@ -6,6 +6,10 @@ import {
   type ReviewAnalysis,
 } from "./analysis.server";
 import type { PlaceReview } from "./google-places.server";
+vi.mock("./settings.server", async () => {
+  const { defaultSettings } = await import("./settings");
+  return { getSettings: async () => ({ ...defaultSettings, multi_model_enabled: false }) };
+});
 
 const review: PlaceReview = {
   author: "Unit fixture",

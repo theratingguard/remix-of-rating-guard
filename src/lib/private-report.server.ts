@@ -8,6 +8,7 @@ import { MAX_REPORT_PDF_BYTES } from "./report-pdf.server";
 import { savedPdfUrl } from "./data";
 import { savedLegalPdfUrl } from "./legal-analysis";
 import { selectedPdfUrl } from "./review-selection";
+import { getSettings } from "./settings.server";
 
 export const privatePdfInput = z.object({
   scanId: z.string().uuid(),
@@ -26,6 +27,24 @@ export async function readPrivateReportPdf(
     .maybeSingle()
     .throwOnError();
   if (!report.data) throw new Error("Access Denied: report is private or unavailable.");
+  const controls = await getSettings();
+  const metadata = report.data.report_data;
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    const date =
+      metadata[
+        input.variant === "full"
+          ? "pdf_saved_at"
+          : input.variant === "legal"
+            ? "legal_pdf_saved_at"
+            : "selected_saved_at"
+      ];
+    if (
+      typeof date !== "string" ||
+      !Number.isFinite(Date.parse(date)) ||
+      Date.now() - Date.parse(date) >= controls.pdf_retention_days * 86400000
+    )
+      throw new Error("PDF expired under the configured retention policy.");
+  }
   const url =
     input.variant === "full"
       ? savedPdfUrl(report.data.report_data)

@@ -19,6 +19,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables, Json } from "@/integrations/supabase/types";
 import { z } from "zod";
 import { generateOwnedReportPdf } from "./report-pdf.server";
+import { getSettings } from "./settings.server";
+import { enabledModelIndices, modelNames } from "./settings";
 
 type ScanClient = SupabaseClient<Database>;
 type QualityScan = Pick<
@@ -235,6 +237,24 @@ export async function scanFetchCore(
     };
 
   await sweepStale(supabase, userId);
+  try {
+    if (!data.batchId)
+      await supabase
+        .rpc("reserve_scan_admission", { _kind: "single", _quantity: 1 })
+        .throwOnError();
+    else if (!(await getSettings()).bulk_scan_enabled)
+      throw new Error("Bulk Scan disabled in Settings.");
+  } catch (error) {
+    console.error(
+      "[scan] Admission denied",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+    return {
+      ok: false,
+      code: "RATE_LIMIT",
+      message: error instanceof Error ? error.message : "Scan admission failed.",
+    };
+  }
   const since = new Date(Date.now() - 2 * 60_000).toISOString();
   const { data: dup } = await supabase
     .from("scans")
@@ -417,7 +437,7 @@ export async function scanAnalyzeCore(
   userId: string,
   data: { scanId: string },
 ): Promise<StageResponse> {
-  const aiKey = process.env["OPENAI_API_KEY"];
+  const aiKey = process.env["OPENAI_API_KEY"] ?? "";
   const t0 = Date.now();
   const { data: scan, error: scanError } = await supabase
     .from("scans")
@@ -438,17 +458,6 @@ export async function scanAnalyzeCore(
       return { ok: false, code: "DB_UNAVAILABLE", message: "Could not verify the saved report." };
     if (saved.data) return { ok: true, scanId: scan.id, reviews: scan.reviews_retrieved };
   }
-  if (!aiKey)
-    return fail(
-      supabase,
-      userId,
-      scan.id,
-      new ScanError(
-        "AI_UNAVAILABLE",
-        "AI analysis is unavailable — OPENAI_API_KEY is not configured.",
-      ),
-      t0,
-    );
   try {
     const { data: reviews, error } = await supabase
       .from("reviews")
@@ -460,6 +469,9 @@ export async function scanAnalyzeCore(
       throw new ScanError("INSUFFICIENT_DATA", "Insufficient data — no reviews to analyze.");
     let t = Date.now();
     await track(supabase, userId, scan.id, "REVIEWS_ANALYZING", t, `${reviews.length} review(s)`);
+    const controls = await getSettings();
+    const enabled = enabledModelIndices(controls);
+    const configVersion = `${PROMPT_VERSION}:${controls.multi_model_enabled}:${enabled.join(",")}`;
 
     // Cache: reuse an earlier analysis of identical text+rating with the same prompt & app version.
     const hashes = reviews
@@ -473,7 +485,7 @@ export async function scanAnalyzeCore(
           )
           .in("content_hash", hashes)
           .eq("analysis_version", APP_VERSION)
-          .eq("prompt_version", PROMPT_VERSION)
+          .eq("prompt_version", configVersion)
       : { data: [] };
     const cache = new Map((cachedRows ?? []).map((c) => [c.content_hash, c]));
     const todo = reviews.filter((r) => !cache.has(r.content_hash));
@@ -545,10 +557,22 @@ export async function scanAnalyzeCore(
       final.map((f) => ({
         review_id: f.review.id,
         scan_id: scan.id,
-        model: ANALYSIS_MODEL,
-        analysis_provider: AI_PROVIDER,
+        model:
+          f.verification &&
+          typeof f.verification === "object" &&
+          !Array.isArray(f.verification) &&
+          typeof f.verification.model === "string"
+            ? f.verification.model
+            : "gpt-4o",
+        analysis_provider:
+          f.verification &&
+          typeof f.verification === "object" &&
+          !Array.isArray(f.verification) &&
+          typeof f.verification.provider === "string"
+            ? f.verification.provider
+            : "OpenAI",
         analysis_version: APP_VERSION,
-        prompt_version: PROMPT_VERSION,
+        prompt_version: configVersion,
         content_hash: f.review.content_hash,
         verification: f.verification,
         cached: f.cached,
@@ -581,7 +605,7 @@ export async function scanAnalyzeCore(
       scan.id,
       "ANALYSIS_COMPLETED",
       t,
-      `${todo.length} analyzed, ${reviews.length - todo.length} reused from cache, ${THREE_MODEL_MODE ? "three-provider consensus required" : `${toVerify.length} verified by second model`}`,
+      `${todo.length} analyzed, ${reviews.length - todo.length} reused from cache, ${controls.multi_model_enabled ? `${enabled.length} enabled-provider assessment` : `${toVerify.length} verified by second model`}`,
     );
 
     const analysis = final.map((f) => f.a);
@@ -613,9 +637,9 @@ export async function scanAnalyzeCore(
           total_reviews: scan.total_reviews,
           reviews_retrieved: reviews.length,
           analysis_version: APP_VERSION,
-          prompt_version: PROMPT_VERSION,
-          model: ANALYSIS_MODEL,
-          analysis_mode: THREE_MODEL_MODE ? "three" : "single",
+          prompt_version: configVersion,
+          model: enabled.map((index) => modelNames[index]).join(" + "),
+          analysis_mode: controls.multi_model_enabled ? `${enabled.length}-model` : "single",
         },
       },
       { onConflict: "scan_id" },
@@ -656,16 +680,27 @@ export async function scanAnalyzeCore(
     }
 
     const pdfStarted = Date.now();
-    await track(
-      supabase,
-      userId,
-      scan.id,
-      "PDF_GENERATING",
-      pdfStarted,
-      "Generating and saving PDF on the VPS",
-    );
-    await generateOwnedReportPdf(supabase, userId, scan.id, true);
-    await track(supabase, userId, scan.id, "PDF_SAVED", pdfStarted, "PDF saved and indexed");
+    if (controls.auto_pdf_enabled) {
+      await track(
+        supabase,
+        userId,
+        scan.id,
+        "PDF_GENERATING",
+        pdfStarted,
+        "Generating and saving PDF on the VPS",
+      );
+      await generateOwnedReportPdf(supabase, userId, scan.id, true);
+      await track(supabase, userId, scan.id, "PDF_SAVED", pdfStarted, "PDF saved and indexed");
+    } else {
+      await track(
+        supabase,
+        userId,
+        scan.id,
+        "PDF_SKIPPED",
+        pdfStarted,
+        "Auto-PDF disabled in Settings; report data saved.",
+      );
+    }
     const completed = await supabase
       .from("scans")
       .update({
