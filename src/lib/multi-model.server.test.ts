@@ -114,6 +114,18 @@ describe("Evidence-grounded three-model consensus", () => {
     expect(result[0]?.consensus.enabled_models).toBe(2);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(fetch.mock.calls.every(([url]) => !String(url).includes("anthropic"))).toBe(true);
+    const body = JSON.parse(fetch.mock.calls[0]![1].body);
+    expect(body.response_format.type).toBe("json_schema");
+    expect(body.response_format.json_schema.strict).toBe(true);
+    expect(body.response_format.json_schema.schema.properties.results.minItems).toBe(
+      reviews.length,
+    );
+    expect(body.response_format.json_schema.schema.properties.results.maxItems).toBe(
+      reviews.length,
+    );
+    expect(
+      body.response_format.json_schema.schema.properties.results.items.properties.index.enum,
+    ).toEqual([0]);
   });
   it("rejects invented evidence, policy headings and duplicate indices", () => {
     expect(() =>

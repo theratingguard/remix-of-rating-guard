@@ -143,6 +143,7 @@ export async function analyzeWithThreeModels(
   const source = JSON.stringify({
     businessName,
     category,
+    required_indices: reviews.map((_, index) => index),
     policies: LEGAL_CITATIONS,
     reviews: reviews.map((review, index) => ({
       index,
@@ -158,7 +159,47 @@ export async function analyzeWithThreeModels(
       body: {
         model: models[0],
         store: false,
-        response_format: { type: "json_object" },
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "review_policy_ballots",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["results"],
+              properties: {
+                results: {
+                  type: "array",
+                  minItems: reviews.length,
+                  maxItems: reviews.length,
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: [
+                      "index",
+                      "violates_policy",
+                      "policy_type",
+                      "policy_section",
+                      "evidence_quote",
+                      "reasoning",
+                      "confidence",
+                    ],
+                    properties: {
+                      index: { type: "integer", enum: reviews.map((_, index) => index) },
+                      violates_policy: { type: "boolean" },
+                      policy_type: { type: "string" },
+                      policy_section: { type: "string" },
+                      evidence_quote: { type: "string" },
+                      reasoning: { type: "string" },
+                      confidence: { type: "number", minimum: 0, maximum: 100 },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
         messages: [
           { role: "system", content: prompt },
           { role: "user", content: source },

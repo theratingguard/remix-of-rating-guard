@@ -19,6 +19,9 @@ running work and other processes may use the previous configuration for up to a 
 - Multi-Model OFF uses the first enabled provider: GPT, then Claude, then Gemini.
 - Disabled providers are never called. Enabled provider failures fail the scan
   rather than silently falling back. All providers OFF produces an explicit error.
+- GPT risk ballots use strict structured output with the exact input review count
+  and allowed original indices. Independent validation still rejects duplicate
+  indices, unsupported policy headings and evidence not present in the source.
 - Legal generation, selected legal requests and appeal drafts currently require
   GPT enabled as well as Legal Expert Mode enabled.
 
