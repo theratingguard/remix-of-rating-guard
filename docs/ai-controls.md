@@ -1,5 +1,10 @@
 # AI control panel
 
+Bulk inputs accept official `share.google` links and the exact Google share
+redirect bridge. Every redirect still passes the HTTPS/host/public-IP checks.
+Review-only links without a resolvable business identity produce an explicit
+error rather than selecting a nearby business.
+
 Only the designated Super Admin can change Settings, view persisted provider health,
 or make paid model tests. Keys remain in the VPS environment; they are never sent
 to the browser. Application settings are validated and cached server-side for

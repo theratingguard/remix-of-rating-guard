@@ -13,6 +13,8 @@ describe("Google URL and network admission", () => {
     "https://127.0.0.1/maps",
     "https://[::1]/maps",
     "https://www.google.com/other",
+    "https://share.google.attacker.com/ABC",
+    "https://www.google.com/share.google?q=https://attacker.com",
   ])("rejects %s", (url) => expect(isGoogleMapsUrl(url)).toBe(false));
 
   it.each([
@@ -20,6 +22,8 @@ describe("Google URL and network admission", () => {
     "https://maps.app.goo.gl/ABC",
     "https://www.google.co.in/maps?query_place_id=Test",
     "https://g.co/kgs/ABC",
+    "https://share.google/nN5vuOSivyLDtXdAu",
+    "https://www.google.com/share.google?q=nN5vuOSivyLDtXdAu",
   ])("accepts supported provider URL %s", (url) => expect(isGoogleMapsUrl(url)).toBe(true));
   it("preserves case-sensitive short links and query values", () => {
     expect(normalizeGoogleUrl("https://maps.app.goo.gl/AbC#fragment")).toBe(

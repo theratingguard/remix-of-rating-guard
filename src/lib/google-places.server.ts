@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { GOOGLE_SHORT_HOSTS, isGoogleMapsUrl } from "./google-url";
+import { GOOGLE_SHORT_HOSTS, isGoogleMapsUrl, isGoogleShareBridge } from "./google-url";
 
 const placeSchema = z.object({
   id: z.string().min(1),
@@ -160,7 +160,7 @@ async function expandShortLink(url: string): Promise<string> {
         "RESOLVE_FAILED",
         `Short link redirected to a non-Google host (${u.hostname}).`,
       );
-    if (!GOOGLE_SHORT_HOSTS.has(u.hostname)) return cur;
+    if (!GOOGLE_SHORT_HOSTS.has(u.hostname) && !isGoogleShareBridge(u)) return cur;
     let addresses;
     try {
       addresses = await lookup(u.hostname, { all: true });
@@ -274,7 +274,8 @@ export async function resolveAndFetchPlace(
   let url = inputUrl.trim();
   if (!isGoogleMapsUrl(url))
     throw new ScanError("INVALID_URL", "Use a supported HTTPS Google Maps business link.");
-  if (GOOGLE_SHORT_HOSTS.has(new URL(url).hostname)) url = await expandShortLink(url);
+  if (GOOGLE_SHORT_HOSTS.has(new URL(url).hostname) || isGoogleShareBridge(new URL(url)))
+    url = await expandShortLink(url);
   let parsed: Parsed;
   try {
     parsed = parseMapsUrl(url);

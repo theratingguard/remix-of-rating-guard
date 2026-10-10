@@ -5,6 +5,25 @@ const url = "https://www.google.com/maps/search/?api=1&query_place_id=test-place
 const dns = vi.hoisted(() => ({ lookup: vi.fn() }));
 vi.mock("node:dns/promises", () => ({ ...dns, default: dns }));
 describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
+  it("follows the exact official share bridge to a Maps place without guessing identity", async () => {
+    dns.lookup.mockResolvedValue([{ address: "8.8.8.8", family: 4 }]);
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: "https://www.google.com/share.google?q=unitShare" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 301, headers: { location: url } }))
+      .mockResolvedValueOnce(Response.json({ id: "test-place", displayName: { text: "Fixture" } }));
+    vi.stubGlobal("fetch", fetch);
+    expect((await resolveAndFetchPlace("unit-key", "https://share.google/unitShare")).placeId).toBe(
+      "test-place",
+    );
+    expect(fetch.mock.calls[0]?.[1].redirect).toBe("manual");
+    expect(fetch.mock.calls[1]?.[1].redirect).toBe("manual");
+  });
   it("returns name-search candidates with exact place-ID URLs, not an arbitrary automatic match", async () => {
     const fetch = vi.fn().mockResolvedValue(
       Response.json({
