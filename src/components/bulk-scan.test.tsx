@@ -29,20 +29,22 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("Durable bulk UI", () => {
-  it("admits 150 business-name lines and exposes two input modes", () => {
+  it("admits 1,001 business-name lines and exposes three input modes", () => {
     render(<BulkScan disabled={false} />);
     fireEvent.change(screen.getByLabelText("URLs or business names (one per line)"), {
       target: {
-        value: Array.from({ length: 150 }, (_, index) => `Business ${index} City`).join("\n"),
+        value: Array.from({ length: 1001 }, (_, index) => `Business ${index} City`).join("\n"),
       },
     });
-    expect(screen.getByText(/150 inputs/)).toBeInTheDocument();
+    expect(screen.getByText(/1001 inputs/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start Bulk Scan" })).not.toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "PDF Upload" }));
     expect(screen.getByLabelText("Bulk PDF file")).toHaveAttribute(
       "accept",
       "application/pdf,.pdf",
     );
+    fireEvent.click(screen.getByRole("button", { name: "CSV / Excel Import" }));
+    expect(screen.getByLabelText("Bulk CSV or Excel file")).toHaveAttribute("accept", ".csv,.xlsx");
   });
   it("shows persisted progress, fetched stars, removal counts and owner batch controls", async () => {
     api.enqueue.mockResolvedValue({
@@ -56,7 +58,8 @@ describe("Durable bulk UI", () => {
         {
           id: "unit",
           url: "The Hudson Albany",
-          status: "pending",
+          status: "completed",
+          reportUrl: "https://ratingguard.online/reports/00000000-0000-4000-8000-000000000002",
           stars: [3, 0, 0, 0, 2],
           removal: { high: 0, medium: 0, low: 5 },
           scan: {
@@ -66,6 +69,25 @@ describe("Durable bulk UI", () => {
             total_reviews: 120,
           },
         },
+        {
+          id: "pending",
+          url: "Pending City",
+          status: "pending",
+          stars: [0, 0, 0, 0, 0],
+          removal: { high: 0, medium: 0, low: 0 },
+          scan: null,
+          reportUrl: null,
+        },
+        {
+          id: "failed",
+          url: "Failed City",
+          status: "failed",
+          error: "Exact fixture failure",
+          stars: [0, 0, 0, 0, 0],
+          removal: { high: 0, medium: 0, low: 0 },
+          scan: { business_name: null, rating: null, reviews_retrieved: 0, total_reviews: null },
+          reportUrl: null,
+        },
       ],
     });
     api.control.mockResolvedValue({ ok: true });
@@ -74,7 +96,7 @@ describe("Durable bulk UI", () => {
       target: { value: "The Hudson Albany" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Start Bulk Scan" }));
-    await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("value", "0"));
+    await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("value", "2"));
     expect(screen.getByRole("columnheader", { name: "1★" })).toBeInTheDocument();
     expect(screen.getByText("🔴 0 / 🟠 0 / 🟡 5")).toBeInTheDocument();
     expect(screen.getByText("5 of 120")).toBeInTheDocument();
@@ -86,7 +108,7 @@ describe("Durable bulk UI", () => {
     );
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export CSV" })).toBeInTheDocument();
-    const createObjectURL = vi.fn(() => "blob:unit-csv");
+    const createObjectURL = vi.fn((_blob: Blob) => "blob:unit-csv");
     vi.stubGlobal(
       "URL",
       class extends URL {
@@ -104,5 +126,20 @@ describe("Durable bulk UI", () => {
     expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
     expect(click).toHaveBeenCalledOnce();
     expect(document.querySelector('a[href="blob:unit-csv"]')).toBeNull();
+    const blob = createObjectURL.mock.calls[0]?.[0];
+    if (!blob) throw new Error("CSV blob was not created.");
+    const csv = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(blob);
+    });
+    expect(csv.split("\r\n")[0]).toContain('"Report URL"');
+    expect(csv).toContain(
+      "https://ratingguard.online/reports/00000000-0000-4000-8000-000000000002",
+    );
+    expect(csv.split("\r\n").find((row) => row.includes("Failed City"))).toBe(
+      '"3","","Failed City","","","","","","","","","","","","","failed","Exact fixture failure"',
+    );
   });
 });
