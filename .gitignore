@@ -16,6 +16,7 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
+public/reports/
 *.local
 
 # Wrangler / Cloudflare

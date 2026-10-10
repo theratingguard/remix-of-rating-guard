@@ -1,12 +1,38 @@
-export async function downloadReportPdf(element: HTMLElement, filename: string) {
-  const [{ toCanvas }, { jsPDF }] = await Promise.all([import("html-to-image"), import("jspdf")]);
+export async function generateReportPdf(element: HTMLElement) {
+  const [{ toSvg }, { jsPDF }] = await Promise.all([import("html-to-image"), import("jspdf")]);
   await document.fonts.ready;
-  const canvas = await toCanvas(element, {
-    backgroundColor: "#ffffff",
-    pixelRatio: 2,
+  const widthPixels = element.scrollWidth;
+  const heightPixels = element.scrollHeight;
+  if (!widthPixels || !heightPixels) throw new Error("Report capture is empty.");
+  const svg = await toSvg(element, {
+    width: widthPixels,
+    height: heightPixels,
     cacheBust: false,
   });
-  if (!canvas.width || !canvas.height) throw new Error("Report capture is empty.");
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    const timer = setTimeout(
+      () => reject(new Error("PDF image rendering timed out. Retry export.")),
+      30000,
+    );
+    image.onload = () => {
+      clearTimeout(timer);
+      resolve(image);
+    };
+    image.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("Could not render the report image."));
+    };
+    image.src = svg;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = widthPixels * 2;
+  canvas.height = heightPixels * 2;
+  const canvasContext = canvas.getContext("2d");
+  if (!canvasContext) throw new Error("PDF export requires browser canvas support.");
+  canvasContext.fillStyle = "#ffffff";
+  canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+  canvasContext.drawImage(image, 0, 0, canvas.width, canvas.height);
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const margin = 10;
   const width = pdf.internal.pageSize.getWidth() - margin * 2;
@@ -29,5 +55,10 @@ export async function downloadReportPdf(element: HTMLElement, filename: string) 
       (slice.height / slice.width) * width,
     );
   }
+  return pdf;
+}
+
+export async function downloadReportPdf(element: HTMLElement, filename: string) {
+  const pdf = await generateReportPdf(element);
   await pdf.save(filename, { returnPromise: true });
 }

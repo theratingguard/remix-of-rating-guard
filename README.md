@@ -63,12 +63,33 @@ Embedded PostgREST queries specify the single-column foreign-key relationship
 explicitly; owner-consistency composite foreign keys must remain enabled and
 must not make dashboard, report or review queries ambiguous.
 
-Completed reports offer a browser-generated **Download PDF** action and a
-separate **Print / Save PDF** action. PDF generation captures the displayed
-report locally, including Unicode text, across A4 pages; it does not upload
-review content or make protected reports public. R2 upload and public hosting
-are not implemented or implied by either action. Printing does not record a
-successful PDF download in the audit log.
+Completed live reports offer **Download PDF** and a separate **Print / Save PDF**
+action. Live PDF generation runs server-side using Puppeteer/Chromium, inline
+styles and system fonts, without browser rendering, external requests or
+JavaScript. It loads owner-scoped saved reviews and AI assessments and preserves
+unresolved-review warnings. Download validates ownership and the PDF, saves it atomically
+to `/opt/rating-guard/public/reports/{scanId}.pdf`, and stores the URL in the
+owner-scoped `reports.report_data.pdf_url` field. The PDF is public to anyone
+with its URL; the UI explicitly discloses this before export. R2 is not used.
+Seed reports download locally only. Printing does not imply a PDF was saved.
+
+Create the VPS reports directory with mode 755 and ownership `ratingguard`.
+Files are 644 for Nginx reads despite the service's restrictive umask; directory
+listing is disabled. Ignore generated PDFs in Git. Keep `/reports/{id}` proxied
+to the app; only UUID `.pdf` URLs use the Nginx static handler, with PDF MIME,
+inline disposition and `nosniff`. Set `client_max_body_size 36m` for PDF uploads
+(24 MB bytes, base64 encoded). Do not copy generated PDFs into deployment
+artifacts or remove them on rebuild. Install Chromium with Puppeteer's browser
+installer and OS dependencies; set `PUPPETEER_CACHE_DIR` to a persistent directory
+readable by the `ratingguard` service. Give Chromium a writable private HOME
+and XDG config/cache directory outside `/home` (for example,
+`/opt/ratingguard-chromium-runtime`) because the service uses `ProtectHome`.
+The service's `NoNewPrivileges` setting
+requires Chromium's no-sandbox mode: only escaped, server-built HTML is rendered,
+with scripting and all network requests disabled. One render per process is
+admitted; launch/content/PDF operations have explicit timeouts and browser cleanup.
+Apply `20261010153000_vps_report_url.sql`
+additively; it retains the separate service-only `scan_history` permissions.
 
 The report's **Report Google** button opens the saved business Google Maps URL
 in a new tab. If no Maps URL is saved, it opens Google's review-reporting help

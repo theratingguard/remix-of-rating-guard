@@ -1,6 +1,6 @@
 import { ScanTimeline } from "@/components/ops-panels";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { Stars, RiskBadge, SeedBadge } from "@/components/review-ui";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { downloadReportPdf } from "@/lib/report-pdf";
+import { saveReportPdf } from "@/lib/report-pdf.functions";
 
 export const Route = createFileRoute("/_authenticated/reports/$id")({
   validateSearch: z.object({ print: z.boolean().optional() }),
@@ -27,6 +28,8 @@ function ReportDetail() {
   const { id } = Route.useParams();
   const { print } = Route.useSearch();
   const audit = useServerFn(logAudit);
+  const savePdf = useServerFn(saveReportPdf);
+  const queryClient = useQueryClient();
   const { data, isLoading, error: queryError } = useQuery(scanQuery(id));
   const articleRef = useRef<HTMLElement>(null);
   const [exporting, setExporting] = useState(false);
@@ -47,7 +50,21 @@ function ReportDetail() {
       return;
     setExporting(true);
     try {
-      await downloadReportPdf(articleRef.current, `${reportNumber(data.scan, data.report)}.pdf`);
+      if (data.scan.is_seed) {
+        await downloadReportPdf(articleRef.current, `${reportNumber(data.scan, data.report)}.pdf`);
+        return;
+      }
+      const result = await savePdf({
+        data: { scanId: id },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["scan", id] });
+      const anchor = document.createElement("a");
+      anchor.href = result.url;
+      anchor.download = `${reportNumber(data.scan, data.report)}.pdf`;
+      anchor.rel = "noopener";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
       if (!data.scan.is_seed)
         await audit({ data: { action: "report.downloaded", detail: { scan_id: id } } }).catch(
           (error: unknown) => {
@@ -91,6 +108,14 @@ function ReportDetail() {
   const { scan, reviews, report } = data;
   const flagged = reviews.filter(isFlagged);
   const analyzed = reviews.filter((r) => r.analysis).length;
+  const metadata = report.report_data;
+  const pdfUrl =
+    metadata &&
+    typeof metadata === "object" &&
+    !Array.isArray(metadata) &&
+    typeof metadata["pdf_url"] === "string"
+      ? metadata["pdf_url"]
+      : null;
 
   return (
     <>
@@ -107,6 +132,13 @@ function ReportDetail() {
           <Button variant="outline" onClick={printReport}>
             Print / Save PDF
           </Button>
+          {pdfUrl && (
+            <Button variant="outline" asChild>
+              <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                Open saved PDF
+              </a>
+            </Button>
+          )}
           {!scan.is_seed && (
             <Button asChild>
               <a
@@ -119,6 +151,12 @@ function ReportDetail() {
             </Button>
           )}
         </div>
+        {!scan.is_seed && (
+          <p className="no-print mb-4 text-sm text-muted-foreground">
+            Download PDF publishes a snapshot on ratingguard.online. Anyone with its PDF URL can
+            open it.
+          </p>
+        )}
       </div>
       <article ref={articleRef} className="surface mx-auto max-w-4xl p-8 sm:p-12">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
