@@ -172,7 +172,8 @@ export type ReviewAnalysis = {
   confidence: number;
 };
 
-export const THREE_MODEL_MODE = process.env["REVIEW_ANALYSIS_MODE"] === "three";
+export const THREE_MODEL_MODE =
+  process.env["REVIEW_ANALYSIS_MODE"] === "three" || process.env["MULTI_MODEL_ENABLED"] === "true";
 export const ANALYSIS_MODEL = THREE_MODEL_MODE ? "gpt-4o" : "gpt-4.1-mini";
 export const AI_PROVIDER = THREE_MODEL_MODE ? "OpenAI + Anthropic + Google" : "OpenAI";
 

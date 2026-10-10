@@ -57,6 +57,11 @@ describe("Evidence-grounded three-model consensus", () => {
       true,
       false,
     ]);
+    expect(
+      result[0]?.consensus.votes.every(
+        (vote) => typeof vote.response_ms === "number" && vote.response_ms >= 0,
+      ),
+    ).toBe(true);
     expect(result[0]?.evidence).toBe(yes.evidence_quote);
   });
   afterEach(() => {

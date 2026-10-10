@@ -72,6 +72,7 @@ export function collectSampleEvidence(review: AnalyzedReview, sample: AnalyzedRe
             violates_policy: z.boolean(),
             quote: z.string(),
             reason: z.string(),
+            response_ms: z.number().nonnegative().optional(),
           }),
         )
         .length(3),
@@ -80,7 +81,7 @@ export function collectSampleEvidence(review: AnalyzedReview, sample: AnalyzedRe
   if (consensus.success) {
     for (const vote of consensus.data.votes)
       findings.push(
-        `${vote.model}: ${vote.violates_policy ? "supported policy concern" : "no supported policy concern"}. Quote: ${vote.quote || "None"}. ${vote.reason}`,
+        `${vote.model}${vote.response_ms === undefined ? "" : ` (${vote.response_ms}ms)`}: ${vote.violates_policy ? "supported policy concern" : "no supported policy concern"}. Quote: ${vote.quote || "None"}. ${vote.reason}`,
       );
   }
   return findings;

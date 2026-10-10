@@ -27,6 +27,7 @@ export type Consensus = {
   reason: string;
   checked_at: string;
   votes: {
+    response_ms?: number;
     model: string;
     violates_policy: boolean;
     policy: string;
@@ -67,7 +68,11 @@ export function validateBallots(value: unknown, reviews: PlaceReview[]): ModelBa
   });
 }
 
-export function consensusReviews(ballots: ModelBallot[][], reviews: PlaceReview[]) {
+export function consensusReviews(
+  ballots: ModelBallot[][],
+  reviews: PlaceReview[],
+  timings: number[] = [],
+) {
   if (ballots.length !== 3) throw new Error("Three validated model results are required.");
   return reviews.map((review, index): ReviewAnalysis & { consensus: Consensus } => {
     const votes = ballots.map((modelResults, modelIndex) => {
@@ -103,6 +108,9 @@ export function consensusReviews(ballots: ModelBallot[][], reviews: PlaceReview[
         reason,
         checked_at: new Date().toISOString(),
         votes: votes.map((vote) => ({
+          ...(timings[models.indexOf(vote.model)] !== undefined
+            ? { response_ms: timings[models.indexOf(vote.model)] }
+            : {}),
           model: vote.model,
           violates_policy: vote.violates_policy,
           policy: vote.policy_section,
@@ -176,42 +184,58 @@ export async function analyzeWithThreeModels(
       },
     },
   ];
+  const timings: number[] = [];
+  const statuses: (number | null)[] = [];
   const settled = await Promise.allSettled(
     requests.map(async (request, index) => {
-      const response = await fetch(request.url, {
-        method: "POST",
-        headers: request.headers,
-        body: JSON.stringify(request.body),
-        signal: AbortSignal.timeout(60000),
-      });
-      if (!response.ok) throw new Error(`${models[index]} HTTP ${response.status}`);
-      const json: unknown = await response.json();
-      const openai = z.object({
-        choices: z.array(z.object({ message: z.object({ content: z.string() }) })),
-      });
-      const claude = z.object({
-        content: z.array(z.object({ type: z.string(), text: z.string().optional() })),
-      });
-      const google = z.object({
-        candidates: z.array(
-          z.object({ content: z.object({ parts: z.array(z.object({ text: z.string() })) }) }),
-        ),
-      });
-      const text =
-        index === 0
-          ? openai.parse(json).choices[0]?.message.content
-          : index === 1
-            ? claude
-                .parse(json)
-                .content.filter((item) => item.type === "text")
-                .map((item) => item.text ?? "")
-                .join("")
-            : google
-                .parse(json)
-                .candidates[0]?.content.parts.map((part) => part.text)
-                .join("");
-      if (!text) throw new Error(`${models[index]} returned no analysis.`);
-      return validateBallots(JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, "")), reviews);
+      const started = Date.now();
+      try {
+        const response = await fetch(request.url, {
+          method: "POST",
+          headers: request.headers,
+          body: JSON.stringify(request.body),
+          signal: AbortSignal.timeout(60000),
+        });
+        statuses[index] = response.status;
+        if (!response.ok) throw new Error(`${models[index]} HTTP ${response.status}`);
+        const json: unknown = await response.json();
+        const openai = z.object({
+          choices: z.array(z.object({ message: z.object({ content: z.string() }) })),
+        });
+        const claude = z.object({
+          content: z.array(z.object({ type: z.string(), text: z.string().optional() })),
+        });
+        const google = z.object({
+          candidates: z.array(
+            z.object({ content: z.object({ parts: z.array(z.object({ text: z.string() })) }) }),
+          ),
+        });
+        const text =
+          index === 0
+            ? openai.parse(json).choices[0]?.message.content
+            : index === 1
+              ? claude
+                  .parse(json)
+                  .content.filter((item) => item.type === "text")
+                  .map((item) => item.text ?? "")
+                  .join("")
+              : google
+                  .parse(json)
+                  .candidates[0]?.content.parts.map((part) => part.text)
+                  .join("");
+        if (!text) throw new Error(`${models[index]} returned no analysis.`);
+        return validateBallots(JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, "")), reviews);
+      } finally {
+        timings[index] = Date.now() - started;
+        console.info(
+          "[multi-model] Provider completed",
+          JSON.stringify({
+            model: models[index],
+            response_ms: timings[index],
+            http_status: statuses[index] ?? null,
+          }),
+        );
+      }
     }),
   );
   const failures = settled.flatMap((result, index) =>
@@ -221,7 +245,15 @@ export async function analyzeWithThreeModels(
     console.error("[multi-model] Required models failed:", failures.join(", "));
     throw new ScanError(
       "AI_UNAVAILABLE",
-      `Three-model analysis incomplete: ${failures.join(", ")} failed or returned invalid evidence. No consensus was published.`,
+      `Three-model analysis incomplete: ${settled
+        .flatMap((result, index) =>
+          result.status === "rejected"
+            ? [
+                `${models[index]} (${statuses[index] ? `HTTP ${statuses[index]}` : "network/output error"}, ${timings[index]}ms)`,
+              ]
+            : [],
+        )
+        .join(", ")}. No consensus was published.`,
     );
   }
   return consensusReviews(
@@ -230,5 +262,6 @@ export async function analyzeWithThreeModels(
       return result.value;
     }),
     reviews,
+    timings,
   );
 }

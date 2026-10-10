@@ -221,6 +221,7 @@ are excluded from the decided-case success denominator.
 
 `REVIEW_ANALYSIS_MODE=single` (default/unset) preserves existing OpenAI scans.
 For optional three-provider analysis, configure `REVIEW_ANALYSIS_MODE=three`,
+or `MULTI_MODEL_ENABLED=true`, together with
 `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` in the private server environment;
 retain the existing `OPENAI_API_KEY`. Models are GPT-4o, Claude Sonnet 4.6 and
 Gemini 2.5 Flash. All three independently receive the original source; two
@@ -228,6 +229,8 @@ validated positive votes flag a concern. Every positive vote requires an
 exact source quote and an allowed policy heading. Missing keys, invalid
 responses or provider failures explicitly fail the analysis; no silent
 single-model fallback or fabricated consensus. Cache versions separate modes.
+Provider HTTP statuses and elapsed milliseconds are logged without credentials
+or review text; successful consensus ballots preserve provider timings in report evidence.
 This mode costs three provider requests per fresh review batch and is **not
 live-verified** until all credentials are configured. Model agreement is
 not proof of a violation or a calibrated removal probability.
