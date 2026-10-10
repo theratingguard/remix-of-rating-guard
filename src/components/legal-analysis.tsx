@@ -64,7 +64,10 @@ export function LegalAnalysisPanel({
         )}
         {url && (
           <Button variant="outline" asChild>
-            <a href={url} download={`RPT-${scan.id.slice(0, 8).toUpperCase()}-legal.pdf`}>
+            <a
+              href={`${url}?download=legal-v1`}
+              download={`RPT-${scan.id.slice(0, 8).toUpperCase()}-legal.pdf`}
+            >
               Download Legal Removal Request
             </a>
           </Button>

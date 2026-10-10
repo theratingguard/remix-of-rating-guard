@@ -146,6 +146,11 @@ New automatic PDFs include Legal Expert Analysis and a separate
 module in place without changing login or credentials. Selected PDFs also
 include legal assessments only for selected reviews. Nginx's UUID-only PDF
 route must permit `_legal` in addition to `_selected` and `_evidence`.
+Serve `_legal.pdf` with `Content-Disposition: attachment` so the legal-request
+button is a download, even in browsers that ignore the HTML `download`
+attribute. Full and selected report URLs may retain inline PDF viewing.
+The legal download button appends `?download=legal-v1` to avoid previously
+cached inline headers when upgrading existing reports.
 
 Flagged (high/medium) reviews receive a structured AI assessment with
 validated review IDs, verbatim evidence, an allowlisted Google policy heading
