@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AnalyzedReview } from "./data";
 import type { Json } from "@/integrations/supabase/types";
 import { reviewQualitySchema } from "./review-quality";
+import { predictionSchema } from "./removal-prediction";
 
 export const LEGAL_VERSION = "legal-v1";
 export const LEGAL_POLICY_URL = "https://support.google.com/contributionpolicy/answer/7400114";
@@ -68,6 +69,7 @@ Respectfully,
 }));
 
 const legalItemSchema = z.object({
+  prediction: predictionSchema.optional(),
   quality: reviewQualitySchema.optional(),
   review_id: z.string().uuid(),
   violates_policy: z.boolean(),

@@ -74,11 +74,21 @@ export async function createSelectedReport(
   const section = `<h2>Selected review requests (${reviews.length})</h2>${requests.map((request) => `<section class="review"><b>${escapeHtml(request.assessment)}</b><p>Review: ${escapeHtml(request.review_id)}</p><p>Policy: ${escapeHtml(request.policy)}</p><p class="text">${escapeHtml(request.request_text)}</p><p class="text">Evidence: ${escapeHtml(request.evidence)}</p><p>${escapeHtml(request.policy_reference)}</p><p>Submit manually using Google's review reporting tools. Nothing has been submitted.</p></section>`).join("")}`;
   const pdfId = randomUUID();
   const outcomeContext = await loadOutcomeStrategyNotes(db);
-  const legal = await generateLegalAnalysis(
+  const baseLegal = await generateLegalAnalysis(
     ownedScan.business_name || "Business",
     reviews,
     outcomeContext,
   );
+  const { enrichPredictions } = await import("./removal-prediction.server");
+  const business = ownedScan.business_id
+    ? await db
+        .from("businesses")
+        .select("category")
+        .eq("id", ownedScan.business_id)
+        .maybeSingle()
+        .throwOnError()
+    : null;
+  const legal = await enrichPredictions(db, baseLegal, business?.data?.category ?? null);
   const reportMetadata = report.data.report_data;
   const selectedHtml = reportPdfHtml(
     scan.data,

@@ -8,6 +8,38 @@ export function smtpConfigured() {
     Boolean(process.env[name]),
   );
 }
+export async function sendTextEmail(recipient: string, subject: string, text: string) {
+  z.string().email().parse(recipient);
+  if (!smtpConfigured())
+    throw new Error("Email is unavailable: configure verified server-side SMTP credentials.");
+  const transport = createSmtpTransport();
+  try {
+    const result = await transport.sendMail({
+      from: process.env["SMTP_FROM"],
+      to: recipient,
+      subject: subject.replace(/[\r\n]/g, " ").slice(0, 160),
+      text,
+    });
+    if (!result.accepted?.includes(recipient) || result.rejected?.length)
+      throw new Error("SMTP server did not accept the insights recipient.");
+    return { accepted: true, messageId: String(result.messageId) };
+  } finally {
+    transport.close();
+  }
+}
+function createSmtpTransport() {
+  const port = z.coerce.number().int().min(1).max(65535).parse(process.env["SMTP_PORT"]);
+  return nodemailer.createTransport({
+    host: process.env["SMTP_HOST"],
+    port,
+    secure: port === 465,
+    requireTLS: port !== 465,
+    auth: { user: process.env["SMTP_USER"], pass: process.env["SMTP_PASS"] },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
+  });
+}
 
 export async function sendReportEmail(clientEmail: string, pdfUrl: string, businessName: string) {
   z.string().email().parse(clientEmail);
@@ -21,17 +53,7 @@ export async function sendReportEmail(clientEmail: string, pdfUrl: string, busin
   const content = await readFile(
     join(process.env["REPORT_PDF_DIRECTORY"] || "/opt/rating-guard-private/reports", `${id}.pdf`),
   );
-  const port = z.coerce.number().int().min(1).max(65535).parse(process.env["SMTP_PORT"]);
-  const transport = nodemailer.createTransport({
-    host: process.env["SMTP_HOST"],
-    port,
-    secure: port === 465,
-    requireTLS: port !== 465,
-    auth: { user: process.env["SMTP_USER"], pass: process.env["SMTP_PASS"] },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 30000,
-  });
+  const transport = createSmtpTransport();
   try {
     const result = await transport.sendMail({
       from: process.env["SMTP_FROM"],

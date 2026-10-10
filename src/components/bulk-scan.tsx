@@ -12,6 +12,7 @@ import {
 import { parseBulkInput, csvCell } from "@/lib/review-metrics";
 import { Button } from "@/components/ui/button";
 import { isGoogleMapsUrl } from "@/lib/google-url";
+import { MAX_BULK_INPUTS } from "@/lib/bulk-import";
 export const isGoogleUrl = isGoogleMapsUrl;
 type BatchJobs = Awaited<ReturnType<typeof getBatchJobs>>;
 export function BulkScan({ disabled }: { disabled: boolean }) {
@@ -21,7 +22,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
   const retry = useServerFn(retryJob);
   const latest = useServerFn(latestBatch);
   const qc = useQueryClient();
-  const [mode, setMode] = useState<"paste" | "pdf">("paste");
+  const [mode, setMode] = useState<"paste" | "pdf" | "spreadsheet">("paste");
   const [text, setText] = useState("");
   const [batch, setBatch] = useState<{ id: string; batch_number: number } | null>(null);
   const [state, setState] = useState<BatchJobs | null>(null);
@@ -103,10 +104,15 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
     setBusy(true);
     setError(null);
     try {
-      const { extractBulkPdf } = await import("@/lib/bulk-pdf");
-      setText(await extractBulkPdf(file));
+      if (mode === "spreadsheet") {
+        const { extractBusinessSpreadsheet } = await import("@/lib/bulk-import");
+        setText((await extractBusinessSpreadsheet(file)).text);
+      } else {
+        const { extractBulkPdf } = await import("@/lib/bulk-pdf");
+        setText(await extractBulkPdf(file));
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : "PDF extraction failed.");
+      setError(error instanceof Error ? error.message : "File import failed.");
     } finally {
       setBusy(false);
     }
@@ -127,6 +133,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       "High advisory",
       "Medium advisory",
       "Low advisory",
+      "Report URL",
       "Status",
       "Error",
     ];
@@ -137,10 +144,11 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       job.scan?.rating,
       job.scan?.reviews_retrieved,
       job.scan?.total_reviews,
-      ...job.stars,
-      job.removal.high,
-      job.removal.medium,
-      job.removal.low,
+      ...(job.scan && job.scan.reviews_retrieved > 0 ? job.stars : ["", "", "", "", ""]),
+      job.reportUrl ? job.removal.high : "",
+      job.reportUrl ? job.removal.medium : "",
+      job.reportUrl ? job.removal.low : "",
+      job.reportUrl,
       job.status,
       job.error,
     ]);
@@ -164,9 +172,10 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
     <section className="mt-6 rounded-2xl bg-card p-4 text-left">
       <h2 className="font-bold">Bulk Scan</h2>
       <p className="my-2 text-xs text-muted-foreground">
-        Up to 500 inputs, including 100+ lines. One Google Maps URL or business name with city per
-        line. Maximum 10 job starts/minute, processed sequentially. Ambiguous names require an exact
-        Maps URL; no guessed match.
+        Up to {MAX_BULK_INPUTS.toLocaleString()} inputs, including 1,000+ rows. Configured daily
+        limits still apply. One Google Maps URL or business name with city per line. Maximum 10 job
+        starts/minute, processed sequentially. Ambiguous names require an exact Maps URL; no guessed
+        match.
       </p>
       <div className="my-3 flex gap-2">
         <Button variant={mode === "paste" ? "default" : "outline"} onClick={() => setMode("paste")}>
@@ -175,7 +184,31 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
         <Button variant={mode === "pdf" ? "default" : "outline"} onClick={() => setMode("pdf")}>
           PDF Upload
         </Button>
+        <Button
+          variant={mode === "spreadsheet" ? "default" : "outline"}
+          onClick={() => setMode("spreadsheet")}
+        >
+          CSV / Excel Import
+        </Button>
       </div>
+      {mode === "spreadsheet" && (
+        <label className="block">
+          Upload CSV or Excel .xlsx (10 MB; one worksheet). Columns: Business Name, City, Google
+          Maps URL.
+          <input
+            aria-label="Bulk CSV or Excel file"
+            type="file"
+            accept=".csv,.xlsx"
+            disabled={busy}
+            onChange={(event) => void upload(event.target.files?.[0])}
+          />
+          <p className="text-xs">
+            URL takes priority; otherwise name and city are required. All row errors must be fixed
+            before queueing. Formulas are rejected. Preview and edit below; import does not start
+            scans.
+          </p>
+        </label>
+      )}
       {mode === "pdf" && (
         <>
           <label className="block">
@@ -184,7 +217,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
               aria-label="Bulk PDF file"
               type="file"
               accept="application/pdf,.pdf"
-              disabled={busy || running}
+              disabled={busy}
               onChange={(event) => void upload(event.target.files?.[0])}
             />
           </label>
@@ -199,7 +232,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
         id="bulk-input"
         rows={8}
         value={text}
-        disabled={busy || running}
+        disabled={busy}
         onChange={(event) => setText(event.target.value)}
         placeholder={"The Hudson Albany\nhttps://goo.gl/maps/wTyktdb5u9M1VLFp9"}
         className="mt-2 w-full rounded border bg-transparent p-3"
@@ -208,6 +241,12 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
         {checked.valid.length} inputs · {checked.duplicates.length} duplicates skipped ·{" "}
         {checked.invalid.length} invalid lines
       </p>
+      {running && (
+        <p className="text-xs">
+          You can preview another import, but finish or cancel the existing batch before starting a
+          new one. Preview does not modify queued jobs.
+        </p>
+      )}
       {checked.invalid.length > 0 && (
         <p role="alert">
           Fix invalid lines before starting (minimum 3, maximum 2000 characters per line).
@@ -219,7 +258,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
           busy ||
           running ||
           !checked.valid.length ||
-          checked.valid.length > 500 ||
+          checked.valid.length > MAX_BULK_INPUTS ||
           checked.invalid.length > 0
         }
         onClick={start}

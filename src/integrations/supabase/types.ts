@@ -922,9 +922,22 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      removal_history: {
+        Row: {
+          id: string;
+          review_id: string;
+          policy_type: string;
+          business_type: string;
+          evidence_strength: number | null;
+          outcome: string;
+          days_to_response: number;
+          created_at: string;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
+      smart_alerts_sample: { Args: Record<string, never>; Returns: Json };
       update_app_settings: { Args: { _settings: Json }; Returns: undefined };
       reserve_scan_admission: { Args: { _kind: string; _quantity: number }; Returns: undefined };
       register_private_selected_artifact: {

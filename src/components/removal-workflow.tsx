@@ -102,6 +102,12 @@ export function RemovalSubmissionForm({
                   evidence_used: {
                     quote: legal.evidence_quote,
                     readiness_score: legal.quality?.total ?? null,
+                    evidence_strength: (() => {
+                      const score = legal.quality?.components.find(
+                        (component) => component.name === "Evidence strength",
+                      )?.score;
+                      return score == null ? null : score * 5;
+                    })(),
                     source:
                       "Manually recorded by Super Admin; not independently verified with Google.",
                   },

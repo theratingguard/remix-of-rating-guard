@@ -16,6 +16,7 @@ import { PrivatePdfButton } from "./private-pdf-button";
 import { ReviewQualityPanel } from "./review-quality";
 import { RemovalSubmissionForm } from "./removal-workflow";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
+import { RemovalPredictionPanel } from "./removal-prediction";
 
 export function LegalAnalysisPanel({
   scan,
@@ -71,7 +72,7 @@ export function LegalAnalysisPanel({
         providers enabled in Settings. This section does not claim Claude/Gemini legal drafting.
       </p>
       <div className="no-print flex flex-wrap gap-2">
-        {(!url || legal?.reviews.some((item) => !item.quality)) && (
+        {(!url || legal?.reviews.some((item) => !item.quality || !item.prediction)) && (
           <Button disabled={busy || !features.data.gpt_enabled} onClick={prepare}>
             {busy
               ? "Generating legal analysis and PDFs..."
@@ -149,6 +150,7 @@ export function LegalAnalysisPanel({
               </p>
               <p className="my-2">{item.reasoning}</p>
               {item.quality && <ReviewQualityPanel quality={item.quality} />}
+              <RemovalPredictionPanel prediction={item.prediction} />
               {item.supporting_docs.length > 0 && (
                 <div>
                   <h4>Supporting documents to obtain (not supplied)</h4>

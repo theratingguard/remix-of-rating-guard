@@ -14,6 +14,8 @@ import { readinessBand, type ReviewQuality } from "./review-quality";
 import { loadOutcomeStrategyNotes } from "./removal-workflow.server";
 import { getSettings } from "./settings.server";
 import { LEGAL_VERSION, LEGAL_DISCLAIMER } from "./legal-analysis";
+import { enrichPredictions } from "./removal-prediction.server";
+import { predictionBand, type RemovalPrediction } from "./removal-prediction";
 
 export const MAX_REPORT_PDF_BYTES = 24 * 1024 * 1024;
 const reportIdSchema = z.string().uuid();
@@ -85,11 +87,20 @@ ${[...analysis.reviews]
 <p>Removal likelihood: ${item.violates_policy ? `${item.removal_likelihood}% (uncalibrated AI estimate, not a verified probability)` : "Not estimable (0 score; insufficient evidence)"}</p>
 <p class="text">Reasoning: ${escapeHtml(item.reasoning)}</p>
 ${item.quality ? reviewQualityHtml(item.quality) : ""}
+${predictionHtml(item.prediction)}
 <p class="text">Supporting documents to obtain (not supplied): ${escapeHtml(item.supporting_docs.join("; ") || "None established")}</p>
 ${item.removal_request_text ? `<h3>Formal policy removal request draft</h3><p class="text">${escapeHtml(item.removal_request_text)}</p>` : "<p>No removal request drafted without supported evidence.</p>"}
 </section>`,
   )
   .join("")}`;
+}
+
+function predictionHtml(prediction?: RemovalPrediction) {
+  if (!prediction) return "<p>Historical prediction not assessed in this report.</p>";
+  return `<h3>Historical removal prediction: ${prediction.probability === null ? "Not estimable" : `${prediction.probability}% — ${escapeHtml(predictionBand(prediction.probability).label)}`}</h3>
+${prediction.interval ? `<p>95% cohort interval: ${prediction.interval[0]}–${prediction.interval[1]}%. Median response: ${prediction.median_days} days.</p>` : ""}
+<ul>${prediction.basis.map((basis) => `<li>${escapeHtml(basis)}</li>`).join("")}</ul>
+<p class="note">${escapeHtml(prediction.unavailable.join(" "))} Snapshot: ${escapeHtml(prediction.generated_at)}</p>`;
 }
 
 export function escapeHtml(value: string | number | null | undefined) {
@@ -248,7 +259,7 @@ export async function generateOwnedReportPdf(
   });
   const outcomeContext = await loadOutcomeStrategyNotes(supabase);
   const controls = await getSettings();
-  const legal: LegalAnalysis = controls.legal_expert_enabled
+  const baseLegal: LegalAnalysis = controls.legal_expert_enabled
     ? await generateLegalAnalysis(scan.data.business_name || "Business", reviews, outcomeContext)
     : {
         version: LEGAL_VERSION,
@@ -257,6 +268,17 @@ export async function generateOwnedReportPdf(
         disclaimer: LEGAL_DISCLAIMER,
         reviews: [],
       };
+  const business = scan.data.business_id
+    ? await supabase
+        .from("businesses")
+        .select("category")
+        .eq("id", scan.data.business_id)
+        .maybeSingle()
+        .throwOnError()
+    : null;
+  const legal = controls.legal_expert_enabled
+    ? await enrichPredictions(supabase, baseLegal, business?.data?.category ?? null)
+    : baseLegal;
   const metadata = report.data.report_data;
   const newMetadata = {
     ...(metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {}),

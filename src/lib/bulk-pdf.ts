@@ -37,8 +37,8 @@ export async function extractBulkPdf(file: File) {
       throw new Error(
         "This PDF has no selectable text. Scanned/image-only PDFs are not supported; upload a text PDF or paste business names.",
       );
-    if (lines.length > 500)
-      throw new Error("PDF contains more than 500 lines. Use one business or URL per line.");
+    if (lines.length > 5000)
+      throw new Error("PDF contains more than 5,000 lines. Use one business or URL per line.");
     return lines.join("\n");
   } finally {
     await task.destroy();

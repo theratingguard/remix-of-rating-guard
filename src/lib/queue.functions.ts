@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { parseBulkInput, starBreakdown, removalSummary } from "./review-metrics";
 import { savedLegalAnalysis } from "./legal-analysis";
 import { requireFeature } from "./settings.server";
+import { MAX_BULK_INPUTS } from "./bulk-import";
 
 const startOfDayUtc = () => {
   const d = new Date();
@@ -15,7 +16,9 @@ const startOfDayUtc = () => {
 export const enqueueBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({ urls: z.array(z.string().trim().min(3).max(2000)).min(1).max(500) }).parse(d),
+    z
+      .object({ urls: z.array(z.string().trim().min(3).max(2000)).min(1).max(MAX_BULK_INPUTS) })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const access = await context.supabase.rpc("report_access_level").throwOnError();
@@ -39,7 +42,10 @@ export const enqueueBatch = createServerFn({ method: "POST" })
         message: "Background worker scheduling has not been verified. Bulk scanning is disabled.",
       };
     const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-    const urls = parseBulkInput(data.urls.join("\n")).valid;
+    const parsed = parseBulkInput(data.urls.join("\n"));
+    if (parsed.invalid.length || data.urls.some((input) => /[\r\n]/.test(input)))
+      throw new Error("Invalid bulk inputs; fix all lines before starting. Nothing queued.");
+    const urls = parsed.valid;
     if (!urls.length) throw new Error("No valid bulk inputs.");
     await context.supabase
       .rpc("reserve_scan_admission", { _kind: "bulk", _quantity: urls.length })
@@ -133,21 +139,36 @@ export const getBatchJobs = createServerFn({ method: "GET" })
       .maybeSingle()
       .throwOnError();
     if (!batch.data) throw new Error("Batch not found or Access Denied.");
-    const { data: jobs } = await context.supabase
-      .from("scan_jobs")
-      .select("id, url, position, status, attempts, error, scan_id, next_run_at")
-      .eq("batch_id", data.batchId)
-      .order("position")
-      .throwOnError();
+    const jobs = [];
+    for (let offset = 0; ; offset += 500) {
+      const result = await context.supabase
+        .from("scan_jobs")
+        .select("id, url, position, status, attempts, error, scan_id, next_run_at")
+        .eq("batch_id", data.batchId)
+        .order("position")
+        .range(offset, offset + 499)
+        .throwOnError();
+      jobs.push(...result.data);
+      if (result.data.length < 500) break;
+      if (jobs.length > MAX_BULK_INPUTS) throw new Error("Batch exceeds supported export size.");
+    }
     const ids = (jobs ?? []).map((j) => j.scan_id).filter(Boolean) as string[];
     const { data: scans } = ids.length
-      ? await context.supabase
-          .from("scans")
-          .select(
-            "id, business_name, rating, total_reviews, reviews_retrieved, high_count, medium_count",
-          )
-          .in("id", ids)
-          .throwOnError()
+      ? {
+          data: (
+            await Promise.all(
+              Array.from({ length: Math.ceil(ids.length / 100) }, (_, index) =>
+                context.supabase
+                  .from("scans")
+                  .select(
+                    "id, business_name, rating, total_reviews, reviews_retrieved, high_count, medium_count",
+                  )
+                  .in("id", ids.slice(index * 100, (index + 1) * 100))
+                  .throwOnError(),
+              ),
+            )
+          ).flatMap((result) => result.data),
+        }
       : { data: [] };
     const byId = new Map((scans ?? []).map((s) => [s.id, s]));
     const [reviews, reports] = ids.length
@@ -161,11 +182,15 @@ export const getBatchJobs = createServerFn({ method: "GET" })
                 .throwOnError(),
             ),
           ).then((results) => ({ data: results.flatMap((result) => result.data ?? []) })),
-          context.supabase
-            .from("reports")
-            .select("scan_id,report_data")
-            .in("scan_id", ids)
-            .throwOnError(),
+          Promise.all(
+            Array.from({ length: Math.ceil(ids.length / 100) }, (_, index) =>
+              context.supabase
+                .from("reports")
+                .select("scan_id,report_data")
+                .in("scan_id", ids.slice(index * 100, (index + 1) * 100))
+                .throwOnError(),
+            ),
+          ).then((results) => ({ data: results.flatMap((result) => result.data) })),
         ])
       : [{ data: [] }, { data: [] }];
     const { data: state } = await context.supabase
@@ -178,6 +203,12 @@ export const getBatchJobs = createServerFn({ method: "GET" })
       jobs: (jobs ?? []).map((j) => ({
         ...j,
         scan: j.scan_id ? (byId.get(j.scan_id) ?? null) : null,
+        reportUrl:
+          j.status === "completed" &&
+          j.scan_id &&
+          reports.data.some((report) => report.scan_id === j.scan_id)
+            ? `https://ratingguard.online/reports/${j.scan_id}`
+            : null,
         stars: starBreakdown((reviews.data ?? []).filter((review) => review.scan_id === j.scan_id)),
         removal: removalSummary(
           savedLegalAnalysis(

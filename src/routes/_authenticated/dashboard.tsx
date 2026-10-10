@@ -13,6 +13,7 @@ import alertIcon from "@/assets/icon-alert.png";
 import { RemovalAnalytics } from "@/components/removal-workflow";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
+import { SmartAlerts } from "@/components/smart-alerts";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -82,6 +83,7 @@ function Dashboard() {
         }
       />
       {features.data?.appeal_tracking_enabled && <RemovalAnalytics />}
+      <SmartAlerts />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((k, i) => (
           <div
