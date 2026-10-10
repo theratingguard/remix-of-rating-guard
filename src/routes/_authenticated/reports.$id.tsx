@@ -162,9 +162,17 @@ function ReportDetail() {
           </Link>
         </Button>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={download} disabled={exporting}>
-            <Download /> {exporting ? "Preparing PDF..." : "Save PDF"}
-          </Button>
+          {pdfUrl ? (
+            <Button variant="outline" asChild>
+              <a href={pdfUrl} download={`${reportNumber(scan, report)}.pdf`}>
+                <Download /> Save PDF
+              </a>
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={download} disabled={exporting}>
+              <Download /> {exporting ? "Preparing PDF..." : "Save PDF"}
+            </Button>
+          )}
           <Button variant="outline" onClick={printReport}>
             Print / Save PDF
           </Button>
