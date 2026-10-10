@@ -11,6 +11,7 @@ import {
 } from "@/lib/legal-analysis";
 import { saveReportPdf } from "@/lib/report-pdf.functions";
 import { Button } from "@/components/ui/button";
+import { RemovalBadge } from "./removal-summary";
 
 export function LegalAnalysisPanel({
   scan,
@@ -95,6 +96,7 @@ export function LegalAnalysisPanel({
           </p>
           {legal.reviews.map((item) => (
             <article key={item.review_id} className="my-3 rounded border p-4">
+              <RemovalBadge item={item} />
               <h3 className="font-semibold">
                 {reviews.find((review) => review.id === item.review_id)?.author || item.review_id}
               </h3>

@@ -10,6 +10,7 @@ export type Risk = "high" | "medium" | "normal" | "requires_review";
 export type AnalyzedReview = {
   user_selected?: boolean;
   review_url?: string | null;
+  legal?: import("./legal-analysis").LegalReview | undefined;
   id: string;
   author: string;
   rating: number;
@@ -86,6 +87,10 @@ export const scanQuery = (id: string) =>
         const a = Array.isArray(review_analyses) ? review_analyses[0] : review_analyses;
         return { ...rest, analysis: a ? { ...a, risk: normalizeRisk(a.risk) } : null };
       });
+      const { savedLegalAnalysis } = await import("./legal-analysis");
+      const legal = savedLegalAnalysis(rep.data?.report_data);
+      for (const review of reviews)
+        review.legal = legal?.reviews.find((item) => item.review_id === review.id);
       reviews.sort((a, b) => (order[riskOf(a)] ?? 9) - (order[riskOf(b)] ?? 9));
       return { scan: s.data, reviews, report: rep.data };
     },

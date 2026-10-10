@@ -508,6 +508,7 @@ export type Database = {
       };
       scan_batches: {
         Row: {
+          control_status: string;
           batch_number: number;
           created_at: string;
           id: string;
@@ -515,6 +516,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          control_status?: string;
           batch_number?: number;
           created_at?: string;
           id?: string;
@@ -522,6 +524,7 @@ export type Database = {
           user_id?: string;
         };
         Update: {
+          control_status?: string;
           batch_number?: number;
           created_at?: string;
           id?: string;

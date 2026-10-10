@@ -1,322 +1,344 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
-import { Upload, Loader2, RotateCcw } from "lucide-react";
-import { enqueueBatch, processQueueNow, getBatchJobs, retryJob } from "@/lib/queue.functions";
+import {
+  enqueueBatch,
+  getBatchJobs,
+  controlBatch,
+  retryJob,
+  latestBatch,
+} from "@/lib/queue.functions";
+import { parseBulkInput, csvCell } from "@/lib/review-metrics";
 import { Button } from "@/components/ui/button";
-import { isGoogleMapsUrl, normalizeGoogleUrl } from "@/lib/google-url";
-
-const MAX_URLS = 500;
-
-type RowStatus = "pending" | "processing" | "completed" | "partial" | "failed";
-type Row = {
-  url: string;
-  status: RowStatus;
-  scanId?: string | undefined;
-  error?: string | undefined;
-  business?: string | null | undefined;
-  rating?: number | null | undefined;
-  reviews?: number | undefined;
-  high?: number | undefined;
-  medium?: number | undefined;
-};
-type Checked = { valid: string[]; invalid: string[]; duplicates: string[] };
-
-export function isGoogleUrl(v: string) {
-  return isGoogleMapsUrl(v);
-}
-
-function normalize(v: string) {
-  return normalizeGoogleUrl(v);
-}
-
-function parseInput(text: string): Checked {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.split(",")[0]!.trim().replace(/^"|"$/g, ""))
-    .filter(Boolean)
-    .filter((l) => !/^(google_url|url)$/i.test(l));
-  const seen = new Set<string>();
-  const out: Checked = { valid: [], invalid: [], duplicates: [] };
-  for (const l of lines) {
-    if (!isGoogleUrl(l)) {
-      out.invalid.push(l);
-      continue;
-    }
-    const k = normalize(l);
-    if (seen.has(k)) {
-      out.duplicates.push(l);
-      continue;
-    }
-    seen.add(k);
-    out.valid.push(l.trim());
-  }
-  return out;
-}
-
+import { isGoogleMapsUrl } from "@/lib/google-url";
+export const isGoogleUrl = isGoogleMapsUrl;
+type BatchJobs = Awaited<ReturnType<typeof getBatchJobs>>;
 export function BulkScan({ disabled }: { disabled: boolean }) {
   const enqueue = useServerFn(enqueueBatch);
-  const process = useServerFn(processQueueNow);
-  const loadJobs = useServerFn(getBatchJobs);
-  const retryFn = useServerFn(retryJob);
+  const load = useServerFn(getBatchJobs);
+  const control = useServerFn(controlBatch);
+  const retry = useServerFn(retryJob);
+  const latest = useServerFn(latestBatch);
   const qc = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<"paste" | "pdf">("paste");
   const [text, setText] = useState("");
-  const [checked, setChecked] = useState<Checked | null>(null);
-  const [rows, setRows] = useState<(Row & { jobId: string })[]>([]);
   const [batch, setBatch] = useState<{ id: string; batch_number: number } | null>(null);
-  const [starting, setStarting] = useState(false);
-  const [paused, setPaused] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const running = rows.some((r) => r.status === "pending" || r.status === "processing");
-
-  const refresh = useCallback(
-    async (batchId: string) => {
-      const r = await loadJobs({ data: { batchId } });
-      setPaused(r.paused ? (r.pauseReason ?? "Queue paused") : null);
-      setRows(
-        r.jobs.map((j) => ({
-          jobId: j.id,
-          url: j.url,
-          status: j.status as RowStatus,
-          scanId: j.scan_id ?? undefined,
-          error:
-            j.status === "pending" && j.error ? `Retrying: ${j.error}` : (j.error ?? undefined),
-          business: j.scan?.business_name,
-          rating: j.scan?.rating,
-          reviews: j.scan?.reviews_retrieved,
-          high: j.scan?.high_count,
-          medium: j.scan?.medium_count,
-        })),
-      );
-    },
-    [loadJobs],
-  );
-
-  // While the page is open: poll progress and nudge the worker. The scheduled worker continues if the page is closed.
+  const [state, setState] = useState<BatchJobs | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const checked = parseBulkInput(text);
   useEffect(() => {
-    if (!batch || !running) return;
-    let alive = true;
+    let active = true;
+    void latest()
+      .then((result) => {
+        if (active && result) setBatch(result);
+      })
+      .catch((error) => {
+        if (active)
+          setError(error instanceof Error ? error.message : "Could not restore latest batch.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [latest]);
+  const jobs = state?.jobs ?? [];
+  const running = jobs.some((job) => job.status === "pending" || job.status === "processing");
+  const refresh = useCallback(
+    async (id: string) => {
+      const result = await load({ data: { batchId: id } });
+      setState(result);
+    },
+    [load],
+  );
+  useEffect(() => {
+    if (!batch) return;
+    let active = true;
     const tick = async () => {
       try {
-        await process();
+        const result = await load({ data: { batchId: batch.id } });
+        if (active) setState(result);
       } catch (error) {
-        if (alive)
-          setErr(
-            error instanceof Error
-              ? error.message
-              : "Worker unavailable. Background progress is not verified.",
-          );
-      }
-      if (alive) {
-        try {
-          await refresh(batch.id);
-        } catch (error) {
-          setErr(error instanceof Error ? error.message : "Could not refresh batch progress.");
-        }
+        if (active)
+          setError(error instanceof Error ? error.message : "Could not load batch progress.");
       }
     };
-    const id = setInterval(() => {
-      void refresh(batch.id).catch((error: unknown) =>
-        setErr(error instanceof Error ? error.message : "Could not refresh batch progress."),
-      );
-    }, 4000);
     void tick();
-    const kick = setInterval(() => {
-      void tick();
-    }, 25000);
+    const interval = setInterval(() => void tick(), 4000);
     return () => {
-      alive = false;
-      clearInterval(id);
-      clearInterval(kick);
-      qc.invalidateQueries({ queryKey: ["scans"] });
+      active = false;
+      clearInterval(interval);
+      void qc.invalidateQueries({ queryKey: ["scans"] });
     };
-  }, [batch, running, process, refresh, qc]);
-
+  }, [batch, load, qc]);
   async function start() {
-    if (!checked?.valid.length) return;
-    setErr(null);
-    setStarting(true);
+    setBusy(true);
+    setError(null);
     try {
-      const r = await enqueue({ data: { urls: checked.valid } });
-      if (!r.ok) {
-        setErr(r.message);
-        return;
-      }
-      setBatch(r.batch);
-      await refresh(r.batch.id);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Batch failed to start.");
+      const result = await enqueue({ data: { urls: checked.valid } });
+      if (!result.ok) throw new Error(result.message);
+      setBatch(result.batch);
+      await refresh(result.batch.id);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not start bulk scan.");
     } finally {
-      setStarting(false);
+      setBusy(false);
     }
   }
-
-  async function retry(i: number) {
+  async function change(action: "pause" | "resume" | "cancel") {
     if (!batch) return;
-    await retryFn({ data: { jobId: rows[i]!.jobId } });
-    await refresh(batch.id);
+    setBusy(true);
+    setError(null);
+    try {
+      await control({ data: { batchId: batch.id, action } });
+      await refresh(batch.id);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Batch control failed.");
+    } finally {
+      setBusy(false);
+    }
   }
-
-  async function onFile(f: File | undefined) {
-    if (!f) return;
-    const t = await f.text();
-    setText(t);
-    setChecked(parseInput(t));
-    setRows([]);
+  async function upload(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { extractBulkPdf } = await import("@/lib/bulk-pdf");
+      setText(await extractBulkPdf(file));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "PDF extraction failed.");
+    } finally {
+      setBusy(false);
+    }
   }
-
-  const count = (s: RowStatus) => rows.filter((r) => r.status === s).length;
-  const tooMany = (checked?.valid.length ?? 0) > MAX_URLS;
-
+  function exportCsv() {
+    const header = [
+      "#",
+      "Business",
+      "Input",
+      "Rating",
+      "Reviews fetched",
+      "1-star",
+      "2-star",
+      "3-star",
+      "4-star",
+      "5-star",
+      "High advisory",
+      "Medium advisory",
+      "Low advisory",
+      "Status",
+      "Error",
+    ];
+    const rows = jobs.map((job, index) => [
+      index + 1,
+      job.scan?.business_name,
+      job.url,
+      job.scan?.rating,
+      job.scan?.reviews_retrieved,
+      ...job.stars,
+      job.removal.high,
+      job.removal.medium,
+      job.removal.low,
+      job.status,
+      job.error,
+    ]);
+    const url = URL.createObjectURL(
+      new Blob([[header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n")], {
+        type: "text/csv;charset=utf-8",
+      }),
+    );
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `bulk-${batch?.id}.csv`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const finished = jobs.filter((job) =>
+    ["completed", "partial", "failed", "cancelled"].includes(job.status),
+  ).length;
   return (
-    <div className="mt-6 rounded-2xl bg-card p-4 text-left text-foreground shadow-[var(--shadow-scanner-glow)]">
-      <label htmlFor="bulk-urls" className="text-sm font-semibold">
-        Paste URLs (one per line) or upload a CSV with a{" "}
-        <span className="font-mono">google_url</span> column
-      </label>
-      <textarea
-        id="bulk-urls"
-        value={text}
-        disabled={running}
-        onChange={(e) => {
-          setText(e.target.value);
-          setChecked(null);
-        }}
-        rows={6}
-        placeholder={"https://maps.app.goo.gl/...\nhttps://www.google.com/maps/place/..."}
-        className="mt-2 w-full rounded-lg border bg-background p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-ring"
-      />
-      <div className="mt-3 flex flex-wrap gap-2">
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,text/csv,text/plain"
-          className="hidden"
-          onChange={(e) => onFile(e.target.files?.[0])}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={running}
-          onClick={() => fileRef.current?.click()}
-        >
-          <Upload /> Upload CSV
+    <section className="mt-6 rounded-2xl bg-card p-4 text-left">
+      <h2 className="font-bold">Bulk Scan</h2>
+      <p className="my-2 text-xs text-muted-foreground">
+        Up to 500 inputs, including 100+ lines. One Google Maps URL or business name with city per
+        line. Maximum 10 job starts/minute, processed sequentially. Ambiguous names require an exact
+        Maps URL; no guessed match.
+      </p>
+      <div className="my-3 flex gap-2">
+        <Button variant={mode === "paste" ? "default" : "outline"} onClick={() => setMode("paste")}>
+          Copy-Paste
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={running || !text.trim()}
-          onClick={() => {
-            setChecked(parseInput(text));
-            setRows([]);
-          }}
-        >
-          Validate
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={disabled || running || starting || !checked?.valid.length || tooMany}
-          onClick={start}
-        >
-          {(running || starting) && <Loader2 className="animate-spin" />} Start batch (
-          {checked?.valid.length ?? 0})
+        <Button variant={mode === "pdf" ? "default" : "outline"} onClick={() => setMode("pdf")}>
+          PDF Upload
         </Button>
       </div>
-
-      {checked && (
-        <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-          <Bucket label="Valid URLs" items={checked.valid} tone="text-risk-normal" />
-          <Bucket label="Invalid URLs" items={checked.invalid} tone="text-risk-high" />
-          <Bucket label="Duplicate URLs" items={checked.duplicates} tone="text-risk-medium" />
-        </div>
+      {mode === "pdf" && (
+        <>
+          <label className="block">
+            Upload text PDF (maximum 10 MB / 40 pages)
+            <input
+              aria-label="Bulk PDF file"
+              type="file"
+              accept="application/pdf,.pdf"
+              disabled={busy || running}
+              onChange={(event) => void upload(event.target.files?.[0])}
+            />
+          </label>
+          <p className="text-xs">
+            Extracted text is editable below. PDFs must contain selectable text, with one business
+            or URL per line. Image-only PDFs are rejected explicitly.
+          </p>
+        </>
       )}
-      {tooMany && <p className="mt-2 text-sm text-risk-high">Maximum {MAX_URLS} URLs per batch.</p>}
-      {paused && (
-        <p role="alert" className="mt-2 text-sm text-risk-high">
-          Queue paused: {paused} An admin can resume it in Settings.
+      <label htmlFor="bulk-input">URLs or business names (one per line)</label>
+      <textarea
+        id="bulk-input"
+        rows={8}
+        value={text}
+        disabled={busy || running}
+        onChange={(event) => setText(event.target.value)}
+        placeholder={"The Hudson Albany\nhttps://goo.gl/maps/wTyktdb5u9M1VLFp9"}
+        className="mt-2 w-full rounded border bg-transparent p-3"
+      />
+      <p className="my-2 text-sm">
+        {checked.valid.length} inputs · {checked.duplicates.length} duplicates skipped ·{" "}
+        {checked.invalid.length} invalid lines
+      </p>
+      {checked.invalid.length > 0 && (
+        <p role="alert">
+          Fix invalid lines before starting (minimum 3, maximum 2000 characters per line).
         </p>
       )}
-      {err && (
-        <p role="alert" className="mt-2 text-sm text-risk-high">
-          {err}
+      <Button
+        disabled={
+          disabled ||
+          busy ||
+          running ||
+          !checked.valid.length ||
+          checked.valid.length > 500 ||
+          checked.invalid.length > 0
+        }
+        onClick={start}
+      >
+        {busy ? "Working..." : "Start Bulk Scan"}
+      </Button>
+      {error && (
+        <p role="alert" className="my-3 text-risk-high">
+          {error}
         </p>
       )}
-
-      {batch && rows.length > 0 && (
-        <div className="mt-6">
-          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
-            <b>Batch Scan #{batch.batch_number}</b>
-            <span>Total {rows.length}</span>
-            <span>Completed {count("completed")}</span>
-            <span>Processing {count("processing")}</span>
-            <span>Partial {count("partial")}</span>
-            <span>Failed {count("failed")}</span>
-            <span>Pending {count("pending")}</span>
+      {batch && state && (
+        <div className="mt-5">
+          <h3 className="font-bold">
+            {finished}/{jobs.length} scanned · Batch {batch.batch_number} · {state.controlStatus}
+          </h3>
+          <progress
+            aria-label="Bulk scan progress"
+            max={jobs.length || 1}
+            value={finished}
+            className="my-3 w-full"
+          />
+          <p className="text-xs">
+            Counts include failures and cancellations; results retain individual status.
+            Pause/cancel stops new jobs; the current job may finish. Progress continues if this page
+            closes.
+          </p>
+          {state.paused && (
+            <p role="alert">
+              Global worker paused: {state.pauseReason}. An authorized admin must resolve provider
+              issues.
+            </p>
+          )}
+          <div className="my-3 flex gap-2">
+            <Button
+              variant="outline"
+              disabled={busy || state.controlStatus === "cancelled"}
+              onClick={() => change(state.controlStatus === "paused" ? "resume" : "pause")}
+            >
+              {state.controlStatus === "paused" ? "Resume" : "Pause"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy || !running || state.controlStatus === "cancelled"}
+              onClick={() => change("cancel")}
+            >
+              Cancel
+            </Button>
+            <Button variant="outline" disabled={!jobs.length} onClick={exportCsv}>
+              Export CSV
+            </Button>
           </div>
-          <div className="mt-3 overflow-x-auto">
+          <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="text-muted-foreground">
-                <tr className="border-b text-left">
+              <thead>
+                <tr>
                   {[
                     "#",
                     "Business",
-                    "URL",
                     "Rating",
-                    "Reviews found",
-                    "High",
-                    "Medium",
+                    "Reviews",
+                    "1★",
+                    "2★",
+                    "3★",
+                    "4★",
+                    "5★",
+                    "Removal Possible (advisory)",
                     "Status",
                     "Action",
-                  ].map((h) => (
-                    <th key={h} className="p-2 font-medium">
-                      {h}
+                  ].map((label) => (
+                    <th key={label} className="p-2 text-left">
+                      {label}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i} className="border-b align-top">
-                    <td className="p-2 font-mono">{i + 1}</td>
-                    <td className="p-2">{r.business ?? "—"}</td>
-                    <td className="max-w-[220px] truncate p-2 font-mono" title={r.url}>
-                      {r.url}
+                {jobs.map((job, index) => (
+                  <tr key={job.id} className="border-t">
+                    <td className="p-2">{index + 1}</td>
+                    <td className="p-2" title={job.url}>
+                      {job.scan?.business_name ?? job.url}
                     </td>
-                    <td className="p-2">{r.rating ?? "—"}</td>
-                    <td className="p-2">{r.reviews ?? "—"}</td>
-                    <td className="p-2">{r.high ?? "—"}</td>
-                    <td className="p-2">{r.medium ?? "—"}</td>
+                    <td className="p-2">{job.scan?.rating ?? "—"}</td>
+                    <td className="p-2">{job.scan?.reviews_retrieved ?? "—"}</td>
+                    {job.stars.map((count, index) => (
+                      <td key={index} className="p-2">
+                        {job.scan ? count : "—"}
+                      </td>
+                    ))}
                     <td className="p-2">
-                      <span className="capitalize">{r.status}</span>
-                      {r.error && (
-                        <div className="mt-1 max-w-[220px] text-muted-foreground">{r.error}</div>
-                      )}
+                      {job.scan
+                        ? `🔴 ${job.removal.high} / 🟠 ${job.removal.medium} / 🟡 ${job.removal.low}`
+                        : "—"}
                     </td>
-                    <td className="space-x-2 whitespace-nowrap p-2">
-                      {r.scanId && (
-                        <Link
-                          to="/reports/$id"
-                          params={{ id: r.scanId }}
-                          className="text-primary underline"
-                        >
+                    <td className="p-2">
+                      {job.status}
+                      {job.error && <p className="max-w-xs text-risk-high">{job.error}</p>}
+                    </td>
+                    <td className="p-2">
+                      {job.status === "completed" && job.scan_id && (
+                        <Link to="/reports/$id" params={{ id: job.scan_id }}>
                           View
                         </Link>
                       )}
-                      {(r.status === "failed" || r.status === "partial") && !running && (
-                        <button
-                          type="button"
-                          onClick={() => retry(i)}
-                          className="inline-flex items-center gap-1 text-primary underline"
-                        >
-                          <RotateCcw className="h-3 w-3" />
-                          Retry
-                        </button>
-                      )}
+                      {["failed", "partial"].includes(job.status) &&
+                        state.controlStatus !== "cancelled" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const result = await retry({ data: { jobId: job.id } });
+                                if (!result.ok) throw new Error("Job is not retryable.");
+                                await refresh(batch.id);
+                              } catch (error) {
+                                setError(error instanceof Error ? error.message : "Retry failed.");
+                              }
+                            }}
+                          >
+                            Retry
+                          </Button>
+                        )}
                     </td>
                   </tr>
                 ))}
@@ -325,25 +347,6 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function Bucket({ label, items, tone }: { label: string; items: string[]; tone: string }) {
-  return (
-    <div className="rounded-lg border p-3">
-      <div className={`font-semibold ${tone}`}>
-        {label}: {items.length}
-      </div>
-      {items.length > 0 && (
-        <ul className="mt-1 max-h-28 overflow-auto font-mono text-xs text-muted-foreground">
-          {items.map((u, i) => (
-            <li key={i} className="truncate" title={u}>
-              {u}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    </section>
   );
 }

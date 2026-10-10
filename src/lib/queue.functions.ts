@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { parseBulkInput, starBreakdown, removalSummary } from "./review-metrics";
+import { savedLegalAnalysis } from "./legal-analysis";
 
 const startOfDayUtc = () => {
   const d = new Date();
@@ -12,7 +14,7 @@ const startOfDayUtc = () => {
 export const enqueueBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({ urls: z.array(z.string().trim().min(5).max(2000)).min(1).max(500) }).parse(d),
+    z.object({ urls: z.array(z.string().trim().min(3).max(2000)).min(1).max(500) }).parse(d),
   )
   .handler(async ({ data, context }) => {
     if (!process.env["GOOGLE_PLACES_API_KEY"])
@@ -27,7 +29,8 @@ export const enqueueBatch = createServerFn({ method: "POST" })
         message: "Background worker scheduling has not been verified. Bulk scanning is disabled.",
       };
     const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-    const urls = [...new Set(data.urls)];
+    const urls = parseBulkInput(data.urls.join("\n")).valid;
+    if (!urls.length) throw new Error("No valid bulk inputs.");
     const { data: state, error: stateError } = await admin
       .from("system_state")
       .select("daily_link_cap, queue_paused, pause_reason")
@@ -68,8 +71,14 @@ export const enqueueBatch = createServerFn({ method: "POST" })
       .insert(
         urls.map((url, position) => ({ batch_id: b.id, user_id: context.userId, url, position })),
       );
-    if (ins.error)
-      return { ok: false as const, message: "Database unavailable — links could not be queued." };
+    if (ins.error) {
+      await admin
+        .from("scan_batches")
+        .update({ control_status: "cancelled" })
+        .eq("id", b.id)
+        .throwOnError();
+      throw new Error("Database unavailable — inputs could not be queued; batch cancelled.");
+    }
     await context.supabase.from("audit_log").insert({
       user_id: context.userId,
       action: "batch.started",
@@ -103,6 +112,14 @@ export const getBatchJobs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ batchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const batch = await context.supabase
+      .from("scan_batches")
+      .select("control_status")
+      .eq("id", data.batchId)
+      .eq("user_id", context.userId)
+      .maybeSingle()
+      .throwOnError();
+    if (!batch.data) throw new Error("Batch not found or Access Denied.");
     const { data: jobs } = await context.supabase
       .from("scan_jobs")
       .select("id, url, position, status, attempts, error, scan_id, next_run_at")
@@ -118,6 +135,24 @@ export const getBatchJobs = createServerFn({ method: "GET" })
           .throwOnError()
       : { data: [] };
     const byId = new Map((scans ?? []).map((s) => [s.id, s]));
+    const [reviews, reports] = ids.length
+      ? await Promise.all([
+          Promise.all(
+            Array.from({ length: Math.ceil(ids.length / 100) }, (_, index) =>
+              context.supabase
+                .from("reviews")
+                .select("scan_id,rating")
+                .in("scan_id", ids.slice(index * 100, (index + 1) * 100))
+                .throwOnError(),
+            ),
+          ).then((results) => ({ data: results.flatMap((result) => result.data ?? []) })),
+          context.supabase
+            .from("reports")
+            .select("scan_id,report_data")
+            .in("scan_id", ids)
+            .throwOnError(),
+        ])
+      : [{ data: [] }, { data: [] }];
     const { data: state } = await context.supabase
       .from("system_state")
       .select("queue_paused, pause_reason")
@@ -128,10 +163,65 @@ export const getBatchJobs = createServerFn({ method: "GET" })
       jobs: (jobs ?? []).map((j) => ({
         ...j,
         scan: j.scan_id ? (byId.get(j.scan_id) ?? null) : null,
+        stars: starBreakdown((reviews.data ?? []).filter((review) => review.scan_id === j.scan_id)),
+        removal: removalSummary(
+          savedLegalAnalysis(
+            (reports.data ?? []).find((report) => report.scan_id === j.scan_id)?.report_data,
+          )?.reviews ?? [],
+          byId.get(j.scan_id ?? "")?.reviews_retrieved ?? 0,
+        ),
       })),
       paused: !!state?.queue_paused,
       pauseReason: state?.pause_reason ?? null,
+      controlStatus: batch.data.control_status,
     };
+  });
+
+export const latestBatch = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const result = await context.supabase
+      .from("scan_batches")
+      .select("id,batch_number")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .throwOnError();
+    return result.data;
+  });
+
+export const controlBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({ batchId: z.string().uuid(), action: z.enum(["pause", "resume", "cancel"]) })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+    const update = await admin
+      .from("scan_batches")
+      .update({
+        control_status:
+          data.action === "pause" ? "paused" : data.action === "resume" ? "running" : "cancelled",
+      })
+      .eq("id", data.batchId)
+      .eq("user_id", context.userId)
+      .neq("control_status", "cancelled")
+      .select("id")
+      .maybeSingle()
+      .throwOnError();
+    if (!update.data) throw new Error("Batch not found, cancelled, or Access Denied.");
+    if (data.action === "cancel")
+      await admin
+        .from("scan_jobs")
+        .update({ status: "cancelled", error: "Cancelled by owner", locked_until: null })
+        .eq("batch_id", data.batchId)
+        .eq("user_id", context.userId)
+        .eq("status", "pending")
+        .throwOnError();
+    return { ok: true };
   });
 
 export const retryJob = createServerFn({ method: "POST" })

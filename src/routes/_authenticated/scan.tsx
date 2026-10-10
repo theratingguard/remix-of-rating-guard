@@ -8,6 +8,7 @@ import { scanQuery } from "@/lib/data";
 import { toast } from "sonner";
 import { ReviewSelection } from "@/components/review-selection";
 import { LegalAnalysisPanel } from "@/components/legal-analysis";
+import { RemovalSummary } from "@/components/removal-summary";
 import { BusinessHeader, RatingAnalysis, RiskAnalysis } from "@/components/scan-result";
 import { Button } from "@/components/ui/button";
 import { BulkScan } from "@/components/bulk-scan";
@@ -392,6 +393,7 @@ function ScanResult({ id }: { id: string }) {
       <ReviewSelection key={id} scan={data.scan} reviews={data.reviews} report={data.report} />
       <LegalAnalysisPanel scan={data.scan} reviews={data.reviews} report={data.report} />
       <RatingAnalysis scan={data.scan} reviews={data.reviews} />
+      <RemovalSummary metadata={data.report?.report_data} total={data.reviews.length} />
       <RiskAnalysis scan={data.scan} reviews={data.reviews} />
     </div>
   );

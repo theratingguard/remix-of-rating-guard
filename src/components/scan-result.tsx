@@ -95,7 +95,9 @@ export function RatingAnalysis({ scan, reviews }: { scan: Scan; reviews: Analyze
         <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
           Google's full rating distribution is not provided by the Places API. Bars show only the
-          reviews retrieved in this scan.
+          reviews retrieved in this scan. {reviews.length} of {scan.total_reviews ?? "unknown"}{" "}
+          reviews fetched. Full breakdown is available through the client's Google Business Profile,
+          not this API.
         </p>
       </div>
     </section>

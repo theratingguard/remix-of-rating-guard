@@ -176,6 +176,42 @@ verified facts and applicable jurisdiction. Supporting documents are items
 to obtain, never a claim that attachments already exist. Google independently
 decides removal; the software never submits a request automatically.
 
+### Bulk scans, stars and removal bands
+
+Bulk input supports up to 500 lines of Google Maps URLs or business names with
+city. Copy-paste and text-PDF modes share an editable preview. Browser PDF.js
+extracts selectable text locally (10 MB/40-page limits); no third-party upload.
+Image-only/scanned PDFs are explicitly unsupported. Names are scanned only
+when Google returns exactly one candidate; ambiguous names fail with a
+request for an exact Maps URL, never a guessed match.
+
+Apply `20261010200000_bulk_controls.sql` before deployment. The existing queue
+is persisted in Supabase and run by `scripts/run-scan-worker.mjs`, invoked
+through a systemd timer using a private `SCAN_WORKER_SECRET`. Set
+`SCAN_WORKER_SCHEDULED=true` only after validating the scheduler. The
+service-only claim transaction locks shared state and admits one job every
+six seconds (at most 10 starts/minute, including retries), even across workers.
+Sequential processing avoids simultaneous Chromium renders. Owner-scoped
+pause/resume/cancel stops new jobs, not an already-running provider request.
+Polling shows individual failures/cancellations, fetched stars and advisory
+removal bands; CSV fields neutralize spreadsheet formulas.
+
+Star distribution covers fetched reviews only, normally up to five out of the
+business's total. The full distribution requires the client's Google Business
+Profile. Removal bands use supported legal-assessment scores: red 70-100,
+orange 40-69, yellow 0-39. Unsupported/unassessed reviews are yellow and not
+estimable. Scores remain uncalibrated AI estimates, never removal guarantees.
+PDFs include the breakdown, color-coded details and a manual prioritized
+action plan without invented timelines.
+
+Private/Super-Admin-only reports require a confirmed access rule and
+designated application administrator before rollout. Existing public PDFs
+remain public until that migration is explicitly deployed. A UI badge or a
+"confidential" footer is NOT access enforcement; do not label current public
+reports as private. Production must revoke public PDF serving, protect
+downloads and all detailed database reads, and verify restricted roles before
+claiming franchise/reseller exclusion.
+
 The report's **Report Google** button opens the saved business Google Maps URL
 in a new tab. If no Maps URL is saved, it opens Google's review-reporting help
 page at `https://support.google.com/business/answer/4596773`. Opening this link

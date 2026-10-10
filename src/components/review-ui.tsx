@@ -26,6 +26,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { RemovalBadge } from "./removal-summary";
 
 export function Stars({ value, size = 14 }: { value: number; size?: number }) {
   return (
@@ -139,6 +140,9 @@ export function ReviewCard({
       <p className="mt-4 line-clamp-4 text-[15px] leading-relaxed">
         {review.text || <em className="text-muted-foreground">No review text</em>}
       </p>
+      <div className="mt-2">
+        <RemovalBadge item={review.legal} />
+      </div>
       {a && risk !== "normal" && (
         <div className="mt-4 grid gap-3 rounded-lg bg-muted p-3 text-sm sm:grid-cols-[1fr_auto]">
           <div>

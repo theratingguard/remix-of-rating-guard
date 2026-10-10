@@ -3,6 +3,8 @@
 import { scanFetchCore, scanAnalyzeCore } from "./scan-core.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables, TablesUpdate } from "@/integrations/supabase/types";
+import { searchBusinesses, ScanError } from "./google-places.server";
+import { isGoogleMapsUrl } from "./google-url";
 
 /** Errors that mean the whole queue must stop until an admin fixes keys/billing. */
 export const PAUSE_CODES = new Set([
@@ -25,7 +27,7 @@ export const RETRY_CODES = new Set([
 ]);
 export const MAX_ATTEMPTS = 3;
 export const BATCH_PER_RUN = 6;
-export const CONCURRENCY = 2;
+export const CONCURRENCY = 1;
 
 export function backoffMs(attempts: number) {
   return (
@@ -111,7 +113,33 @@ async function runJob(
     if (!s || s.stage === "fetch") scanId = undefined;
   }
   if (!scanId) {
-    const a = await scanFetchCore(admin, job.user_id, { url: job.url, batchId: job.batch_id });
+    let url = job.url;
+    if (!isGoogleMapsUrl(url)) {
+      if (/^(?:https?:|www\.)/i.test(url))
+        return handle(
+          { code: "INVALID_URL", message: "Unsupported URL. Use an official Google Maps link." },
+          false,
+        );
+      try {
+        const candidates = await searchBusinesses(process.env["GOOGLE_PLACES_API_KEY"] || "", url);
+        if (candidates.length !== 1)
+          return handle(
+            {
+              code: "AMBIGUOUS_BUSINESS",
+              message: candidates.length
+                ? "Multiple business matches. Use the single-scan name search to choose an exact Google Maps URL, then retry in a new batch."
+                : "No matching business found. Include the city or use its Maps URL.",
+            },
+            false,
+          );
+        url = candidates[0]!.url;
+      } catch (error) {
+        if (error instanceof ScanError)
+          return handle({ code: error.code, message: error.message }, false);
+        throw error;
+      }
+    }
+    const a = await scanFetchCore(admin, job.user_id, { url, batchId: job.batch_id });
     if (!a.ok) return handle(a, false);
     scanId = a.scanId;
     await upd({ scan_id: scanId });

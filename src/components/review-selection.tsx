@@ -12,6 +12,7 @@ import {
   type SelectionRequest,
 } from "@/lib/review-selection";
 import { Button } from "@/components/ui/button";
+import { RemovalBadge } from "./removal-summary";
 
 export function ReviewSelection({
   scan,
@@ -135,6 +136,7 @@ export function ReviewSelection({
                 />
                 {review.rating}/5 · {review.author}
               </label>
+              <RemovalBadge item={review.legal} />
               <p className="my-2 whitespace-pre-wrap">
                 {review.text || "Rating only; no review comment."}
               </p>

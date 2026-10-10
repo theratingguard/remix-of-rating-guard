@@ -9,6 +9,7 @@ import type { Scan, Report, AnalyzedReview } from "./data";
 import puppeteer from "puppeteer";
 import { generateLegalAnalysis } from "./analysis.server";
 import { savedLegalAnalysis, type LegalAnalysis } from "./legal-analysis";
+import { starBreakdown, removalBand, removalSummary } from "./review-metrics";
 
 export const MAX_REPORT_PDF_BYTES = 24 * 1024 * 1024;
 const reportIdSchema = z.string().uuid();
@@ -88,6 +89,8 @@ export function escapeHtml(value: string | number | null | undefined) {
 
 export function reportPdfHtml(scan: Scan, report: Report, reviews: AnalyzedReview[]) {
   const legal = savedLegalAnalysis(report.report_data);
+  const stars = starBreakdown(reviews);
+  const removal = removalSummary(legal?.reviews ?? [], reviews.length);
   const analyzed = reviews.filter((review) => review.analysis).length;
   const flagged = reviews.filter(
     (review) => review.analysis?.risk === "high" || review.analysis?.risk === "medium",
@@ -119,11 +122,14 @@ td { padding:7px; border-bottom:1px solid #e1e5eb; } .note { font-size:10px; col
 &middot; High risk: ${reviews.filter((review) => review.analysis?.risk === "high").length} &middot; Medium risk: ${reviews.filter((review) => review.analysis?.risk === "medium").length}
 &middot; Normal: ${reviews.filter((review) => review.analysis?.risk === "normal").length} &middot; Requires review: ${unresolved}</p>
 <p class="note">Source: Google Places API (New). The official API provides up to 5 reviews per business, not all reviews.</p>
+<p>${reviews.length} of ${escapeHtml(scan.total_reviews)} reviews fetched. Fetched star breakdown: ${stars.map((count, index) => `${index + 1}-star: ${count}`).join(" / ")}. Full breakdown requires the client's Google Business Profile.</p>
+<h2>Removal Possibility Summary</h2><p>High (red): ${removal.high} / Medium (orange): ${removal.medium} / Low (yellow): ${removal.low}</p><p class="note">Uncalibrated advisory scores, not verified chances. High 70-100, medium 40-69, low 0-39. Unsupported cases are not estimable.</p>
 <h2>Review details and AI assessments</h2>
 ${reviews
   .map(
     (review) => `<section class="review">
 <b>${escapeHtml(review.author)}</b> &middot; ${review.rating}/5 &middot; ${escapeHtml(review.analysis?.risk ?? "requires_review")}
+<p style="padding:5px;background:${{ high: "#fee2e2", medium: "#ffedd5", low: "#fef9c3" }[removalBand(legal?.reviews.find((item) => item.review_id === review.id))]}">Removal band: ${removalBand(legal?.reviews.find((item) => item.review_id === review.id))} (advisory only)</p>
 <p>${escapeHtml(review.published_at || review.relative_time)}</p>
 <p class="text">${escapeHtml(review.text)}</p>
 <p>Policy category: ${escapeHtml(review.analysis?.category)} &middot; Confidence: ${escapeHtml(review.analysis?.confidence)}%</p>
@@ -138,6 +144,7 @@ ${reviews
 <p>https://support.google.com/business/answer/4596773</p>
 <p class="note">This report has not been submitted to Google. Classification is automated and advisory, not proof of a policy violation. Google independently determines whether removal is appropriate.</p>
 ${legal ? legalAnalysisHtml(legal, reviews) : ""}
+<h2>Action Plan</h2><p>Prioritize supported high-score policy concerns, then supported medium-score concerns. Review each source quote and authentic supporting facts before manually submitting via Google. Do not report genuine complaints merely because they are negative. Retain submitted request and case references for follow-up. Google controls review and appeal timelines; no fixed removal date can be predicted or guaranteed.</p>
 </body></html>`;
 }
 
