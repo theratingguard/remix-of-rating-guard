@@ -83,9 +83,11 @@ export function AiControlPanel() {
                     ? "Active"
                     : status?.status === "billing"
                       ? "Billing"
-                      : status
-                        ? "Error"
-                        : "Not tested"}
+                      : status?.status === "unconfigured"
+                        ? "Unconfigured"
+                        : status && status.status !== "disabled"
+                          ? "Error"
+                          : "Not tested"}
               </span>
               <Button size="sm" variant="outline" disabled={busy} onClick={() => void run(id)}>
                 Test {modelNames[index]}

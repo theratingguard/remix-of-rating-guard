@@ -39,7 +39,8 @@ begin
  if jsonb_typeof(_settings)<>'object' or (select count(*) from jsonb_object_keys(_settings))<>14
    or exists(select 1 from jsonb_object_keys(_settings) k where not exists(select 1 from public.app_settings s where s.key=k)) then
    raise exception 'Exactly all supported settings required'; end if;
- update public.app_settings s set value=_settings->s.key,updated_at=clock_timestamp();
+ update public.app_settings s set value=_settings->s.key,updated_at=clock_timestamp()
+ where s.key in (select jsonb_object_keys(_settings));
 end $$;
 revoke all on function public.update_app_settings(jsonb) from public,anon;
 grant execute on function public.update_app_settings(jsonb) to authenticated;

@@ -39,5 +39,5 @@ deny expired downloads immediately. The existing 03:00 cleanup reads the same
 setting, aborts without deleting on invalid/unavailable settings, and deletes
 only expired private PDF artifacts. Downloaded or emailed copies cannot be revoked.
 
-Apply both AI-settings migrations before deploying. Database regression fixtures
+Apply all three AI-settings migrations before deploying. Database regression fixtures
 in `supabase/tests/ai-control-settings.sql` run in a rolled-back transaction.
