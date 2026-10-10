@@ -35,7 +35,7 @@ const request = {
   policy_type: "Spam",
   policy_section: "Advertising & solicitation",
   evidence_quote: "Visit my website",
-  removal_request_text: Array.from({ length: 220 }, () => "assessment").join(" "),
+  removal_request_text: `Advertising & solicitation. Evidence: Visit my website ${Array.from({ length: 213 }, () => "assessment").join(" ")}`,
   removal_likelihood: 60,
   reasoning: "Quoted promotion may fit the supplied policy.",
 };
@@ -56,6 +56,7 @@ describe("Legal Expert evidence boundaries", () => {
     for (const template of LEGAL_TEMPLATES) expect(template.text).toContain(LEGAL_POLICY_URL);
   });
   it.each([
+    { ...request, removal_request_text: Array.from({ length: 220 }, () => "assessment").join(" ") },
     { ...request, evidence_quote: "invented quote" },
     { ...request, policy_section: "Google Legal Section 42" },
     { ...request, removal_request_text: "too short" },
@@ -104,13 +105,20 @@ describe("Legal Expert evidence boundaries", () => {
     vi.stubGlobal("fetch", fetch);
     vi.mocked(readOpenAIStream)
       .mockResolvedValueOnce(
-        JSON.stringify({ reviews: [{ ...request, removal_request_text: "Too short" }] }),
+        JSON.stringify({
+          reviews: [
+            {
+              ...request,
+              removal_request_text: "Advertising & solicitation. Evidence: Visit my website",
+            },
+          ],
+        }),
       )
       .mockResolvedValueOnce(JSON.stringify({ reviews: [request] }));
     const output = await generateLegalAnalysis("Unit Business", [review]);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(JSON.parse(String(fetch.mock.calls[1]?.[1]?.body)).input[0].content).toContain(
-      "received 2 whitespace-separated words",
+      "received 7 whitespace-separated words",
     );
     expect(output.reviews[0]?.removal_request_text.split(/\s+/)).toHaveLength(220);
   });

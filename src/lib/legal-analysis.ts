@@ -131,6 +131,13 @@ export function validateLegalReviews(value: unknown, reviews: AnalyzedReview[]) 
       (policy) => policy.type === item.policy_type && policy.section === item.policy_section,
     );
     if (!policy) throw new Error("Legal analysis cited an unverified Google policy section.");
+    if (
+      !item.removal_request_text.includes(item.evidence_quote) ||
+      !item.removal_request_text.includes(item.policy_section)
+    )
+      throw new Error(
+        "The formal removal request must itself include the exact evidence quote and verified policy heading.",
+      );
     const words = item.removal_request_text.trim().split(/\s+/).length;
     if (words < 200 || words > 300)
       throw new Error(

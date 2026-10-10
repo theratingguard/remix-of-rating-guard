@@ -154,8 +154,10 @@ cached inline headers when upgrading existing reports.
 
 Flagged (high/medium) reviews receive a structured AI assessment with
 validated review IDs, verbatim evidence, an allowlisted Google policy heading
-and a 200-300 word formal draft when supported. Invalid evidence, citations,
-length triggers one logged, bounded correction pass with measured validation
+and a 200-300 word formal draft when supported. The copied draft must itself
+include the exact evidence excerpt and verified policy heading, not just
+the surrounding PDF fields. Invalid evidence, citations or length triggers
+one logged, bounded correction pass with measured validation
 feedback; a second invalid result or provider failure stops publication
 explicitly. Non-flagged reviews
 receive an insufficient-evidence assessment, not invented allegations.
