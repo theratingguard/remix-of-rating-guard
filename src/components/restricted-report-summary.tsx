@@ -21,7 +21,8 @@ export function RestrictedReportSummary({ scanId }: { scanId?: string }) {
     <section className="surface p-5">
       <h2 className="font-bold">Access Denied — detailed reports are private</h2>
       <p>
-        Franchise/reseller access is summary-only. Reviews, legal analysis and PDFs are not
+        Only theratingguard@gmail.com (Super Admin) can access details. All other accounts,
+        including report owners, have summary-only access. Reviews, legal analysis and PDFs are not
         available.
       </p>
       <table className="mt-4 w-full">

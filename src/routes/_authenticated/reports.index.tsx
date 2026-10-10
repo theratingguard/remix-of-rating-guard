@@ -26,7 +26,7 @@ function ReportsPage() {
   const reports = scans.filter((s) => s.status === "complete" && s.reports);
   if (access.error)
     return <p role="alert">Could not verify report access: {access.error.message}</p>;
-  if (access.data === "franchise" || access.data === "reseller") return <RestrictedReportSummary />;
+  if (access.data && access.data !== "super_admin") return <RestrictedReportSummary />;
   if (access.isPending) return <p>Verifying report access…</p>;
   if (error) return <p role="alert">Could not load reports: {error.message}</p>;
   return (

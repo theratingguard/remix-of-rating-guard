@@ -71,7 +71,7 @@ unresolved-review warnings. Download validates ownership and the PDF, saves it a
 to `/opt/rating-guard-private/reports/{scanId}.pdf`, and stores its identifier in the
 owner-scoped `reports.report_data.pdf_url` field. Legacy PDF URLs are retained
 as artifact identifiers, not public download endpoints. Downloads now require
-an authenticated owner or explicitly designated Super Admin. R2 is not used.
+the designated Super Admin (theratingguard@gmail.com). R2 is not used.
 Seed reports download locally only. Printing does not imply a PDF was saved.
 
 Create `/opt/rating-guard-private/reports` with mode 700 and ownership `ratingguard`.
@@ -211,22 +211,23 @@ action plan without invented timelines.
 
 ### Private reports
 
-Apply `20261010210000_private_reports.sql` and run
-`supabase/tests/private-reports.sql` (transaction-only fixtures and role assignments).
-Ordinary owners retain their own detailed reports. Only an explicitly designated
-`report_principals.access_level='super_admin'` can read all owners' details.
-Existing `admin` roles do not automatically gain that capability. No account is
-promoted by the migration.
+Apply `20261010210000_private_reports.sql`, followed by
+`20261010220000_super_admin_only_reports.sql`, and run
+`supabase/tests/private-reports.sql` (transaction-only fixtures).
+Option B designates only `theratingguard@gmail.com` as Super Admin.
+Every other signed-in account, including report owners and existing application
+admins, receives summary-only access. A unique index permits one Super Admin
+principal; the access function also verifies the designated account's email.
 
 Authorized operators assign franchise/reseller principals through trusted
-database administration, never browser writes. Those principals receive only
-their own business-name/total-review summaries from `private_report_summaries()`;
+database administration, never browser writes. All signed-in users can see
+business-name/total-review summaries from `private_report_summaries()`;
 restrictive RLS denies scans, reviews, analyses, actions, reports, events, jobs,
 errors and audit details. `report_access` automatically indexes report ownership.
 Public PDF locations and build copies must be removed, and the CDN cache purged.
 New PDFs are confidential, mode 600, outside the web root.
 Links now point to the private report page and require authorized login.
-Previously downloaded copies/browser caches cannot be recalled. An owner who
+Previously downloaded copies/browser caches cannot be recalled. A Super Admin who
 emails an attachment deliberately shares an external, non-revocable copy.
 
 The report's **Report Google** button opens the saved business Google Maps URL

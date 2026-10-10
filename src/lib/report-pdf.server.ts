@@ -175,7 +175,7 @@ export async function renderReportPdf(html: string) {
           displayHeaderFooter: true,
           headerTemplate: "<span></span>",
           footerTemplate:
-            '<div style="font:9px Arial;width:100%;text-align:center;color:#526276">CONFIDENTIAL — Authorized owner / Super Admin only &middot; Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
+            '<div style="font:9px Arial;width:100%;text-align:center;color:#526276">CONFIDENTIAL — For Super Admin Only &middot; Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
         }),
       );
     } finally {

@@ -110,8 +110,7 @@ function ReportDetail() {
 
   if (access.error)
     return <p role="alert">Could not verify report access: {access.error.message}</p>;
-  if (access.data === "franchise" || access.data === "reseller")
-    return <RestrictedReportSummary scanId={id} />;
+  if (access.data && access.data !== "super_admin") return <RestrictedReportSummary scanId={id} />;
   if (isLoading || access.isPending)
     return <div className="text-muted-foreground">Preparing report…</div>;
   if (queryError) return <p role="alert">Could not load report: {queryError.message}</p>;
@@ -213,8 +212,8 @@ function ReportDetail() {
         </div>
         {!scan.is_seed && (
           <p className="no-print mb-4 text-sm text-muted-foreground">
-            Private Report — only the authorized owner or a designated Super Admin can view details.
-            Franchise/reseller accounts cannot access detailed reports or PDFs.
+            Private Report — only Super Admin (theratingguard@gmail.com) can view details and PDFs.
+            All other accounts, including report owners, have summary-only access.
           </p>
         )}
       </div>
@@ -406,7 +405,7 @@ function ReportDetail() {
           </p>
         </section>
         <footer className="border-t pt-6 text-xs text-muted-foreground">
-          <p className="font-semibold">CONFIDENTIAL — Authorized owner / Super Admin only</p>
+          <p className="font-semibold">CONFIDENTIAL — For Super Admin Only</p>
           Classification is automated and advisory; it does not guarantee a policy violation. Google
           independently determines whether a review violates its policies and whether removal is
           appropriate.

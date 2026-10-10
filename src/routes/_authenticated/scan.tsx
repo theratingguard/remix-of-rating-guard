@@ -13,6 +13,7 @@ import { BusinessHeader, RatingAnalysis, RiskAnalysis } from "@/components/scan-
 import { Button } from "@/components/ui/button";
 import { BulkScan } from "@/components/bulk-scan";
 import { isGoogleMapsUrl } from "@/lib/google-url";
+import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 
 export const Route = createFileRoute("/_authenticated/scan")({
   head: () => ({
@@ -39,6 +40,7 @@ function looksLikeGoogleUrl(v: string) {
 }
 
 function ScanPage() {
+  const access = useQuery(reportAccessQuery());
   const status = useServerFn(getSystemStatus);
   const fetchStage = useServerFn(scanFetch);
   const analyzeStage = useServerFn(scanAnalyze);
@@ -140,6 +142,11 @@ function ScanPage() {
     return "idle";
   }
 
+  if (access.error)
+    return <p role="alert">Could not verify report access: {access.error.message}</p>;
+  if (access.isPending) return <p>Verifying report access…</p>;
+  if (access.data !== "super_admin") return <RestrictedReportSummary />;
+
   return (
     <>
       <div className="bg-scanner-green relative overflow-hidden rounded-3xl border border-scanner-accent/30 p-6 text-foreground shadow-[var(--shadow-lift)] sm:p-12">
@@ -151,8 +158,8 @@ function ScanPage() {
             to analyze available rating and review information.
           </p>
           <p className="mt-2 text-xs opacity-75">
-            Scanning automatically saves a private PDF. Details are available only to the authorized
-            owner or a designated Super Admin; franchise/reseller accounts receive summaries only.
+            Scanning automatically saves a private PDF. Only Super Admin (theratingguard@gmail.com)
+            can view details and PDFs; every other account receives summaries only.
           </p>
 
           {keyMissing && (
