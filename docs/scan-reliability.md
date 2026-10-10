@@ -81,3 +81,9 @@ Full scan-list loading paginates beyond REST's default limit, with an explicit
 
 Detailed reports, diagnostics and raw outcomes remain restricted to Super Admin.
 Auth implementation, provider secrets and existing paused batches are unchanged.
+# Validated assessment persistence
+
+Review risk counts are saved before legal drafting and PDF generation. A later drafting
+or PDF failure remains a failed scan, but does not erase already validated assessments
+or display zero counts beside flagged review rows. Legal drafting examples themselves
+meet the 200-300-word requirement and explicitly preserve legitimate criticism.

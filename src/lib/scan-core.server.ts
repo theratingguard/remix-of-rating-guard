@@ -625,6 +625,19 @@ export async function scanAnalyzeCore(
     const high = n("high"),
       medium = n("medium");
 
+    const assessmentSaved = await supabase
+      .from("scans")
+      .update({
+        high_count: high,
+        medium_count: medium,
+        normal_count: n("normal"),
+        requires_review_count: n("requires_review"),
+        reviews_failed_analysis: failedIds.length,
+      })
+      .eq("id", scan.id);
+    if (assessmentSaved.error)
+      throw new ScanError("DB_UNAVAILABLE", "Could not persist validated review assessment counts.");
+
     t = Date.now();
     await track(supabase, userId, scan.id, "REPORT_GENERATING", t);
     const recommended =

@@ -57,7 +57,12 @@ describe("Legal Expert evidence boundaries", () => {
       )[0],
     ).toMatchObject({ removal_likelihood: 60, legal_grounds: LEGAL_GROUNDS });
     expect(LEGAL_TEMPLATES).toHaveLength(4);
-    for (const template of LEGAL_TEMPLATES) expect(template.text).toContain(LEGAL_POLICY_URL);
+    for (const template of LEGAL_TEMPLATES) {
+      expect(template.text).toContain(LEGAL_POLICY_URL);
+      const words = template.text.trim().split(/\s+/).length;
+      expect(words).toBeGreaterThanOrEqual(200);
+      expect(words).toBeLessThanOrEqual(300);
+    }
   });
   it.each([
     { ...request, removal_request_text: Array.from({ length: 220 }, () => "assessment").join(" ") },

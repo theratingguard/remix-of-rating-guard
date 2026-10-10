@@ -106,6 +106,13 @@ describe("Durable scan completion (unit fixtures only)", () => {
     const result = await scanAnalyzeCore(db.client, "owner", { scanId: "scan-fixture" });
     expect(result.ok).toBe(false);
     expect(db.updates.some((update) => update["status"] === "complete")).toBe(false);
+    expect(db.updates).toContainEqual({
+      high_count: 0,
+      medium_count: 0,
+      normal_count: 1,
+      requires_review_count: 0,
+      reviews_failed_analysis: 0,
+    });
   });
   it("does not mark complete or return success when report persistence fails", async () => {
     vi.stubEnv("OPENAI_API_KEY", "unit-test-only");

@@ -80,6 +80,10 @@ The exact review wording is: "[paste verbatim excerpt]". [Describe precisely how
 
 Supporting documents: [list authentic documents you can lawfully share; redact unnecessary personal information]. Distinguish established facts from disputed statements and opinion. Do not claim a court finding or legal violation without applicable jurisdiction and verified legal support.
 
+This submission asks for a content-policy assessment, not a determination of legal liability. No independent investigation, court decision or authenticated external supporting documents are implied by this draft. Any further evidence should be checked for accuracy, relevance and lawful disclosure before it is supplied through Google's official reporting process.
+
+Please consider the quoted passage in the context of the complete original review and the specific location. A low rating, dissatisfaction or disagreement with a customer's account is not itself a policy breach. Where the available evidence is inconclusive, please retain legitimate criticism rather than infer wrongdoing from an unsupported allegation.
+
 Please independently evaluate this evidence against the cited policy and remove the content only if it meets Google's removal criteria. This request does not seek to suppress legitimate negative feedback and does not guarantee removal.
 
 Respectfully,
