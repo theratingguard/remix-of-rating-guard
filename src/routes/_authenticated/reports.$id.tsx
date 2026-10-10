@@ -2,13 +2,15 @@ import { ScanTimeline } from "@/components/ops-panels";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft, Download, Flag } from "lucide-react";
 import { scanQuery, fmtDate, reportNumber, GOOGLE_REPORT_URL, riskOf, isFlagged } from "@/lib/data";
 import { logAudit } from "@/lib/scan.functions";
 import { Stars, RiskBadge, SeedBadge } from "@/components/review-ui";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { downloadReportPdf } from "@/lib/report-pdf";
 
 export const Route = createFileRoute("/_authenticated/reports/$id")({
   validateSearch: z.object({ print: z.boolean().optional() }),
@@ -26,20 +28,45 @@ function ReportDetail() {
   const { print } = Route.useSearch();
   const audit = useServerFn(logAudit);
   const { data, isLoading, error: queryError } = useQuery(scanQuery(id));
+  const articleRef = useRef<HTMLElement>(null);
+  const [exporting, setExporting] = useState(false);
 
-  function download() {
+  const printReport = useCallback(() => {
     if (!data?.scan || !data.report || data.scan.status !== "complete") return;
-    if (!data.scan.is_seed)
-      audit({ data: { action: "report.downloaded", detail: { scan_id: id } } }).catch(
-        (error: unknown) => console.error("[report] Could not record print action", error),
-      );
     window.print();
+  }, [data]);
+
+  async function download() {
+    if (
+      !data?.scan ||
+      !data.report ||
+      data.scan.status !== "complete" ||
+      !articleRef.current ||
+      exporting
+    )
+      return;
+    setExporting(true);
+    try {
+      await downloadReportPdf(articleRef.current, `${reportNumber(data.scan, data.report)}.pdf`);
+      if (!data.scan.is_seed)
+        await audit({ data: { action: "report.downloaded", detail: { scan_id: id } } }).catch(
+          (error: unknown) => {
+            console.error("[report] Could not record PDF export action", error);
+            toast.error("PDF generated, but its audit entry could not be saved.");
+          },
+        );
+    } catch (error) {
+      console.error("[report] PDF export failed", error);
+      toast.error(error instanceof Error ? error.message : "Could not generate the report PDF.");
+    } finally {
+      setExporting(false);
+    }
   }
   useEffect(() => {
     if (!print || !data?.scan || !data.report || data.scan.status !== "complete") return undefined;
-    const t = setTimeout(download, 400);
+    const t = setTimeout(printReport, 400);
     return () => clearTimeout(t);
-  }, [print, data]);
+  }, [print, data, printReport]);
 
   if (isLoading) return <div className="text-muted-foreground">Preparing report…</div>;
   if (queryError) return <p role="alert">Could not load report: {queryError.message}</p>;
@@ -74,8 +101,11 @@ function ReportDetail() {
           </Link>
         </Button>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={download}>
-            <Download /> Print / Save PDF
+          <Button variant="outline" onClick={download} disabled={exporting}>
+            <Download /> {exporting ? "Generating PDF..." : "Download PDF"}
+          </Button>
+          <Button variant="outline" onClick={printReport}>
+            Print / Save PDF
           </Button>
           {!scan.is_seed && (
             <Button asChild>
@@ -86,7 +116,7 @@ function ReportDetail() {
           )}
         </div>
       </div>
-      <article className="surface mx-auto max-w-4xl p-8 sm:p-12">
+      <article ref={articleRef} className="surface mx-auto max-w-4xl p-8 sm:p-12">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
           <div>
             <div className="text-xs font-bold tracking-[0.25em] text-brand">EVIDENCE REPORT</div>

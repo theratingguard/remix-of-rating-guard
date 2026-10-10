@@ -63,6 +63,13 @@ Embedded PostgREST queries specify the single-column foreign-key relationship
 explicitly; owner-consistency composite foreign keys must remain enabled and
 must not make dashboard, report or review queries ambiguous.
 
+Completed reports offer a browser-generated **Download PDF** action and a
+separate **Print / Save PDF** action. PDF generation captures the displayed
+report locally, including Unicode text, across A4 pages; it does not upload
+review content or make protected reports public. R2 upload and public hosting
+are not implemented or implied by either action. Printing does not record a
+successful PDF download in the audit log.
+
 Configure `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `SCAN_WORKER_SECRET`
 only on the server. Bulk admission remains disabled unless
 `SCAN_WORKER_SCHEDULED=true` is set after a real scheduler has been verified.
