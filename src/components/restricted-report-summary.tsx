@@ -19,6 +19,9 @@ export function RestrictedReportSummary({ scanId }: { scanId?: string }) {
   if (result.error) return <p role="alert">Could not load summaries: {result.error.message}</p>;
   return (
     <section className="surface p-5">
+      <span className="mb-3 inline-block rounded-full border px-3 py-1 text-xs font-semibold">
+        Private Report
+      </span>
       <h2 className="font-bold">Access Denied — detailed reports are private</h2>
       <p>
         Only theratingguard@gmail.com (Super Admin) can access details. All other accounts,

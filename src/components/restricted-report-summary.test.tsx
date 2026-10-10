@@ -16,6 +16,7 @@ afterEach(cleanup);
 describe("Super Admin only report summaries", () => {
   it("shows business summaries to ordinary owners without detailed-report controls", () => {
     render(<RestrictedReportSummary />);
+    expect(screen.getByText("Private Report")).toBeInTheDocument();
     expect(screen.getByText(/including report owners/)).toBeInTheDocument();
     expect(screen.getByText("The Hudson")).toBeInTheDocument();
     expect(screen.getByText("120")).toBeInTheDocument();
