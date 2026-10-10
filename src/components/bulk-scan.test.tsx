@@ -25,6 +25,8 @@ import { BulkScan } from "./bulk-scan";
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 describe("Durable bulk UI", () => {
   it("admits 150 business-name lines and exposes two input modes", () => {
@@ -78,5 +80,23 @@ describe("Durable bulk UI", () => {
     );
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export CSV" })).toBeInTheDocument();
+    const createObjectURL = vi.fn(() => "blob:unit-csv");
+    vi.stubGlobal(
+      "URL",
+      class extends URL {
+        static override createObjectURL = createObjectURL;
+        static override revokeObjectURL = vi.fn();
+      },
+    );
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      expect(this.isConnected).toBe(true);
+      expect(this.download).toBe("bulk-00000000-0000-4000-8000-000000000001.csv");
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    expect(click).toHaveBeenCalledOnce();
+    expect(document.querySelector('a[href="blob:unit-csv"]')).toBeNull();
   });
 });

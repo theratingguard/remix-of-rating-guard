@@ -196,6 +196,12 @@ pause/resume/cancel stops new jobs, not an already-running provider request.
 Polling shows individual failures/cancellations, fetched stars and advisory
 removal bands; CSV fields neutralize spreadsheet formulas.
 
+The VPS uses `ratingguard-scan-worker.service` and its six-second
+`OnUnitInactiveSec` timer. Both the app and worker load the root-readable
+`/etc/ratingguard-worker.env` for the worker secret, scheduling flag and
+authorized Supabase server key. Keep this file mode 600 and out of Git.
+Stop the timer and wait for the current worker before replacing a build.
+
 Star distribution covers fetched reviews only, normally up to five out of the
 business's total. The full distribution requires the client's Google Business
 Profile. Removal bands use supported legal-assessment scores: red 70-100,

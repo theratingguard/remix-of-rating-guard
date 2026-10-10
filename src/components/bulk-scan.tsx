@@ -150,7 +150,9 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = `bulk-${batch?.id}.csv`;
+    document.body.appendChild(anchor);
     anchor.click();
+    anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   const finished = jobs.filter((job) =>
