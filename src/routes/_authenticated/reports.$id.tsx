@@ -22,6 +22,7 @@ import { downloadReportPdf } from "@/lib/report-pdf";
 import { saveReportPdf, emailReport, reportEmailStatus } from "@/lib/report-pdf.functions";
 import { Input } from "@/components/ui/input";
 import { ReviewSelection } from "@/components/review-selection";
+import { LegalAnalysisPanel } from "@/components/legal-analysis";
 
 export const Route = createFileRoute("/_authenticated/reports/$id")({
   validateSearch: z.object({ print: z.boolean().optional() }),
@@ -401,6 +402,7 @@ function ReportDetail() {
         </footer>
       </article>
       <ReviewSelection key={scan.id} scan={scan} reviews={reviews} report={report} />
+      <LegalAnalysisPanel scan={scan} reviews={reviews} report={report} />
       <ScanTimeline scanId={scan.id} isSeed={!!scan.is_seed} />
     </>
   );

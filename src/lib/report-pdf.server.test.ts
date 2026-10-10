@@ -10,7 +10,10 @@ import {
   generateOwnedReportPdf,
   saveReportToVPS,
   renderReportPdf,
+  legalAnalysisHtml,
 } from "./report-pdf.server";
+import { LEGAL_DISCLAIMER, LEGAL_VERSION, unsupportedLegalReview } from "./legal-analysis";
+import type { AnalyzedReview } from "./data";
 import puppeteer from "puppeteer";
 
 const browserMock = vi.hoisted(() => ({
@@ -61,7 +64,7 @@ function database(options: { owner?: boolean; status?: string; updateFailure?: b
       expect(url.searchParams.get("scan_id")).toBe(`eq.${scanId}`);
       return Response.json([
         {
-          id: "review-fixture",
+          id: "b8c10010-0e10-487f-a50f-61c8cb1276d4",
           author: "<script>attack</script>",
           rating: 1,
           text: "Unit review",
@@ -110,6 +113,41 @@ function database(options: { owner?: boolean; status?: string; updateFailure?: b
 }
 
 describe("VPS PDF persistence", () => {
+  it("escapes legal evidence, displays advisory scores and includes supported draft text", () => {
+    const review: AnalyzedReview = {
+      id: scanId,
+      author: "<script>author</script>",
+      rating: 1,
+      text: "Unit evidence",
+      review_uri: null,
+      published_at: null,
+      relative_time: null,
+      analysis: null,
+    };
+    const html = legalAnalysisHtml(
+      {
+        version: LEGAL_VERSION,
+        generated_at: new Date().toISOString(),
+        model: "unit",
+        disclaimer: LEGAL_DISCLAIMER,
+        reviews: [
+          {
+            ...unsupportedLegalReview(review),
+            violates_policy: true,
+            removal_likelihood: 60,
+            evidence_quote: "<script>evidence</script>",
+            removal_request_text: "Unit formal draft",
+          },
+        ],
+      },
+      [review],
+    );
+    expect(html).toContain("Legal Expert Analysis");
+    expect(html).toContain("60% (uncalibrated AI estimate");
+    expect(html).toContain("Unit formal draft");
+    expect(html).toContain("&lt;script&gt;evidence&lt;/script&gt;");
+    expect(html).not.toContain("<script>");
+  });
   it("stores valid bytes atomically, with a UUID filename and correct public URL", async () => {
     expect(await saveReportToVPS(scanId, pdf)).toBe(
       `https://ratingguard.online/reports/${scanId}.pdf`,
@@ -141,17 +179,30 @@ describe("VPS PDF persistence", () => {
           pdf_saved_at: expect.any(String),
           pdf_status: "ready",
           report_url: result.url,
+          legal_pdf_url: result.legalUrl,
+          legal_pdf_saved_at: expect.any(String),
+          legal_analysis: expect.objectContaining({
+            version: "legal-v1",
+            reviews: expect.arrayContaining([
+              expect.objectContaining({ violates_policy: false, removal_likelihood: 0 }),
+            ]),
+          }),
         },
       },
     ]);
     expect(browserMock.javascript).toHaveBeenCalledWith(false);
     expect(browserMock.interception).toHaveBeenCalledWith(true);
-    expect(browserMock.close).toHaveBeenCalledOnce();
+    expect(browserMock.close).toHaveBeenCalledTimes(2);
     const html = browserMock.setContent.mock.calls[0]?.[0];
     expect(html).toContain("&lt;script&gt;attack&lt;/script&gt;");
     expect(html).toContain("No clean-result conclusion");
     expect(html).not.toContain("No reporting action recommended.");
-    expect(await readdir(join(directory, "shared"))).toEqual([`${scanId}.pdf`]);
+    expect(html).toContain("Legal Expert Analysis");
+    expect(html).toContain("Not estimable");
+    expect(await readdir(join(directory, "shared"))).toEqual([
+      `${scanId}.pdf`,
+      `${scanId}_legal.pdf`,
+    ]);
   });
   it.each([{ owner: false }, { status: "failed" }, { status: "running" }])(
     "does not publish unauthorized or incomplete reports: %j",

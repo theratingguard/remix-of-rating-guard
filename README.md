@@ -139,6 +139,34 @@ keep application `/reports/{scanId}` routes proxied. Selected snapshots also
 have business-folder and shared copies and the same 90-day retention. Selected
 PDF sharing is labeled separately from the full automatic report.
 
+### Legal Expert Mode
+
+New automatic PDFs include Legal Expert Analysis and a separate
+`{scanId}_legal.pdf` downloadable assessment. Older reports can generate the
+module in place without changing login or credentials. Selected PDFs also
+include legal assessments only for selected reviews. Nginx's UUID-only PDF
+route must permit `_legal` in addition to `_selected` and `_evidence`.
+
+Flagged (high/medium) reviews receive a structured AI assessment with
+validated review IDs, verbatim evidence, an allowlisted Google policy heading
+and a 200-300 word formal draft when supported. Invalid evidence, citations,
+length or provider failures stop publication explicitly. Non-flagged reviews
+receive an insufficient-evidence assessment, not invented allegations.
+Policy headings were verified against Google's prohibited/restricted content
+page on 2026-10-10: Fake Engagement, Rating Manipulation, Advertising &
+solicitation, Harassment, Hate speech, and Offensive content. Four editable templates use
+these verified headings; Spam maps to Advertising & solicitation. The
+Prohibited Content template starts with Harassment; assessments may also cite
+Hate speech or Offensive content only when substantiated by the source review.
+
+This is AI-assisted policy analysis, not legal advice or a lawyer's opinion.
+Removal likelihood is an uncalibrated AI score, not a validated probability;
+unsupported cases display "Not estimable (0 score)". No defamation, false-light,
+consumer-protection or platform-liability violation is asserted without
+verified facts and applicable jurisdiction. Supporting documents are items
+to obtain, never a claim that attachments already exist. Google independently
+decides removal; the software never submits a request automatically.
+
 The report's **Report Google** button opens the saved business Google Maps URL
 in a new tab. If no Maps URL is saved, it opens Google's review-reporting help
 page at `https://support.google.com/business/answer/4596773`. Opening this link

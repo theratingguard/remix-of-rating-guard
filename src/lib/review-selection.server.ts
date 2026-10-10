@@ -5,6 +5,7 @@ import type { AnalyzedReview } from "./data";
 import { renderReportPdf, saveReportToVPS, reportPdfHtml, escapeHtml } from "./report-pdf.server";
 import { reviewGoogleLink, validateSelectionOutput } from "./review-selection";
 import { readOpenAIStream } from "./openai-stream.server";
+import { generateLegalAnalysis } from "./analysis.server";
 
 export async function createSelectedReport(
   db: SupabaseClient<Database>,
@@ -68,11 +69,19 @@ export async function createSelectedReport(
   );
   const section = `<h2>Selected review requests (${reviews.length})</h2>${requests.map((request) => `<section class="review"><b>${escapeHtml(request.assessment)}</b><p>Review: ${escapeHtml(request.review_id)}</p><p>Policy: ${escapeHtml(request.policy)}</p><p class="text">${escapeHtml(request.request_text)}</p><p class="text">Evidence: ${escapeHtml(request.evidence)}</p><p>${escapeHtml(request.policy_reference)}</p><p>Submit manually using Google's review reporting tools. Nothing has been submitted.</p></section>`).join("")}`;
   const pdfId = randomUUID();
+  const legal = await generateLegalAnalysis(ownedScan.business_name || "Business", reviews);
+  const reportMetadata = report.data.report_data;
   const selectedHtml = reportPdfHtml(
     scan.data,
     {
       ...report.data,
       report_number: `RPT-${pdfId.slice(0, 8).toUpperCase()}`,
+      report_data: {
+        ...(reportMetadata && typeof reportMetadata === "object" && !Array.isArray(reportMetadata)
+          ? reportMetadata
+          : {}),
+        legal_analysis: legal,
+      },
       recommended_action:
         "Assess only the selected reviews below; request drafts require factual policy evidence. Nothing has been submitted to Google.",
     },

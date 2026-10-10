@@ -7,6 +7,7 @@ import { scanFetch, scanAnalyze, getSystemStatus, findBusinesses } from "@/lib/s
 import { scanQuery } from "@/lib/data";
 import { toast } from "sonner";
 import { ReviewSelection } from "@/components/review-selection";
+import { LegalAnalysisPanel } from "@/components/legal-analysis";
 import { BusinessHeader, RatingAnalysis, RiskAnalysis } from "@/components/scan-result";
 import { Button } from "@/components/ui/button";
 import { BulkScan } from "@/components/bulk-scan";
@@ -27,7 +28,7 @@ const STEPS = [
   "Reading public business information",
   "Retrieving available reviews",
   "Analyzing review signals",
-  "Generating and saving PDF",
+  "Legal assessment and saving PDFs",
 ];
 // Steps 1-3 belong to the server "fetch" stage, 4-5 to the "analyze" stage.
 type Phase = "idle" | "fetch" | "analyze" | "done" | "error";
@@ -389,6 +390,7 @@ function ScanResult({ id }: { id: string }) {
     <div className="mt-8">
       <BusinessHeader scan={data.scan} />
       <ReviewSelection key={id} scan={data.scan} reviews={data.reviews} report={data.report} />
+      <LegalAnalysisPanel scan={data.scan} reviews={data.reviews} report={data.report} />
       <RatingAnalysis scan={data.scan} reviews={data.reviews} />
       <RiskAnalysis scan={data.scan} reviews={data.reviews} />
     </div>

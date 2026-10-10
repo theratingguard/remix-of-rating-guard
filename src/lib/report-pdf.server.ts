@@ -7,6 +7,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { Scan, Report, AnalyzedReview } from "./data";
 import puppeteer from "puppeteer";
+import { generateLegalAnalysis } from "./analysis.server";
+import { savedLegalAnalysis, type LegalAnalysis } from "./legal-analysis";
 
 export const MAX_REPORT_PDF_BYTES = 24 * 1024 * 1024;
 const reportIdSchema = z.string().uuid();
@@ -15,7 +17,7 @@ export async function saveReportToVPS(
   reportId: string,
   pdfBuffer: Buffer,
   subdirectory?: string,
-  evidence: boolean | "selected" = false,
+  evidence: boolean | "selected" | "legal" = false,
 ) {
   reportIdSchema.parse(reportId);
   if (subdirectory && subdirectory !== "shared") reportIdSchema.parse(subdirectory);
@@ -42,13 +44,33 @@ export async function saveReportToVPS(
       temporary,
       join(
         directory,
-        `${reportId}${evidence === "selected" ? "_selected" : evidence ? "_evidence" : ""}.pdf`,
+        `${reportId}${typeof evidence === "string" ? `_${evidence}` : evidence ? "_evidence" : ""}.pdf`,
       ),
     );
   } finally {
     await rm(temporary, { force: true });
   }
-  return `https://ratingguard.online/reports/${subdirectory ? subdirectory + "/" : ""}${reportId}${evidence === "selected" ? "_selected" : evidence ? "_evidence" : ""}.pdf`;
+  return `https://ratingguard.online/reports/${subdirectory ? subdirectory + "/" : ""}${reportId}${typeof evidence === "string" ? `_${evidence}` : evidence ? "_evidence" : ""}.pdf`;
+}
+
+export function legalAnalysisHtml(analysis: LegalAnalysis, reviews: AnalyzedReview[]) {
+  return `<h2>Legal Expert Analysis</h2><p class="note">${escapeHtml(analysis.disclaimer)}</p>
+${analysis.reviews
+  .map(
+    (item) => `<section class="review">
+<h3>${escapeHtml(reviews.find((review) => review.id === item.review_id)?.author || item.review_id)}</h3>
+<p>Policy concern: ${item.violates_policy ? "Potential supported concern; Google decides" : "No substantiated violation"}</p>
+<p>Policy citation: ${escapeHtml(item.policy_type)} / ${escapeHtml(item.policy_section)}</p>
+<p class="text">${escapeHtml(item.policy_url)}</p>
+<p class="text">Evidence quote: ${escapeHtml(item.evidence_quote || "No supported policy evidence")}</p>
+<p class="text">Legal grounds: ${escapeHtml(item.legal_grounds)}</p>
+<p>Removal likelihood: ${item.violates_policy ? `${item.removal_likelihood}% (uncalibrated AI estimate, not a verified probability)` : "Not estimable (0 score; insufficient evidence)"}</p>
+<p class="text">Reasoning: ${escapeHtml(item.reasoning)}</p>
+<p class="text">Supporting documents to obtain (not supplied): ${escapeHtml(item.supporting_docs.join("; ") || "None established")}</p>
+${item.removal_request_text ? `<h3>Formal policy removal request draft</h3><p class="text">${escapeHtml(item.removal_request_text)}</p>` : "<p>No removal request drafted without supported evidence.</p>"}
+</section>`,
+  )
+  .join("")}`;
 }
 
 export function escapeHtml(value: string | number | null | undefined) {
@@ -65,6 +87,7 @@ export function escapeHtml(value: string | number | null | undefined) {
 }
 
 export function reportPdfHtml(scan: Scan, report: Report, reviews: AnalyzedReview[]) {
+  const legal = savedLegalAnalysis(report.report_data);
   const analyzed = reviews.filter((review) => review.analysis).length;
   const flagged = reviews.filter(
     (review) => review.analysis?.risk === "high" || review.analysis?.risk === "medium",
@@ -114,6 +137,7 @@ ${reviews
 <p>Open the business in Google Maps, select the relevant review and use Google's reporting tools when supported by evidence.</p>
 <p>https://support.google.com/business/answer/4596773</p>
 <p class="note">This report has not been submitted to Google. Classification is automated and advisory, not proof of a policy violation. Google independently determines whether removal is appropriate.</p>
+${legal ? legalAnalysisHtml(legal, reviews) : ""}
 </body></html>`;
 }
 
@@ -197,11 +221,23 @@ export async function generateOwnedReportPdf(
         : null,
     };
   });
-  const pdfBuffer = await renderReportPdf(reportPdfHtml(scan.data, report.data, reviews));
+  const legal = await generateLegalAnalysis(scan.data.business_name || "Business", reviews);
+  const metadata = report.data.report_data;
+  const newMetadata = {
+    ...(metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {}),
+    legal_analysis: legal,
+  };
+  const reportWithLegal = { ...report.data, report_data: newMetadata };
+  const fullHtml = reportPdfHtml(scan.data, reportWithLegal, reviews);
+  const pdfBuffer = await renderReportPdf(fullHtml);
   const url = await saveReportToVPS(scanId, pdfBuffer);
+  const legalHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font:12px Arial;line-height:1.6;color:#13243b}.review{border:1px solid #ccd4df;padding:12px;margin:14px 0}.text{white-space:pre-wrap;overflow-wrap:anywhere}.note{font-size:10px}</style></head><body><h1>Legal Removal Request Assessment</h1><h2>${escapeHtml(scan.data.business_name)}</h2><p>${escapeHtml(report.data.report_number)} / ${escapeHtml(scan.data.created_at)}</p>${legalAnalysisHtml(legal, reviews)}<p>Nothing has been submitted to Google. Unsupported assessments are not removal requests.</p></body></html>`;
+  const legalPdf = await renderReportPdf(legalHtml);
+  const legalUrl = await saveReportToVPS(scanId, legalPdf, undefined, "legal");
   if (scan.data.business_id) {
     await saveReportToVPS(scanId, pdfBuffer, scan.data.business_id);
-    const evidenceHtml = reportPdfHtml(scan.data, report.data, reviews).replace(
+    await saveReportToVPS(scanId, legalPdf, scan.data.business_id, "legal");
+    const evidenceHtml = fullHtml.replace(
       "Google Review Risk Report</h1>",
       "Review Evidence Appendix</h1>",
     );
@@ -209,16 +245,18 @@ export async function generateOwnedReportPdf(
     await saveReportToVPS(scanId, evidencePdf, scan.data.business_id, true);
   }
   await saveReportToVPS(scanId, pdfBuffer, "shared");
-  const metadata = report.data.report_data;
+  await saveReportToVPS(scanId, legalPdf, "shared", "legal");
   const updated = await supabase
     .from("reports")
     .update({
       report_data: {
-        ...(metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {}),
+        ...newMetadata,
         pdf_url: url,
         pdf_saved_at: new Date().toISOString(),
         pdf_status: "ready",
         report_url: url,
+        legal_pdf_url: legalUrl,
+        legal_pdf_saved_at: new Date().toISOString(),
       },
     })
     .eq("id", report.data.id)
@@ -229,5 +267,5 @@ export async function generateOwnedReportPdf(
     throw new Error(
       "PDF was saved on the VPS, but its report URL could not be saved to the database.",
     );
-  return { url };
+  return { url, legalUrl };
 }
