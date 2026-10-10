@@ -390,10 +390,10 @@ function ScanResult({ id }: { id: string }) {
   return (
     <div className="mt-8">
       <BusinessHeader scan={data.scan} />
-      <ReviewSelection key={id} scan={data.scan} reviews={data.reviews} report={data.report} />
-      <LegalAnalysisPanel scan={data.scan} reviews={data.reviews} report={data.report} />
       <RatingAnalysis scan={data.scan} reviews={data.reviews} />
       <RemovalSummary metadata={data.report?.report_data} total={data.reviews.length} />
+      <ReviewSelection key={id} scan={data.scan} reviews={data.reviews} report={data.report} />
+      <LegalAnalysisPanel scan={data.scan} reviews={data.reviews} report={data.report} />
       <RiskAnalysis scan={data.scan} reviews={data.reviews} />
     </div>
   );

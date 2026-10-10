@@ -324,6 +324,8 @@ function ReportDetail() {
             </p>
           )}
         </section>
+        <RatingAnalysis scan={scan} reviews={reviews} />
+        <RemovalSummary metadata={report.report_data} total={reviews.length} />
         <section className="border-t py-6">
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             Flagged review details ({flagged.length})
@@ -404,8 +406,6 @@ function ReportDetail() {
         </footer>
       </article>
       <ReviewSelection key={scan.id} scan={scan} reviews={reviews} report={report} />
-      <RatingAnalysis scan={scan} reviews={reviews} />
-      <RemovalSummary metadata={report.report_data} total={reviews.length} />
       <LegalAnalysisPanel scan={scan} reviews={reviews} report={report} />
       <ScanTimeline scanId={scan.id} isSeed={!!scan.is_seed} />
     </>
