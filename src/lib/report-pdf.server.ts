@@ -15,7 +15,7 @@ export async function saveReportToVPS(
   reportId: string,
   pdfBuffer: Buffer,
   subdirectory?: string,
-  evidence = false,
+  evidence: boolean | "selected" = false,
 ) {
   reportIdSchema.parse(reportId);
   if (subdirectory && subdirectory !== "shared") reportIdSchema.parse(subdirectory);
@@ -38,14 +38,20 @@ export async function saveReportToVPS(
   try {
     await writeFile(temporary, pdfBuffer, { flag: "wx", mode: 0o600 });
     await chmod(temporary, 0o644);
-    await rename(temporary, join(directory, `${reportId}${evidence ? "_evidence" : ""}.pdf`));
+    await rename(
+      temporary,
+      join(
+        directory,
+        `${reportId}${evidence === "selected" ? "_selected" : evidence ? "_evidence" : ""}.pdf`,
+      ),
+    );
   } finally {
     await rm(temporary, { force: true });
   }
-  return `https://ratingguard.online/reports/${subdirectory ? subdirectory + "/" : ""}${reportId}${evidence ? "_evidence" : ""}.pdf`;
+  return `https://ratingguard.online/reports/${subdirectory ? subdirectory + "/" : ""}${reportId}${evidence === "selected" ? "_selected" : evidence ? "_evidence" : ""}.pdf`;
 }
 
-function escapeHtml(value: string | number | null | undefined) {
+export function escapeHtml(value: string | number | null | undefined) {
   return String(value ?? "Not available").replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
       "&": "&amp;",

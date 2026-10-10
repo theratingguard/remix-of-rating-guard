@@ -6,6 +6,7 @@ import { PageHeader, EmptyState, StatusPill } from "@/components/app-shell";
 import { RiskBadge, DevTag } from "@/components/review-ui";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { selectedPdfUrl } from "@/lib/review-selection";
 
 export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
@@ -158,6 +159,16 @@ function HistoryPage() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
+                    {s.status === "complete" && selectedPdfUrl(s.reports?.report_data) && (
+                      <a
+                        href={selectedPdfUrl(s.reports?.report_data) ?? undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mr-3 text-brand hover:underline"
+                      >
+                        Selected PDF
+                      </a>
+                    )}
                     {s.status === "complete" && savedPdfUrl(s.reports?.report_data) && (
                       <a
                         href={savedPdfUrl(s.reports?.report_data) ?? undefined}

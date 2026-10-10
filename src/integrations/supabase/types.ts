@@ -431,6 +431,8 @@ export type Database = {
       };
       reviews: {
         Row: {
+          user_selected: boolean;
+          review_url: string | null;
           author: string;
           author_uri: string | null;
           confidence: number;
@@ -451,6 +453,8 @@ export type Database = {
           text: string | null;
         };
         Insert: {
+          user_selected?: boolean;
+          review_url?: string | null;
           author?: string;
           author_uri?: string | null;
           confidence?: number;
@@ -471,6 +475,8 @@ export type Database = {
           text?: string | null;
         };
         Update: {
+          user_selected?: boolean;
+          review_url?: string | null;
           author?: string;
           author_uri?: string | null;
           confidence?: number;
@@ -831,6 +837,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      save_selected_report: {
+        Args: { _scan_id: string; _review_ids: string[]; _review_links: Json; _metadata: Json };
+        Returns: boolean;
+      };
       get_published_site_content: {
         Args: Record<PropertyKey, never>;
         Returns: Json;

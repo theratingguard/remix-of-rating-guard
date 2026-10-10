@@ -4,6 +4,21 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ANALYSIS_MODEL, AI_PROVIDER } from "./analysis.server";
 import { APP_VERSION } from "./version";
 import { scanFetchCore, scanAnalyzeCore, audit, type StageResponse } from "./scan-core.server";
+import { searchBusinesses } from "./google-places.server";
+
+export const findBusinesses = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ query: z.string().trim().min(3).max(200) }).parse(input))
+  .handler(async ({ data }) => {
+    const key = process.env["GOOGLE_PLACES_API_KEY"];
+    if (!key) throw new Error("Google business search is not configured.");
+    try {
+      return await searchBusinesses(key, data.query);
+    } catch (error) {
+      console.error("[business-search] Google search failed", error);
+      throw error;
+    }
+  });
 
 export { APP_VERSION };
 export type { StageResponse };

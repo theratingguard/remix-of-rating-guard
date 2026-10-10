@@ -115,6 +115,30 @@ SMTP acceptance is not proof of inbox delivery. Email is explicitly unavailable
 when SMTP is unconfigured; owner access is checked and attachments are read from
 validated local report filenames, never fetched from arbitrary URLs.
 
+Manual review selection is available after a completed scan and on its report
+page: All/1-star/Clear controls, individual checkboxes and filters operate on
+the up-to-five official API reviews. Apply `20261010170000_review_selection.sql`
+additively; ownership RLS stays unchanged. Selection is persisted when a
+selected report is generated. A selected report uses only the chosen reviews
+and saves a separate `{artifactId}_selected.pdf`, request assessments and IDs in
+owner-scoped report metadata; the automatic full PDF is preserved.
+Selecting a negative review does not make it a violation. Requests without a
+supported existing AI concern and an exact evidence quote are downgraded to
+insufficient evidence, not fabricated allegations. Reports never submit to
+Google automatically. Original API `review_uri` is preferred; absent URLs
+link to the business Maps page or a clearly labeled Google search, not an
+invented direct review URL.
+Selection flags and selected request metadata are committed together by the
+owner-scoped `save_selected_report` transaction. Each selected generation has
+a fresh artifact ID, preserving previous shared snapshots even on retries.
+Single scans also support business-name search (include city). The user must
+choose a candidate by name and address; the chosen exact place-ID URL runs
+through the existing scan flow. Search never silently scans an arbitrary match.
+Nginx's UUID-only PDF location must permit `_selected` alongside `_evidence`;
+keep application `/reports/{scanId}` routes proxied. Selected snapshots also
+have business-folder and shared copies and the same 90-day retention. Selected
+PDF sharing is labeled separately from the full automatic report.
+
 The report's **Report Google** button opens the saved business Google Maps URL
 in a new tab. If no Maps URL is saved, it opens Google's review-reporting help
 page at `https://support.google.com/business/answer/4596773`. Opening this link

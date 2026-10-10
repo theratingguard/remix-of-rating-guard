@@ -1,10 +1,32 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parseMapsUrl, resolveAndFetchPlace } from "./google-places.server";
+import { parseMapsUrl, resolveAndFetchPlace, searchBusinesses } from "./google-places.server";
 
 const url = "https://www.google.com/maps/search/?api=1&query_place_id=test-place&query=test";
 const dns = vi.hoisted(() => ({ lookup: vi.fn() }));
 vi.mock("node:dns/promises", () => ({ ...dns, default: dns }));
 describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
+  it("returns name-search candidates with exact place-ID URLs, not an arbitrary automatic match", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        places: [
+          {
+            id: "unit-place",
+            displayName: { text: "Unit Business" },
+            formattedAddress: "Unit City",
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    const candidates = await searchBusinesses("unit-key", "Unit Business Unit City");
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.url).toContain("query_place_id=unit-place");
+    expect(candidates[0]?.address).toBe("Unit City");
+    expect(JSON.parse(fetch.mock.calls[0]?.[1].body)).toEqual({
+      textQuery: "Unit Business Unit City",
+      pageSize: 5,
+    });
+  });
   afterEach(() => vi.unstubAllGlobals());
   it.each([
     "http://www.google.com/maps",

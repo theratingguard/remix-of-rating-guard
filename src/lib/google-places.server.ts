@@ -236,6 +236,36 @@ export function parseMapsUrl(raw: string): Parsed {
 const DETAILS_MASK =
   "id,displayName,formattedAddress,rating,userRatingCount,googleMapsUri,primaryTypeDisplayName,reviews,location";
 
+export async function searchBusinesses(apiKey: string, query: string) {
+  const result = z
+    .object({
+      places: z
+        .array(
+          z.object({
+            id: z.string().min(1),
+            displayName: z.object({ text: z.string().min(1) }),
+            formattedAddress: z.string().optional(),
+          }),
+        )
+        .max(5)
+        .optional(),
+    })
+    .safeParse(
+      await googleFetch(apiKey, "/places:searchText", {
+        method: "POST",
+        body: JSON.stringify({ textQuery: query, pageSize: 5 }),
+        fieldMask: "places.id,places.displayName,places.formattedAddress",
+      }),
+    );
+  if (!result.success)
+    throw new ScanError("GOOGLE_ERROR", "Google returned invalid business search results.");
+  return (result.data.places ?? []).map((place) => ({
+    name: place.displayName.text,
+    address: place.formattedAddress ?? "Address unavailable",
+    url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.displayName.text)}&query_place_id=${encodeURIComponent(place.id)}`,
+  }));
+}
+
 export async function resolveAndFetchPlace(
   apiKey: string,
   inputUrl: string,

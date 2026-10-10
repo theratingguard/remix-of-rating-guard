@@ -3,9 +3,10 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2, Search, KeyRound, AlertTriangle, X } from "lucide-react";
-import { scanFetch, scanAnalyze, getSystemStatus } from "@/lib/scan.functions";
+import { scanFetch, scanAnalyze, getSystemStatus, findBusinesses } from "@/lib/scan.functions";
 import { scanQuery } from "@/lib/data";
 import { toast } from "sonner";
+import { ReviewSelection } from "@/components/review-selection";
 import { BusinessHeader, RatingAnalysis, RiskAnalysis } from "@/components/scan-result";
 import { Button } from "@/components/ui/button";
 import { BulkScan } from "@/components/bulk-scan";
@@ -48,6 +49,32 @@ function ScanPage() {
   const [failedAt, setFailedAt] = useState<"fetch" | "analyze" | null>(null);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [scanId, setScanId] = useState<string | null>(null);
+  const find = useServerFn(findBusinesses);
+  const [businessQuery, setBusinessQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [businesses, setBusinesses] = useState<{ name: string; address: string; url: string }[]>(
+    [],
+  );
+  const [searchMessage, setSearchMessage] = useState<string | null>(null);
+
+  async function searchNames(event: React.FormEvent) {
+    event.preventDefault();
+    setSearching(true);
+    setBusinesses([]);
+    setSearchMessage(null);
+    try {
+      const results = await find({ data: { query: businessQuery } });
+      setBusinesses(results);
+      if (results.length === 0)
+        setSearchMessage("No businesses found. Add a city or use a Google Maps URL.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Business search failed.";
+      setSearchMessage(message);
+      toast.error(message);
+    } finally {
+      setSearching(false);
+    }
+  }
 
   const urlValid = looksLikeGoogleUrl(url);
   const running = phase === "fetch" || phase === "analyze";
@@ -118,8 +145,8 @@ function ScanPage() {
         <div className="relative mx-auto max-w-3xl text-center">
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Scan a Google Business</h1>
           <p className="mx-auto mt-3 max-w-xl opacity-75">
-            Paste a public Google Maps or Business URL to analyze available business rating and
-            review information.
+            Paste a public Google Maps URL, or search by business name and choose the exact business
+            to analyze available rating and review information.
           </p>
           <p className="mt-2 text-xs opacity-75">
             Scanning automatically publishes a PDF. Anyone with its PDF URL can open it.
@@ -164,6 +191,68 @@ function ScanPage() {
             <BulkScan disabled={!!keyMissing} />
           ) : (
             <>
+              <form
+                onSubmit={searchNames}
+                className="mt-5 flex flex-wrap gap-2 rounded-2xl bg-card p-3 text-left"
+              >
+                <label htmlFor="business-name" className="text-sm font-semibold">
+                  Find by business name (include city)
+                </label>
+                <input
+                  id="business-name"
+                  value={businessQuery}
+                  onChange={(event) => setBusinessQuery(event.target.value)}
+                  disabled={running || searching}
+                  placeholder="The Hudson Albany"
+                  minLength={3}
+                  maxLength={200}
+                  className="min-w-0 flex-1 rounded border bg-transparent p-2"
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  disabled={running || searching || !!keyMissing || businessQuery.trim().length < 3}
+                >
+                  {searching ? "Searching..." : "Find business"}
+                </Button>
+              </form>
+              {searchMessage && (
+                <p role="status" className="mt-2 text-sm">
+                  {searchMessage}
+                </p>
+              )}
+              {businesses.length > 0 && (
+                <div className="mt-3 space-y-2 text-left">
+                  <p className="text-sm">
+                    Choose the correct business and address; results are not scanned automatically.
+                  </p>
+                  {businesses.map((business) => (
+                    <div
+                      key={business.url}
+                      className="flex items-center justify-between gap-3 rounded border bg-card p-3"
+                    >
+                      <div>
+                        <b>{business.name}</b>
+                        <p className="text-sm">{business.address}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        disabled={running}
+                        onClick={() => {
+                          setUrl(business.url);
+                          setTouched(false);
+                          setBusinesses([]);
+                          setSearchMessage(
+                            `Selected ${business.name}, ${business.address}. Click Scan business to continue.`,
+                          );
+                        }}
+                      >
+                        Choose business
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <form
                 onSubmit={start}
                 noValidate
@@ -299,6 +388,7 @@ function ScanResult({ id }: { id: string }) {
   return (
     <div className="mt-8">
       <BusinessHeader scan={data.scan} />
+      <ReviewSelection key={id} scan={data.scan} reviews={data.reviews} report={data.report} />
       <RatingAnalysis scan={data.scan} reviews={data.reviews} />
       <RiskAnalysis scan={data.scan} reviews={data.reviews} />
     </div>

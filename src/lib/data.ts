@@ -8,6 +8,8 @@ export type Risk = "high" | "medium" | "normal" | "requires_review";
 
 /** Original Google review data + separately stored AI analysis. */
 export type AnalyzedReview = {
+  user_selected?: boolean;
+  review_url?: string | null;
   id: string;
   author: string;
   rating: number;
@@ -71,7 +73,7 @@ export const scanQuery = (id: string) =>
         supabase
           .from("reviews")
           .select(
-            "id, author, rating, published_at, relative_time, text, review_uri, review_analyses!review_analyses_review_id_fkey(risk, category, signals, reason, evidence, confidence, model)",
+            "id, author, rating, published_at, relative_time, text, review_uri, user_selected, review_url, review_analyses!review_analyses_review_id_fkey(risk, category, signals, reason, evidence, confidence, model)",
           )
           .eq("scan_id", id),
         supabase.from("reports").select("*").eq("scan_id", id).maybeSingle(),
