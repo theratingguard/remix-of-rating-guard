@@ -33,7 +33,7 @@ vi.mock("./analysis.server", () => ({
   THREE_MODEL_MODE: false,
 }));
 
-function database(failure?: "report" | "completion") {
+function database(failure?: "report" | "completion", scanStatus = "running") {
   const updates: Record<string, unknown>[] = [];
   const reportWrites: Record<string, unknown>[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
@@ -46,7 +46,7 @@ function database(failure?: "report" | "completion") {
           {
             id: "scan-fixture",
             user_id: "owner",
-            status: "running",
+            status: scanStatus,
             stage: "analyze",
             rating: 4,
             reviews_retrieved: 1,
@@ -81,6 +81,8 @@ function database(failure?: "report" | "completion") {
         { status: 500 },
       );
     }
+    if (table === "scans" && status === "running")
+      return Response.json([{ id: "scan-fixture" }]);
     return new Response(null, { status: 204 });
   };
   const client = createClient<Database>(
@@ -140,6 +142,20 @@ describe("Durable scan completion (unit fixtures only)", () => {
       ok: true,
     });
     expect(db.updates.at(-1)).toMatchObject({ status: "complete", error: null });
+  });
+  it("re-enters the running analysis lifecycle before publishing a failed scan retry", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
+    const db = database(undefined, "failed");
+    expect(await scanAnalyzeCore(db.client, "owner", { scanId: "scan-fixture" })).toMatchObject({
+      ok: true,
+    });
+    expect(db.updates[0]).toMatchObject({
+      status: "running",
+      stage: "analyze",
+      error: null,
+      completed_at: null,
+    });
+    expect(db.updates.at(-1)).toMatchObject({ status: "complete" });
   });
   it("does not recommend a clean result when model assessments require manual review", async () => {
     vi.stubEnv("OPENAI_API_KEY", "unit-test-only");

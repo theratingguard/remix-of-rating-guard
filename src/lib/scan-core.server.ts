@@ -471,6 +471,20 @@ export async function scanAnalyzeCore(
     if (saved.data) return { ok: true, scanId: scan.id, reviews: scan.reviews_retrieved };
   }
   try {
+    if (scan.status === "failed") {
+      const retry = await supabase
+        .from("scans")
+        .update({ status: "running", stage: "analyze", error: null, completed_at: null })
+        .eq("id", scan.id)
+        .eq("user_id", userId)
+        .eq("status", "failed")
+        .select("id")
+        .maybeSingle();
+      if (retry.error)
+        throw new ScanError("DB_UNAVAILABLE", "Could not start the saved scan analysis retry.");
+      if (!retry.data)
+        return { ok: false, code: "SCAN_IN_PROGRESS", message: "This scan is already being retried." };
+    }
     const { data: reviews, error } = await supabase
       .from("reviews")
       .select("*")
