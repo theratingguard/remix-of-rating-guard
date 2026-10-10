@@ -133,7 +133,9 @@ export const getBatchJobs = createServerFn({ method: "GET" })
     const { data: scans } = ids.length
       ? await context.supabase
           .from("scans")
-          .select("id, business_name, rating, reviews_retrieved, high_count, medium_count")
+          .select(
+            "id, business_name, rating, total_reviews, reviews_retrieved, high_count, medium_count",
+          )
           .in("id", ids)
           .throwOnError()
       : { data: [] };

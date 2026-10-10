@@ -118,6 +118,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       "Input",
       "Rating",
       "Reviews fetched",
+      "Total Google reviews",
       "1-star",
       "2-star",
       "3-star",
@@ -135,6 +136,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       job.url,
       job.scan?.rating,
       job.scan?.reviews_retrieved,
+      job.scan?.total_reviews,
       ...job.stars,
       job.removal.high,
       job.removal.medium,
@@ -302,7 +304,11 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
                       {job.scan?.business_name ?? job.url}
                     </td>
                     <td className="p-2">{job.scan?.rating ?? "—"}</td>
-                    <td className="p-2">{job.scan?.reviews_retrieved ?? "—"}</td>
+                    <td className="p-2">
+                      {job.scan
+                        ? `${job.scan.reviews_retrieved} of ${job.scan.total_reviews ?? "unknown"}`
+                        : "—"}
+                    </td>
                     {job.stars.map((count, index) => (
                       <td key={index} className="p-2">
                         {job.scan ? count : "—"}

@@ -59,7 +59,12 @@ describe("Durable bulk UI", () => {
           status: "pending",
           stars: [3, 0, 0, 0, 2],
           removal: { high: 0, medium: 0, low: 5 },
-          scan: { business_name: "The Hudson", rating: 3.2, reviews_retrieved: 5 },
+          scan: {
+            business_name: "The Hudson",
+            rating: 3.2,
+            reviews_retrieved: 5,
+            total_reviews: 120,
+          },
         },
       ],
     });
@@ -72,6 +77,7 @@ describe("Durable bulk UI", () => {
     await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("value", "0"));
     expect(screen.getByRole("columnheader", { name: "1★" })).toBeInTheDocument();
     expect(screen.getByText("🔴 0 / 🟠 0 / 🟡 5")).toBeInTheDocument();
+    expect(screen.getByText("5 of 120")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
     await waitFor(() =>
       expect(api.control).toHaveBeenCalledWith({
