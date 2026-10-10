@@ -19,12 +19,30 @@ export const generateSelectedReport = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     try {
-      return await createSelectedReport(
+      const result = await createSelectedReport(
         context.supabase,
         context.userId,
         data.scanId,
         data.reviewIds,
       );
+      const artifactId = z
+        .string()
+        .uuid()
+        .parse(
+          new URL(result.url).pathname
+            .split("/")
+            .pop()
+            ?.replace(/_selected\.pdf$/, ""),
+        );
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin
+        .rpc("register_private_selected_artifact", {
+          _artifact_id: artifactId,
+          _scan_id: data.scanId,
+          _owner_id: context.userId,
+        })
+        .throwOnError();
+      return result;
     } catch (error) {
       console.error("[review-selection] Selected report failed", error);
       throw error;

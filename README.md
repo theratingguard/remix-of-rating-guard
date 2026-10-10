@@ -68,16 +68,18 @@ action. Live PDF generation runs server-side using Puppeteer/Chromium, inline
 styles and system fonts, without browser rendering, external requests or
 JavaScript. It loads owner-scoped saved reviews and AI assessments and preserves
 unresolved-review warnings. Download validates ownership and the PDF, saves it atomically
-to `/opt/rating-guard/public/reports/{scanId}.pdf`, and stores the URL in the
-owner-scoped `reports.report_data.pdf_url` field. The PDF is public to anyone
-with its URL; the UI explicitly discloses this before export. R2 is not used.
+to `/opt/rating-guard-private/reports/{scanId}.pdf`, and stores its identifier in the
+owner-scoped `reports.report_data.pdf_url` field. Legacy PDF URLs are retained
+as artifact identifiers, not public download endpoints. Downloads now require
+an authenticated owner or explicitly designated Super Admin. R2 is not used.
 Seed reports download locally only. Printing does not imply a PDF was saved.
 
-Create the VPS reports directory with mode 755 and ownership `ratingguard`.
-Files are 644 for Nginx reads despite the service's restrictive umask; directory
-listing is disabled. Ignore generated PDFs in Git. Keep `/reports/{id}` proxied
-to the app; only UUID `.pdf` URLs use the Nginx static handler, with PDF MIME,
-inline disposition and `nosniff`. Set `client_max_body_size 36m` for PDF uploads
+Create `/opt/rating-guard-private/reports` with mode 700 and ownership `ratingguard`.
+Files are mode 600 and must never be copied into `public` or build output.
+Ignore generated PDFs in Git. Keep `/reports/{id}` proxied to the app;
+Nginx denies every legacy `/reports/*.pdf` path, including shared/business copies.
+Authenticated PDF transport returns validated bytes with private/no-store headers.
+Set `client_max_body_size 36m` for PDF uploads
 (24 MB bytes, base64 encoded). Do not copy generated PDFs into deployment
 artifacts or remove them on rebuild. Install Chromium with Puppeteer's browser
 installer and OS dependencies; set `PUPPETEER_CACHE_DIR` to a persistent directory
@@ -94,7 +96,7 @@ additively; it retains the separate service-only `scan_history` permissions.
 Live scan completion now waits for server-generated PDFs to be saved and indexed;
 `REPORT_READY` is emitted only afterward. PDF failure fails the scan explicitly,
 not an untracked fire-and-forget background job. On a live scan, the UI explains
-that reports are automatically public to anyone with the PDF URL.
+that reports are private and require authorized login.
 Canonical `/reports/{scanId}.pdf` links remain compatible; copies are saved under
 `{businessId}/{scanId}.pdf` and `shared/{scanId}.pdf`, with an AI-evidence appendix
 `{businessId}/{scanId}_evidence.pdf`. Review assessments remain advisory.
@@ -134,8 +136,7 @@ a fresh artifact ID, preserving previous shared snapshots even on retries.
 Single scans also support business-name search (include city). The user must
 choose a candidate by name and address; the chosen exact place-ID URL runs
 through the existing scan flow. Search never silently scans an arbitrary match.
-Nginx's UUID-only PDF location must permit `_selected` alongside `_evidence`;
-keep application `/reports/{scanId}` routes proxied. Selected snapshots also
+Keep application `/reports/{scanId}` routes proxied. Selected snapshots also
 have business-folder and shared copies and the same 90-day retention. Selected
 PDF sharing is labeled separately from the full automatic report.
 
@@ -144,13 +145,11 @@ PDF sharing is labeled separately from the full automatic report.
 New automatic PDFs include Legal Expert Analysis and a separate
 `{scanId}_legal.pdf` downloadable assessment. Older reports can generate the
 module in place without changing login or credentials. Selected PDFs also
-include legal assessments only for selected reviews. Nginx's UUID-only PDF
-route must permit `_legal` in addition to `_selected` and `_evidence`.
-Serve `_legal.pdf` with `Content-Disposition: attachment` so the legal-request
-button is a download, even in browsers that ignore the HTML `download`
-attribute. Full and selected report URLs may retain inline PDF viewing.
-The legal download button appends `?download=legal-v1` to avoid previously
-cached inline headers when upgrading existing reports.
+include legal assessments only for selected reviews. All variants download
+through the same authenticated, ownership-checked byte transport, not static
+Nginx URLs. Previously selected snapshots must be regenerated once to obtain
+a server-registered ownership binding; editable report metadata is not proof
+that a selected artifact belongs to its requester.
 
 Flagged (high/medium) reviews receive a structured AI assessment with
 validated review IDs, verbatim evidence, an allowlisted Google policy heading
@@ -210,13 +209,25 @@ estimable. Scores remain uncalibrated AI estimates, never removal guarantees.
 PDFs include the breakdown, color-coded details and a manual prioritized
 action plan without invented timelines.
 
-Private/Super-Admin-only reports require a confirmed access rule and
-designated application administrator before rollout. Existing public PDFs
-remain public until that migration is explicitly deployed. A UI badge or a
-"confidential" footer is NOT access enforcement; do not label current public
-reports as private. Production must revoke public PDF serving, protect
-downloads and all detailed database reads, and verify restricted roles before
-claiming franchise/reseller exclusion.
+### Private reports
+
+Apply `20261010210000_private_reports.sql` and run
+`supabase/tests/private-reports.sql` (transaction-only fixtures and role assignments).
+Ordinary owners retain their own detailed reports. Only an explicitly designated
+`report_principals.access_level='super_admin'` can read all owners' details.
+Existing `admin` roles do not automatically gain that capability. No account is
+promoted by the migration.
+
+Authorized operators assign franchise/reseller principals through trusted
+database administration, never browser writes. Those principals receive only
+their own business-name/total-review summaries from `private_report_summaries()`;
+restrictive RLS denies scans, reviews, analyses, actions, reports, events, jobs,
+errors and audit details. `report_access` automatically indexes report ownership.
+Public PDF locations and build copies must be removed, and the CDN cache purged.
+New PDFs are confidential, mode 600, outside the web root.
+Links now point to the private report page and require authorized login.
+Previously downloaded copies/browser caches cannot be recalled. An owner who
+emails an attachment deliberately shares an external, non-revocable copy.
 
 The report's **Report Google** button opens the saved business Google Maps URL
 in a new tab. If no Maps URL is saved, it opens Google's review-reporting help

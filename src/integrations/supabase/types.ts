@@ -840,6 +840,20 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      register_private_selected_artifact: {
+        Args: { _artifact_id: string; _scan_id: string; _owner_id: string };
+        Returns: undefined;
+      };
+      can_download_selected_artifact: {
+        Args: { _artifact_id: string; _scan_id: string };
+        Returns: boolean;
+      };
+      report_access_level: { Args: Record<string, never>; Returns: string };
+      can_read_report_owner: { Args: { owner_id: string }; Returns: boolean };
+      private_report_summaries: {
+        Args: Record<string, never>;
+        Returns: { scan_id: string; business_name: string | null; total_reviews: number | null }[];
+      };
       save_selected_report: {
         Args: { _scan_id: string; _review_ids: string[]; _review_links: Json; _metadata: Json };
         Returns: boolean;

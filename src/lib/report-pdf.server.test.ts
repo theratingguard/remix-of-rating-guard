@@ -148,14 +148,14 @@ describe("VPS PDF persistence", () => {
     expect(html).toContain("&lt;script&gt;evidence&lt;/script&gt;");
     expect(html).not.toContain("<script>");
   });
-  it("stores valid bytes atomically, with a UUID filename and correct public URL", async () => {
+  it("stores valid bytes atomically, with a UUID filename and private filesystem permissions", async () => {
     expect(await saveReportToVPS(scanId, pdf)).toBe(
       `https://ratingguard.online/reports/${scanId}.pdf`,
     );
     expect(await readFile(join(directory, `${scanId}.pdf`))).toEqual(pdf);
     expect(await readdir(directory)).toEqual([`${scanId}.pdf`]);
     if (process.platform !== "win32")
-      expect((await stat(join(directory, `${scanId}.pdf`))).mode & 0o777).toBe(0o644);
+      expect((await stat(join(directory, `${scanId}.pdf`))).mode & 0o777).toBe(0o600);
   });
   it("rejects traversal and malformed PDF bytes without writing files", async () => {
     await expect(saveReportToVPS("../escape", pdf)).rejects.toThrow();

@@ -8,6 +8,7 @@ import { PageHeader, EmptyState } from "@/components/app-shell";
 import { DevTag } from "@/components/review-ui";
 import { Button } from "@/components/ui/button";
 import { BatchInsightsPanel } from "@/components/batch-insights";
+import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 
 export const Route = createFileRoute("/_authenticated/reports/")({
   head: () => ({
@@ -20,8 +21,13 @@ export const Route = createFileRoute("/_authenticated/reports/")({
 });
 
 function ReportsPage() {
+  const access = useQuery(reportAccessQuery());
   const { data: scans = [], isLoading, error } = useQuery(scansQuery());
   const reports = scans.filter((s) => s.status === "complete" && s.reports);
+  if (access.error)
+    return <p role="alert">Could not verify report access: {access.error.message}</p>;
+  if (access.data === "franchise" || access.data === "reseller") return <RestrictedReportSummary />;
+  if (access.isPending) return <p>Verifying report access…</p>;
   if (error) return <p role="alert">Could not load reports: {error.message}</p>;
   return (
     <>

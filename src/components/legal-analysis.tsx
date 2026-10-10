@@ -12,6 +12,7 @@ import {
 import { saveReportPdf } from "@/lib/report-pdf.functions";
 import { Button } from "@/components/ui/button";
 import { RemovalBadge } from "./removal-summary";
+import { PrivatePdfButton } from "./private-pdf-button";
 
 export function LegalAnalysisPanel({
   scan,
@@ -64,14 +65,9 @@ export function LegalAnalysisPanel({
           </Button>
         )}
         {url && (
-          <Button variant="outline" asChild>
-            <a
-              href={`${url}?download=legal-v1`}
-              download={`RPT-${scan.id.slice(0, 8).toUpperCase()}-legal.pdf`}
-            >
-              Download Legal Removal Request
-            </a>
-          </Button>
+          <PrivatePdfButton scanId={scan.id} variant="legal">
+            Download Legal Removal Request
+          </PrivatePdfButton>
         )}
         <Button variant="outline" asChild>
           <a

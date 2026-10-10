@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { selectedPdfUrl } from "@/lib/review-selection";
 import { savedLegalPdfUrl } from "@/lib/legal-analysis";
+import { PrivatePdfButton } from "@/components/private-pdf-button";
+import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 
 export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
@@ -23,6 +25,7 @@ const sel =
   "h-9 rounded-md border bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function HistoryPage() {
+  const access = useQuery(reportAccessQuery());
   const { data: scans = [], isLoading, error } = useQuery(scansQuery());
   const [q, setQ] = useState("");
   const [risk, setRisk] = useState("all");
@@ -47,6 +50,10 @@ function HistoryPage() {
     [scans, q, risk, status, from, to],
   );
 
+  if (access.error)
+    return <p role="alert">Could not verify report access: {access.error.message}</p>;
+  if (access.data === "franchise" || access.data === "reseller") return <RestrictedReportSummary />;
+  if (access.isPending) return <p>Verifying report access…</p>;
   if (error) return <p role="alert">Could not load scan history: {error.message}</p>;
   return (
     <>
@@ -161,34 +168,17 @@ function HistoryPage() {
                   </td>
                   <td className="px-5 py-3 text-right">
                     {s.status === "complete" && savedLegalPdfUrl(s.reports?.report_data) && (
-                      <a
-                        href={savedLegalPdfUrl(s.reports?.report_data) ?? undefined}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mr-3 text-brand hover:underline"
-                      >
+                      <PrivatePdfButton scanId={s.id} variant="legal">
                         Legal PDF
-                      </a>
+                      </PrivatePdfButton>
                     )}
                     {s.status === "complete" && selectedPdfUrl(s.reports?.report_data) && (
-                      <a
-                        href={selectedPdfUrl(s.reports?.report_data) ?? undefined}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mr-3 text-brand hover:underline"
-                      >
+                      <PrivatePdfButton scanId={s.id} variant="selected">
                         Selected PDF
-                      </a>
+                      </PrivatePdfButton>
                     )}
                     {s.status === "complete" && savedPdfUrl(s.reports?.report_data) && (
-                      <a
-                        href={savedPdfUrl(s.reports?.report_data) ?? undefined}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mr-3 text-brand hover:underline"
-                      >
-                        PDF
-                      </a>
+                      <PrivatePdfButton scanId={s.id}>PDF</PrivatePdfButton>
                     )}
                     {s.status === "complete" && (
                       <Link

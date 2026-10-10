@@ -25,6 +25,10 @@ import { ReviewSelection } from "@/components/review-selection";
 import { LegalAnalysisPanel } from "@/components/legal-analysis";
 import { RemovalSummary } from "@/components/removal-summary";
 import { RatingAnalysis } from "@/components/scan-result";
+import { PrivatePdfButton } from "@/components/private-pdf-button";
+import { downloadPrivateReport } from "@/lib/private-report.functions";
+import { savePrivatePdf } from "@/lib/private-report";
+import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 
 export const Route = createFileRoute("/_authenticated/reports/$id")({
   validateSearch: z.object({ print: z.boolean().optional() }),
@@ -38,10 +42,12 @@ export const Route = createFileRoute("/_authenticated/reports/$id")({
 });
 
 function ReportDetail() {
+  const access = useQuery(reportAccessQuery());
   const { id } = Route.useParams();
   const { print } = Route.useSearch();
   const audit = useServerFn(logAudit);
   const savePdf = useServerFn(saveReportPdf);
+  const privateDownload = useServerFn(downloadPrivateReport);
   const sendEmail = useServerFn(emailReport);
   const emailStatus = useServerFn(reportEmailStatus);
   const { data: smtp, error: smtpError } = useQuery({
@@ -76,19 +82,12 @@ function ReportDetail() {
         return;
       }
       const existing = savedPdfUrl(data.report.report_data);
-      const result = existing
-        ? { url: existing }
-        : await savePdf({
-            data: { scanId: id },
-          });
+      if (!existing)
+        await savePdf({
+          data: { scanId: id },
+        });
       await queryClient.invalidateQueries({ queryKey: ["scan", id] });
-      const anchor = document.createElement("a");
-      anchor.href = result.url;
-      anchor.download = `${reportNumber(data.scan, data.report)}.pdf`;
-      anchor.rel = "noopener";
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
+      savePrivatePdf(await privateDownload({ data: { scanId: id, variant: "full" } }));
       if (!data.scan.is_seed)
         await audit({ data: { action: "report.downloaded", detail: { scan_id: id } } }).catch(
           (error: unknown) => {
@@ -109,12 +108,17 @@ function ReportDetail() {
     return () => clearTimeout(t);
   }, [print, data, printReport]);
 
-  if (isLoading) return <div className="text-muted-foreground">Preparing report…</div>;
+  if (access.error)
+    return <p role="alert">Could not verify report access: {access.error.message}</p>;
+  if (access.data === "franchise" || access.data === "reseller")
+    return <RestrictedReportSummary scanId={id} />;
+  if (isLoading || access.isPending)
+    return <div className="text-muted-foreground">Preparing report…</div>;
   if (queryError) return <p role="alert">Could not load report: {queryError.message}</p>;
   if (!data?.scan)
     return (
       <div>
-        Report not found.{" "}
+        Access Denied: this report is private or unavailable.{" "}
         <Link to="/reports" className="text-brand">
           Back to reports
         </Link>
@@ -136,8 +140,8 @@ function ReportDetail() {
   async function copyLink() {
     if (!pdfUrl) return;
     try {
-      await navigator.clipboard.writeText(pdfUrl);
-      toast.success("Report link copied.");
+      await navigator.clipboard.writeText(`https://ratingguard.online/reports/${id}`);
+      toast.success("Private report link copied. Authorized login required.");
     } catch (error) {
       console.error("[report] Link copy failed", error);
       toast.error("Could not copy the link. Copy the displayed PDF URL manually.");
@@ -160,6 +164,7 @@ function ReportDetail() {
   return (
     <>
       <div className="no-print mb-6 flex flex-wrap justify-between gap-3">
+        <span className="rounded-full border px-3 py-1 text-xs font-semibold">Private Report</span>
         <Button variant="ghost" asChild>
           <Link to="/reports">
             <ArrowLeft /> Reports
@@ -167,11 +172,9 @@ function ReportDetail() {
         </Button>
         <div className="flex gap-2">
           {pdfUrl ? (
-            <Button variant="outline" asChild>
-              <a href={pdfUrl} download={`${reportNumber(scan, report)}.pdf`}>
-                <Download /> Save PDF
-              </a>
-            </Button>
+            <PrivatePdfButton scanId={id}>
+              <Download /> Save PDF
+            </PrivatePdfButton>
           ) : (
             <Button variant="outline" onClick={download} disabled={exporting}>
               <Download /> {exporting ? "Preparing PDF..." : "Save PDF"}
@@ -182,17 +185,12 @@ function ReportDetail() {
           </Button>
           {pdfUrl && (
             <>
-              <Button variant="outline" asChild>
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                  Open saved PDF
-                </a>
-              </Button>
               <Button variant="outline" onClick={copyLink}>
                 Copy Link
               </Button>
               <Button variant="outline" asChild>
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`Your Rating Guard report: ${pdfUrl}`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`Your Rating Guard private report (authorized login required): https://ratingguard.online/reports/${id}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -215,15 +213,23 @@ function ReportDetail() {
         </div>
         {!scan.is_seed && (
           <p className="no-print mb-4 text-sm text-muted-foreground">
-            Reports are automatically published on ratingguard.online. Anyone with the PDF URL can
-            open it.
+            Private Report — only the authorized owner or a designated Super Admin can view details.
+            Franchise/reseller accounts cannot access detailed reports or PDFs.
           </p>
         )}
       </div>
       {!scan.is_seed && (
         <section className="no-print surface mb-6 p-4">
           <p>PDF Status: {pdfUrl ? "Ready" : "Not available or expired; Save PDF to regenerate"}</p>
-          {pdfUrl && <p className="break-all text-sm">{pdfUrl}</p>}
+          <p className="text-xs text-muted-foreground">
+            Emailing an attachment shares a confidential copy outside this access control; that copy
+            cannot be revoked.
+          </p>
+          {pdfUrl && (
+            <p className="break-all text-sm">
+              https://ratingguard.online/reports/{id} — authorized login required
+            </p>
+          )}
           <form onSubmit={submitEmail} className="mt-3 flex flex-wrap items-center gap-2">
             <label htmlFor="report-email">Email Report</label>
             <Input
@@ -400,6 +406,7 @@ function ReportDetail() {
           </p>
         </section>
         <footer className="border-t pt-6 text-xs text-muted-foreground">
+          <p className="font-semibold">CONFIDENTIAL — Authorized owner / Super Admin only</p>
           Classification is automated and advisory; it does not guarantee a policy violation. Google
           independently determines whether a review violates its policies and whether removal is
           appropriate.

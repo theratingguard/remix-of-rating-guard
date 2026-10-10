@@ -33,14 +33,14 @@ export async function saveReportToVPS(
   if (document.getPageCount() < 1 || document.getPageCount() > 100)
     throw new Error("A report PDF must contain between 1 and 100 pages.");
 
-  const root = process.env["REPORT_PDF_DIRECTORY"] || "/opt/rating-guard/public/reports";
+  const root = process.env["REPORT_PDF_DIRECTORY"] || "/opt/rating-guard-private/reports";
   const directory = subdirectory ? join(root, subdirectory) : root;
-  await mkdir(directory, { recursive: true, mode: 0o755 });
-  await chmod(directory, 0o755);
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  await chmod(directory, 0o700);
   const temporary = join(directory, `.${reportId}-${randomUUID()}.tmp`);
   try {
     await writeFile(temporary, pdfBuffer, { flag: "wx", mode: 0o600 });
-    await chmod(temporary, 0o644);
+    await chmod(temporary, 0o600);
     await rename(
       temporary,
       join(
@@ -175,7 +175,7 @@ export async function renderReportPdf(html: string) {
           displayHeaderFooter: true,
           headerTemplate: "<span></span>",
           footerTemplate:
-            '<div style="font:9px Arial;width:100%;text-align:center;color:#526276">Rating Guard &middot; Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
+            '<div style="font:9px Arial;width:100%;text-align:center;color:#526276">CONFIDENTIAL — Authorized owner / Super Admin only &middot; Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
         }),
       );
     } finally {

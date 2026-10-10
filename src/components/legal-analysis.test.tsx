@@ -8,6 +8,7 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
 vi.mock("@/lib/report-pdf.functions", () => ({ saveReportPdf: {} }));
+vi.mock("@/lib/private-report.functions", () => ({ downloadPrivateReport: {} }));
 const scan = {
   id: "d8bdb357-60db-4a05-92c4-38020ec52eda",
   status: "complete",
@@ -52,9 +53,9 @@ describe("Legal analysis report UI", () => {
     render(<LegalAnalysisPanel scan={scan} report={report} reviews={[review]} />);
     expect(screen.getByText(/Not estimable/)).toBeInTheDocument();
     expect(screen.getByText(/No removal request drafted/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Download Legal Removal Request" })).toHaveAttribute(
-      "download",
-    );
+    expect(
+      screen.getByRole("button", { name: "Download Legal Removal Request" }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByText(/Policy request templates/));
     for (const name of [
       "Fake Content template",

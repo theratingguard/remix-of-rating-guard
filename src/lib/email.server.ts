@@ -19,7 +19,7 @@ export async function sendReportEmail(clientEmail: string, pdfUrl: string, busin
   if (!id) throw new Error("Invalid saved report PDF URL.");
   z.string().uuid().parse(id);
   const content = await readFile(
-    join(process.env["REPORT_PDF_DIRECTORY"] || "/opt/rating-guard/public/reports", `${id}.pdf`),
+    join(process.env["REPORT_PDF_DIRECTORY"] || "/opt/rating-guard-private/reports", `${id}.pdf`),
   );
   const port = z.coerce.number().int().min(1).max(65535).parse(process.env["SMTP_PORT"]);
   const transport = nodemailer.createTransport({
@@ -37,7 +37,7 @@ export async function sendReportEmail(clientEmail: string, pdfUrl: string, busin
       from: process.env["SMTP_FROM"],
       to: clientEmail,
       subject: `Rating Guard report: ${businessName.replace(/[\r\n]/g, " ").slice(0, 120)}`,
-      text: `Your Rating Guard report for ${businessName} is attached.\n\n${pdfUrl}\n\nAI assessments are advisory, not guarantees of review removal.`,
+      text: `Your Rating Guard report for ${businessName} is attached. This attachment is confidential; the sender is sharing a copy that cannot be revoked.\n\nhttps://ratingguard.online/reports/${id} (authorized login required)\n\nAI assessments are advisory, not guarantees of review removal.`,
       attachments: [
         {
           filename: `RPT-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}.pdf`,

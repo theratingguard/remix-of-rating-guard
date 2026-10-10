@@ -13,6 +13,7 @@ import {
 } from "@/lib/review-selection";
 import { Button } from "@/components/ui/button";
 import { RemovalBadge } from "./removal-summary";
+import { PrivatePdfButton } from "./private-pdf-button";
 
 export function ReviewSelection({
   scan,
@@ -164,19 +165,17 @@ export function ReviewSelection({
       {pdfUrl && requests.length > 0 && (
         <div className="mt-5 border-t pt-4">
           <h3 className="font-bold">Saved selected report: {requests.length} reviews</h3>
-          <a
-            href={pdfUrl}
-            download={`RPT-${scan.id.slice(0, 8).toUpperCase()}-selected.pdf`}
-            className="text-brand underline"
-          >
+          <PrivatePdfButton scanId={scan.id} variant="selected">
             Save Selected PDF
-          </a>
+          </PrivatePdfButton>
           <Button
             variant="outline"
             onClick={async () => {
               try {
-                await navigator.clipboard.writeText(pdfUrl);
-                toast.success("Selected PDF link copied.");
+                await navigator.clipboard.writeText(
+                  `https://ratingguard.online/reports/${scan.id}`,
+                );
+                toast.success("Private report link copied. Authorized login required.");
               } catch (error) {
                 console.error("[review-selection] Clipboard failed", error);
                 toast.error("Could not copy the selected PDF URL.");
@@ -187,7 +186,7 @@ export function ReviewSelection({
           </Button>
           <Button variant="outline" asChild>
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(`Your Rating Guard selected review report: ${pdfUrl}`)}`}
+              href={`https://wa.me/?text=${encodeURIComponent(`Your Rating Guard selected review report (authorized login required): https://ratingguard.online/reports/${scan.id}`)}`}
               target="_blank"
               rel="noopener noreferrer"
             >

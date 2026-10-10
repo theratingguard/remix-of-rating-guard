@@ -8,6 +8,7 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn(async () => {}) }),
 }));
 vi.mock("@/lib/review-selection.functions", () => ({ generateSelectedReport: {} }));
+vi.mock("@/lib/private-report.functions", () => ({ downloadPrivateReport: {} }));
 const scan = {
   id: "6736a5be-e460-4e01-bfed-839fcd714877",
   business_name: "Unit Business",
@@ -71,6 +72,6 @@ describe("Manual review selection UI", () => {
     expect(generate).toHaveBeenCalledWith({
       data: { scanId: scan.id, reviewIds: reviews.slice(0, 2).map((r) => r.id) },
     });
-    expect(screen.getByRole("link", { name: "Save Selected PDF" })).toHaveAttribute("download");
+    expect(screen.getByRole("button", { name: "Save Selected PDF" })).toBeInTheDocument();
   });
 });

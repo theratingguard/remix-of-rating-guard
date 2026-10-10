@@ -151,7 +151,8 @@ function ScanPage() {
             to analyze available rating and review information.
           </p>
           <p className="mt-2 text-xs opacity-75">
-            Scanning automatically publishes a PDF. Anyone with its PDF URL can open it.
+            Scanning automatically saves a private PDF. Details are available only to the authorized
+            owner or a designated Super Admin; franchise/reseller accounts receive summaries only.
           </p>
 
           {keyMissing && (

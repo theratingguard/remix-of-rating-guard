@@ -17,6 +17,9 @@ export const enqueueBatch = createServerFn({ method: "POST" })
     z.object({ urls: z.array(z.string().trim().min(3).max(2000)).min(1).max(500) }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const access = await context.supabase.rpc("report_access_level").throwOnError();
+    if (access.data === "franchise" || access.data === "reseller")
+      throw new Error("Access Denied: summary-only accounts cannot queue detailed scans.");
     if (!process.env["GOOGLE_PLACES_API_KEY"])
       return { ok: false as const, message: "Google Places API is not configured." };
     if (!process.env["OPENAI_API_KEY"])
