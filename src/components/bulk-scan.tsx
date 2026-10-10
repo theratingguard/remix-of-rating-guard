@@ -15,6 +15,9 @@ import { isGoogleMapsUrl } from "@/lib/google-url";
 import { MAX_BULK_INPUTS } from "@/lib/bulk-import";
 export const isGoogleUrl = isGoogleMapsUrl;
 type BatchJobs = Awaited<ReturnType<typeof getBatchJobs>>;
+function hasFetchedReviews(job: BatchJobs["jobs"][number]) {
+  return job.scan && (job.status === "completed" || job.scan.reviews_retrieved > 0);
+}
 export function BulkScan({ disabled }: { disabled: boolean }) {
   const enqueue = useServerFn(enqueueBatch);
   const load = useServerFn(getBatchJobs);
@@ -142,9 +145,9 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       job.scan?.business_name,
       job.url,
       job.scan?.rating,
-      job.scan?.reviews_retrieved,
+      hasFetchedReviews(job) ? job.scan?.reviews_retrieved : "",
       job.scan?.total_reviews,
-      ...(job.scan && job.scan.reviews_retrieved > 0 ? job.stars : ["", "", "", "", ""]),
+      ...(hasFetchedReviews(job) ? job.stars : ["", "", "", "", ""]),
       job.reportUrl ? job.removal.high : "",
       job.reportUrl ? job.removal.medium : "",
       job.reportUrl ? job.removal.low : "",
@@ -344,17 +347,17 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
                     </td>
                     <td className="p-2">{job.scan?.rating ?? "—"}</td>
                     <td className="p-2">
-                      {job.scan
+                      {hasFetchedReviews(job) && job.scan
                         ? `${job.scan.reviews_retrieved} of ${job.scan.total_reviews ?? "unknown"}`
                         : "—"}
                     </td>
                     {job.stars.map((count, index) => (
                       <td key={index} className="p-2">
-                        {job.scan ? count : "—"}
+                        {hasFetchedReviews(job) ? count : "—"}
                       </td>
                     ))}
                     <td className="p-2">
-                      {job.scan
+                      {job.reportUrl
                         ? `🔴 ${job.removal.high} / 🟠 ${job.removal.medium} / 🟡 ${job.removal.low}`
                         : "—"}
                     </td>
