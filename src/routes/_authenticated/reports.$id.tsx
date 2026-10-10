@@ -109,8 +109,12 @@ function ReportDetail() {
           </Button>
           {!scan.is_seed && (
             <Button asChild>
-              <a href={GOOGLE_REPORT_URL} target="_blank" rel="noreferrer">
-                <Flag /> Open Google reporting path
+              <a
+                href={scan.maps_uri?.trim() || "https://support.google.com/business/answer/4596773"}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Flag /> Report Google
               </a>
             </Button>
           )}

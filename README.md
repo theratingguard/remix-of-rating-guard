@@ -70,6 +70,11 @@ review content or make protected reports public. R2 upload and public hosting
 are not implemented or implied by either action. Printing does not record a
 successful PDF download in the audit log.
 
+The report's **Report Google** button opens the saved business Google Maps URL
+in a new tab. If no Maps URL is saved, it opens Google's review-reporting help
+page at `https://support.google.com/business/answer/4596773`. Opening this link
+does not automatically submit a review report to Google.
+
 Configure `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `SCAN_WORKER_SECRET`
 only on the server. Bulk admission remains disabled unless
 `SCAN_WORKER_SCHEDULED=true` is set after a real scheduler has been verified.
