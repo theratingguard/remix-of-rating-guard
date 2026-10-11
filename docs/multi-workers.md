@@ -61,6 +61,10 @@ directory, not inaccessible root-owned PM2 log paths. Do not run the legacy syst
 process managers could process the same bulk queue. Save `pm2 save` only after all eight
 processes and a real scan chain are verified. Gracefully stop PM2 and restore the prior
 systemd deployment if cutover fails. Do not rewrite published Git history.
+Use `pm2 restart ratingguard-api` for API updates, not cluster `reload`: a reload was
+observed to leave this Nitro application's listener closed. After configuration updates,
+verify all eight apps and HTTP health before saving the process list. Test
+`systemctl restart pm2-root` and confirm the saved inventory still contains eight apps.
 
 Errors retain original source reviews and evidence boundaries. A risky count or removal
 chance is never fabricated to pass a scan test. A task becomes complete only after legal
