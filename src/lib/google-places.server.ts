@@ -289,8 +289,8 @@ export async function resolveAndFetchPlace(
     placeId = (await cidLookup(parsed.cid)) ?? undefined;
   }
   if (!placeId && parsed.cid && !parsed.query) {
-    const {resolveCidBusinessName}=await import("./google-cid.server");
-    parsed.query=await resolveCidBusinessName(parsed.cid);
+    const { resolveCidBusinessName } = await import("./google-cid.server");
+    parsed.query = await resolveCidBusinessName(parsed.cid);
   }
   if (!placeId) {
     if (!parsed.query)
