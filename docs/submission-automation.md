@@ -30,3 +30,30 @@ Rejection notifications link to existing source-validated AI appeal drafting and
 Google's one-time appeal workflow. No new evidence is fabricated. The Submissions
 page reuses existing outcome analytics and appeal controls, shows recorded submissions
 and recent in-app events, and remains Super Admin-only.
+
+## Deployment verification (11 October 2026)
+
+- Applied migration after a rollback-only SQL test verified status synchronization,
+  five distinct notification events, daily reminder idempotency, rejection/future
+  guards and ordinary/anonymous privacy. Test submissions were rolled back; there
+  are zero actual recorded submissions and notifications.
+- Local and VPS: 232 tests passed in 47 files, type-check and app/worker builds
+  passed; lint has zero errors and ten existing warnings.
+- `/submissions` is live; authenticated report-readiness UI returned
+  "The Hudson: 0 eligible review drafts". Normal reviews are not offered for reporting.
+- Production extension endpoint: authorized 200, anonymous 401, ordinary user 403.
+  Ordinary-user table reads returned no private records.
+- Installed and loaded the unpacked MV3 extension in isolated Chrome for Testing.
+  Its real service worker fetched the authorized report, rejected an opaque
+  server-secret-shaped token and cleared session data on disconnect. This is not
+  an installation in the client's shared browser.
+- Enabled `ratingguard-submission-followup.timer` persistently. Schedule:
+  00:00, 06:00, 12:00, 18:00 UTC. First service run exited successfully with
+  `checked: 0, google_polled: false`. Eight PM2 processes remain online; Redis responds PONG.
+- SMTP and WhatsApp credentials are not configured. Only in-app event persistence
+  is currently available.
+
+Phase 3 is not fully complete: live Google field filling, actual submission,
+Google confirmation/status capture and a live rejected-case appeal still require
+an authorized Business Profile/account and a genuinely reportable review.
+No Google report or appeal was submitted during verification.
