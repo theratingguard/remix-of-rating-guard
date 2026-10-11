@@ -24,7 +24,12 @@ can supply strategy notes. No untrusted review text is inserted into a system pr
 Snapshots expire after eight days. Accuracy remains N/A without prospective held-out
 evaluation; historical approval percentages are not prediction accuracy.
 
-Ollama installation, fallback routing and weekly production scheduling are separate
-deployment gates. Do not run an 8B model alongside the eight production processes on
+The VPS `ratingguard-case-learning.timer` runs weekly on Monday at 09:00 UTC,
+with persistent catch-up and a 256MB-bounded oneshot service. Its initial run recorded
+zero decided cases and zero patterns. Hudson's post-deployment scan synchronized five
+real reviews as pending memory. No fake approvals were inserted for testing.
+
+Ollama installation and fallback routing remain separate deployment gates.
+Do not run an 8B model alongside the eight production processes on
 the existing 4GB, single-vCPU VPS. Claude and Gemini stay disabled until configured and
 verified; fallback must never silently call disabled providers.
