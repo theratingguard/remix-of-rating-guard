@@ -73,7 +73,8 @@ Analysis: ${a ? `risk=${a.risk}; category=${a.category ?? "none"}; reason=${a.re
 
       let res: Response;
       try {
-        res = await fetch("https://api.openai.com/v1/responses", {
+        const { budgetedAiFetch } = await import("./queue/ai-budget.server");
+        res = await budgetedAiFetch("https://api.openai.com/v1/responses", {
           method: "POST",
           signal: AbortSignal.timeout(45000),
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },

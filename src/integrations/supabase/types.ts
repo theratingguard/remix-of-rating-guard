@@ -8,6 +8,77 @@ export type Database = {
   };
   public: {
     Tables: {
+      worker_tasks: {
+        Row: {
+          id: string;
+          scan_id: string;
+          user_id: string;
+          batch_id: string | null;
+          bulk_job_id: string | null;
+          stage: string;
+          status: string;
+          generation: number;
+          attempts: number;
+          error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          scan_id: string;
+          user_id: string;
+          batch_id?: string | null;
+          bulk_job_id?: string | null;
+          stage: string;
+          status?: string;
+          generation?: number;
+          attempts?: number;
+          error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          stage?: string;
+          status?: string;
+          generation?: number;
+          attempts?: number;
+          error?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      worker_logs: {
+        Row: {
+          id: string;
+          worker_name: string;
+          queue_name: string;
+          job_id: string | null;
+          status: string;
+          duration_ms: number | null;
+          error: string | null;
+          payload: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          worker_name: string;
+          queue_name: string;
+          job_id?: string | null;
+          status: string;
+          duration_ms?: number | null;
+          error?: string | null;
+          payload?: Json | null;
+          created_at?: string;
+        };
+        Update: { status?: string };
+        Relationships: [];
+      };
+      ai_daily_budget: {
+        Row: { day: string; reserved_usd: number; calls: number };
+        Insert: { day: string; reserved_usd?: number; calls?: number };
+        Update: { reserved_usd?: number; calls?: number };
+        Relationships: [];
+      };
       service_checks: {
         Row: { service: string; success: boolean; detail: string; checked_at: string };
         Insert: { service: string; success: boolean; detail: string; checked_at?: string };
@@ -943,6 +1014,10 @@ export type Database = {
       };
     };
     Functions: {
+      enqueue_worker_scan: { Args: { _url: string }; Returns: string };
+      ensure_bulk_worker_task: { Args: { _job_id: string }; Returns: string };
+      reserve_ai_budget: { Args: { _cost: number }; Returns: boolean };
+      worker_daily_stats: { Args: Record<string, never>; Returns: Json };
       smart_alerts_sample: { Args: Record<string, never>; Returns: Json };
       update_app_settings: { Args: { _settings: Json }; Returns: undefined };
       reserve_scan_admission: { Args: { _kind: string; _quantity: number }; Returns: undefined };

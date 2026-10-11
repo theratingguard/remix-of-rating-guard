@@ -299,6 +299,20 @@ export const retryJob = createServerFn({ method: "POST" })
       .select("id")
       .maybeSingle();
     if (updateError) throw new Error("Could not retry the job.");
+    if (updated && process.env["MULTI_WORKER_ENABLED"] === "true") {
+      const task = (
+        await admin
+          .from("worker_tasks")
+          .select("scan_id,user_id,status")
+          .eq("bulk_job_id", job.id)
+          .maybeSingle()
+          .throwOnError()
+      ).data;
+      if (task?.status === "failed") {
+        const { retryWorkerTask } = await import("./queue/pipeline.server");
+        await retryWorkerTask(task.scan_id, task.user_id);
+      }
+    }
     return { ok: !!updated };
   });
 

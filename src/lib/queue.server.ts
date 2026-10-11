@@ -161,6 +161,15 @@ async function runJob(
 
 /** One bounded worker run: lock → claim a small batch → process with limited concurrency. */
 export async function runWorker(opts: { deadlineMs?: number } = {}) {
+  if (process.env["MULTI_WORKER_ENABLED"] === "true") {
+    const { dispatchWorkerTasks } = await import("./queue/pipeline.server");
+    await dispatchWorkerTasks();
+    return {
+      ran: true,
+      reason: "Redis outbox dispatch only; PM2 workers execute stages.",
+      processed: 0,
+    };
+  }
   const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
   const { data: state } = await admin
     .from("system_state")

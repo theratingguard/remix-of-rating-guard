@@ -8,6 +8,7 @@ import { assessReviewQuality } from "./review-quality";
 import { getSettings } from "./settings.server";
 import { enabledModelIndices } from "./settings";
 import { requireProviderResponse, ProviderHttpError } from "./ai-retry.server";
+import { budgetedAiFetch } from "./queue/ai-budget.server";
 import {
   LEGAL_VERSION,
   LEGAL_DISCLAIMER,
@@ -54,7 +55,7 @@ export async function generateLegalAnalysis(
     for (let attempt = 0; attempt < 3; attempt++) {
       let response: Response;
       try {
-        response = await fetch("https://api.openai.com/v1/responses", {
+        response = await budgetedAiFetch("https://api.openai.com/v1/responses", {
           method: "POST",
           signal: AbortSignal.timeout(20000),
           headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -79,6 +80,7 @@ export async function generateLegalAnalysis(
           }),
         });
       } catch (error) {
+        if (error instanceof ScanError && error.code === "AI_BUDGET_LIMIT") throw error;
         console.error("[legal-analysis] AI connection failed", error);
         if (attempt < 2) continue;
         throw new ScanError(
@@ -252,7 +254,7 @@ export async function verifyFlags(
   if (!controls.gpt_enabled) throw new Error("GPT disabled in Settings.");
   const now = new Date().toISOString();
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await budgetedAiFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({

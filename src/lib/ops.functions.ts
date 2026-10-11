@@ -387,6 +387,21 @@ export const retryErrorScan = createServerFn({ method: "POST" })
           "Job queued for retry. Existing batch/global pause is preserved; resume intentionally from Bulk.",
       };
     }
+    if (process.env["MULTI_WORKER_ENABLED"] === "true") {
+      const { retryWorkerTask, submitWorkerScan } = await import("./queue/pipeline.server");
+      const saved = (
+        await context.supabase
+          .from("worker_tasks")
+          .select("id")
+          .eq("scan_id", error.scan_id)
+          .maybeSingle()
+          .throwOnError()
+      ).data;
+      if (saved) return retryWorkerTask(error.scan_id, context.userId);
+      const queued = await submitWorkerScan(context.supabase, context.userId, scan.source_url);
+      if (!queued.ok) throw new Error(queued.message);
+      return { scanId: queued.scanId, message: "Scan queued for background retry." };
+    }
     const { scanFetchCore, scanAnalyzeCore } = await import("./scan-core.server");
     let scanId = error.scan_id;
     if (scan.reviews_retrieved === 0) {

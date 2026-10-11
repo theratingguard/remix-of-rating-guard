@@ -1,6 +1,7 @@
 import { SystemQuality, ErrorCenter } from "@/components/ops-panels";
 import { HomepageEditor } from "@/components/homepage-editor";
 import { AiControlPanel } from "@/components/ai-control-panel";
+import { WorkersStatus } from "@/components/workers-status";
 import { reportAccessQuery } from "@/components/restricted-report-summary";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -428,6 +429,7 @@ function SettingsPage() {
         <HomepageEditor />
       </section>
       <SystemQuality health={sys?.checks} />
+      {access.data === "super_admin" && <WorkersStatus />}
       <ErrorCenter />
     </>
   );

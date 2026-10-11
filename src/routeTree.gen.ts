@@ -25,6 +25,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
 import { Route as AuthenticatedReportsIdRouteImport } from './routes/_authenticated/reports.$id'
+import { Route as ApiWorkersStatusRouteImport } from './routes/api/workers/status'
 import { Route as ApiPublicHooksScanWorkerRouteImport } from './routes/api/public/hooks/scan-worker'
 
 const IndexRoute = IndexRouteImport.update({
@@ -108,6 +109,11 @@ const AuthenticatedReportsIdRoute = AuthenticatedReportsIdRouteImport.update({
   path: '/reports/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiWorkersStatusRoute = ApiWorkersStatusRouteImport.update({
+  id: '/api/workers/status',
+  path: '/api/workers/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksScanWorkerRoute =
   ApiPublicHooksScanWorkerRouteImport.update({
     id: '/api/public/hooks/scan-worker',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
 }
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
 }
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/_authenticated/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/api/workers/status': typeof ApiWorkersStatusRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
 }
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/health'
     | '/reports/$id'
+    | '/api/workers/status'
     | '/reports/'
     | '/api/public/hooks/scan-worker'
   fileRoutesByTo: FileRoutesByTo
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/health'
     | '/reports/$id'
+    | '/api/workers/status'
     | '/reports'
     | '/api/public/hooks/scan-worker'
   id:
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/api/health'
     | '/_authenticated/reports/$id'
+    | '/api/workers/status'
     | '/_authenticated/reports/'
     | '/api/public/hooks/scan-worker'
   fileRoutesById: FileRoutesById
@@ -238,6 +250,7 @@ export interface RootRouteChildren {
   ResponsibleUseRoute: typeof ResponsibleUseRoute
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiWorkersStatusRoute: typeof ApiWorkersStatusRoute
   ApiPublicHooksScanWorkerRoute: typeof ApiPublicHooksScanWorkerRoute
 }
 
@@ -355,6 +368,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/workers/status': {
+      id: '/api/workers/status'
+      path: '/api/workers/status'
+      fullPath: '/api/workers/status'
+      preLoaderRoute: typeof ApiWorkersStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/scan-worker': {
       id: '/api/public/hooks/scan-worker'
       path: '/api/public/hooks/scan-worker'
@@ -399,6 +419,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResponsibleUseRoute: ResponsibleUseRoute,
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiWorkersStatusRoute: ApiWorkersStatusRoute,
   ApiPublicHooksScanWorkerRoute: ApiPublicHooksScanWorkerRoute,
 }
 export const routeTree = rootRouteImport

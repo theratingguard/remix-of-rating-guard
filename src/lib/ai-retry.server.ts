@@ -27,7 +27,12 @@ export async function retryAi<T>(operation: (attempt: number) => Promise<T>, lab
           error: error instanceof Error ? error.message : "Unknown failure",
         }),
       );
-      if (attempt === 3 || (error instanceof ProviderHttpError && error.permanent)) throw error;
+      if (
+        attempt === 3 ||
+        (error instanceof ProviderHttpError && error.permanent) ||
+        (error instanceof Error && "code" in error && error.code === "AI_BUDGET_LIMIT")
+      )
+        throw error;
       await new Promise((resolve) => setTimeout(resolve, attempt * 250));
     }
   }

@@ -13,6 +13,7 @@ dist-ssr
 .env*
 !.env.example
 .output
+.worker-dist
 .vinxi
 .tanstack/**
 .nitro

@@ -41,18 +41,26 @@ function database(failure?: "report" | "completion", scanStatus = "running") {
     const table = url.pathname.split("/").at(-1);
     const method = init?.method ?? "GET";
     if (method === "GET") {
-      if (table === "scans")
-        return Response.json([
-          {
-            id: "scan-fixture",
-            user_id: "owner",
-            status: scanStatus,
-            stage: "analyze",
-            rating: 4,
-            reviews_retrieved: 1,
-            business_name: "Unit fixture",
-          },
-        ]);
+      if (table === "scans") {
+        const row = {
+          id: "scan-fixture",
+          user_id: "owner",
+          status: scanStatus,
+          stage: "analyze",
+          rating: 4,
+          reviews_retrieved: 1,
+          business_name: "Unit fixture",
+          high_count: 0,
+          medium_count: 0,
+          normal_count: 0,
+          requires_review_count: 0,
+          ...Object.assign({}, ...updates),
+        };
+        return Response.json(
+          new Headers(init?.headers).get("accept")?.includes("vnd.pgrst.object") ? row : [row],
+        );
+      }
+      if (table === "reports") return Response.json([{ id: "report-fixture" }]);
       if (table === "reviews")
         return Response.json([
           {
@@ -81,8 +89,7 @@ function database(failure?: "report" | "completion", scanStatus = "running") {
         { status: 500 },
       );
     }
-    if (table === "scans" && status === "running")
-      return Response.json([{ id: "scan-fixture" }]);
+    if (table === "scans" && status === "running") return Response.json([{ id: "scan-fixture" }]);
     return new Response(null, { status: 204 });
   };
   const client = createClient<Database>(
@@ -175,5 +182,17 @@ describe("Durable scan completion (unit fixtures only)", () => {
     });
     expect(db.reportWrites[0]?.["recommended_action"]).toContain("require manual assessment");
     expect(db.updates.at(-1)?.["requires_review_count"]).toBe(1);
+  });
+  it("leaves the scan incomplete and does not generate PDFs in the analyzer-only stage", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
+    const db = database();
+    expect(
+      await scanAnalyzeCore(db.client, "owner", {
+        scanId: "scan-fixture",
+        deferLegal: true,
+      }),
+    ).toMatchObject({ ok: true, queued: true });
+    expect(generateOwnedReportPdf).not.toHaveBeenCalled();
+    expect(db.updates.some((update) => update["status"] === "complete")).toBe(false);
   });
 });

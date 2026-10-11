@@ -59,7 +59,7 @@ async function cachedPlace(url: string, load: () => Promise<PlaceResult>): Promi
 }
 
 export type StageResponse =
-  | { ok: true; scanId: string; reviews: number }
+  | { ok: true; scanId: string; reviews: number; queued?: boolean }
   | { ok: false; code: string; message: string; scanId?: string };
 
 export async function audit(
@@ -113,6 +113,7 @@ const MODULE: Record<string, string> = {
   AI_UNAVAILABLE: "ai",
   AI_QUOTA: "ai",
   AI_AUTH: "ai",
+  AI_BUDGET_LIMIT: "ai",
   DB_UNAVAILABLE: "database",
   REPORT_ERROR: "report",
   TIMEOUT: "scan",
@@ -121,6 +122,7 @@ const MODULE: Record<string, string> = {
 const SEVERITY: Record<string, string> = {
   AI_QUOTA: "CRITICAL",
   AI_AUTH: "CRITICAL",
+  AI_BUDGET_LIMIT: "MEDIUM",
   API_UNAVAILABLE: "CRITICAL",
   DB_UNAVAILABLE: "HIGH",
   AI_UNAVAILABLE: "HIGH",
@@ -179,7 +181,8 @@ async function sweepStale(supabase: ScanClient, userId: string) {
     })
     .eq("user_id", userId)
     .eq("status", "running")
-    .lt("created_at", cutoff)
+    .neq("stage", "queued")
+    .lt("started_at", cutoff)
     .select("id");
   for (const s of data ?? [])
     await recordError(supabase, userId, {
@@ -231,7 +234,7 @@ function healthScore(
 export async function scanFetchCore(
   supabase: ScanClient,
   userId: string,
-  data: { url: string; batchId?: string | undefined },
+  data: { url: string; batchId?: string | undefined; queuedScanId?: string },
 ): Promise<StageResponse> {
   if (!validGoogleUrl(data.url))
     return {
@@ -250,11 +253,11 @@ export async function scanFetchCore(
 
   await sweepStale(supabase, userId);
   try {
-    if (!data.batchId)
+    if (!data.batchId && !data.queuedScanId)
       await supabase
         .rpc("reserve_scan_admission", { _kind: "single", _quantity: 1 })
         .throwOnError();
-    else if (!(await getSettings()).bulk_scan_enabled)
+    else if (data.batchId && !(await getSettings()).bulk_scan_enabled)
       throw new Error("Bulk Scan disabled in Settings.");
   } catch (error) {
     console.error(
@@ -276,7 +279,7 @@ export async function scanFetchCore(
     .eq("status", "running")
     .gte("created_at", since)
     .limit(1);
-  if (dup?.length)
+  if (dup?.length && !data.queuedScanId)
     return {
       ok: false,
       code: "SCAN_IN_PROGRESS",
@@ -284,18 +287,30 @@ export async function scanFetchCore(
       scanId: dup[0]!.id,
     };
   const t0 = Date.now();
-  const { data: scan, error } = await supabase
-    .from("scans")
-    .insert({
-      user_id: userId,
-      source_url: data.url,
-      status: "running",
-      stage: "fetch",
-      data_source: "google_places",
-      batch_id: data.batchId ?? null,
-    })
-    .select("id")
-    .single();
+  const existing = data.queuedScanId
+    ? await supabase
+        .from("scans")
+        .select("id,stage,reviews_retrieved")
+        .eq("id", data.queuedScanId)
+        .eq("user_id", userId)
+        .single()
+    : null;
+  if (existing?.data && existing.data.stage === "analyze" && existing.data.reviews_retrieved > 0)
+    return { ok: true, scanId: existing.data.id, reviews: existing.data.reviews_retrieved };
+  const { data: scan, error } =
+    existing ??
+    (await supabase
+      .from("scans")
+      .insert({
+        user_id: userId,
+        source_url: data.url,
+        status: "running",
+        stage: "fetch",
+        data_source: "google_places",
+        batch_id: data.batchId ?? null,
+      })
+      .select("id")
+      .single());
   if (error || !scan) {
     await recordError(supabase, userId, {
       code: "DB_UNAVAILABLE",
@@ -366,6 +381,8 @@ export async function scanFetchCore(
 
     t = Date.now();
     if (place.reviews.length) {
+      if (data.queuedScanId)
+        await supabase.from("reviews").delete().eq("scan_id", scan.id).throwOnError();
       const rows = await Promise.all(
         place.reviews.map(async (r) => ({
           scan_id: scan.id,
@@ -447,7 +464,7 @@ export async function scanFetchCore(
 export async function scanAnalyzeCore(
   supabase: ScanClient,
   userId: string,
-  data: { scanId: string },
+  data: { scanId: string; deferLegal?: boolean },
 ): Promise<StageResponse> {
   const aiKey = process.env["OPENAI_API_KEY"] ?? "";
   const t0 = Date.now();
@@ -501,7 +518,7 @@ export async function scanAnalyzeCore(
     await track(supabase, userId, scan.id, "REVIEWS_ANALYZING", t, `${reviews.length} review(s)`);
     const controls = await getSettings();
     const enabled = enabledModelIndices(controls);
-    const configVersion = `${PROMPT_VERSION}:${controls.multi_model_enabled}:${enabled.join(",")}`;
+    const configVersion = `${PROMPT_VERSION}:${controls.multi_model_enabled}:${enabled.join(",")}${process.env["MULTI_WORKER_ENABLED"] === "true" ? ":workers-v1" : ""}`;
 
     // Cache: reuse an earlier analysis of identical text+rating with the same prompt & app version.
     const hashes = reviews
@@ -725,39 +742,15 @@ export async function scanAnalyzeCore(
         throw new ScanError("DB_UNAVAILABLE", "Could not save recommended review actions.");
     }
 
-    const pdfStarted = Date.now();
-    if (controls.auto_pdf_enabled) {
-      await track(
-        supabase,
-        userId,
-        scan.id,
-        "PDF_GENERATING",
-        pdfStarted,
-        "Generating and saving PDF on the VPS",
-      );
-      await generateOwnedReportPdf(supabase, userId, scan.id, true);
-      await track(supabase, userId, scan.id, "PDF_SAVED", pdfStarted, "PDF saved and indexed");
-    } else {
-      await track(
-        supabase,
-        userId,
-        scan.id,
-        "PDF_SKIPPED",
-        pdfStarted,
-        "Auto-PDF disabled in Settings; report data saved.",
-      );
-    }
-    const completed = await supabase
+    const assessed = await supabase
       .from("scans")
       .update({
-        status: "complete",
-        stage: "done",
+        stage: "analyze",
         error: null,
         high_count: high,
         medium_count: medium,
         normal_count: n("normal"),
         requires_review_count: n("requires_review"),
-        completed_at: new Date().toISOString(),
         rating_mismatch: mismatch,
         reviews_failed_analysis: failedIds.length,
         review_health_score: healthScore(
@@ -773,20 +766,11 @@ export async function scanAnalyzeCore(
         ),
       })
       .eq("id", scan.id);
-    if (completed.error)
+    if (assessed.error)
       throw new ScanError(
         "DB_UNAVAILABLE",
-        "Report saved, but scan completion could not be persisted. Retry analysis.",
+        "Report saved, but assessment quality could not be persisted. Retry analysis.",
       );
-    await track(
-      supabase,
-      userId,
-      scan.id,
-      reportOk ? "REPORT_READY" : "FAILED",
-      t,
-      reportOk ? undefined : "Report could not be saved",
-      reportOk ? undefined : "REPORT_ERROR",
-    );
     if (reportOk && flagged.length)
       await track(
         supabase,
@@ -796,8 +780,9 @@ export async function scanAnalyzeCore(
         t,
         `${flagged.length} review(s) in the Action Center`,
       );
-    await audit(supabase, userId, "scan.completed", { scan_id: scan.id, high, medium });
-    return { ok: true, scanId: scan.id, reviews: reviews.length };
+    if (data.deferLegal)
+      return { ok: true, scanId: scan.id, reviews: reviews.length, queued: true };
+    return scanFinalizeCore(supabase, userId, { scanId: scan.id });
   } catch (e) {
     await supabase
       .from("reviews")
@@ -806,6 +791,88 @@ export async function scanAnalyzeCore(
       .neq("processing_status", "ANALYZED");
     return fail(supabase, userId, scan.id, e, t0, scan.business_name);
   }
+}
+
+export async function scanFinalizeCore(
+  supabase: ScanClient,
+  userId: string,
+  data: { scanId: string },
+): Promise<StageResponse> {
+  const t = Date.now();
+  const scan = (
+    await supabase
+      .from("scans")
+      .select("*")
+      .eq("id", data.scanId)
+      .eq("user_id", userId)
+      .single()
+      .throwOnError()
+  ).data;
+  if (scan.status === "complete")
+    return { ok: true, scanId: scan.id, reviews: scan.reviews_retrieved };
+  try {
+    const report = (
+      await supabase
+        .from("reports")
+        .select("id")
+        .eq("scan_id", scan.id)
+        .maybeSingle()
+        .throwOnError()
+    ).data;
+    if (!report) throw new ScanError("REPORT_ERROR", "Validated assessment report is missing.");
+    const controls = await getSettings();
+    if (controls.auto_pdf_enabled) {
+      await track(
+        supabase,
+        userId,
+        scan.id,
+        "PDF_GENERATING",
+        t,
+        "Legal worker saving private PDFs",
+      );
+      await generateOwnedReportPdf(supabase, userId, scan.id, true);
+      await track(supabase, userId, scan.id, "PDF_SAVED", t, "PDF saved and indexed");
+    } else {
+      await track(supabase, userId, scan.id, "PDF_SKIPPED", t, "Auto-PDF disabled in Settings.");
+    }
+    const completed = await supabase
+      .from("scans")
+      .update({
+        status: "complete",
+        stage: "done",
+        error: null,
+        completed_at: new Date().toISOString(),
+        high_count: scan.high_count,
+        medium_count: scan.medium_count,
+        normal_count: scan.normal_count,
+        requires_review_count: scan.requires_review_count,
+      })
+      .eq("id", scan.id);
+    if (completed.error)
+      throw new ScanError(
+        "DB_UNAVAILABLE",
+        "Report saved, but scan completion could not be persisted. Retry analysis.",
+      );
+    await track(supabase, userId, scan.id, "REPORT_READY", t);
+    await audit(supabase, userId, "scan.completed", {
+      scan_id: scan.id,
+      high: scan.high_count,
+      medium: scan.medium_count,
+    });
+    return { ok: true, scanId: scan.id, reviews: scan.reviews_retrieved };
+  } catch (error) {
+    return fail(supabase, userId, scan.id, error, t, scan.business_name);
+  }
+}
+
+export async function submitScanCore(
+  supabase: ScanClient,
+  userId: string,
+  data: { url: string },
+): Promise<StageResponse> {
+  if (process.env["MULTI_WORKER_ENABLED"] !== "true") return scanFetchCore(supabase, userId, data);
+  const { submitWorkerScan } = await import("./queue/pipeline.server");
+  return submitWorkerScan(supabase, userId, data.url);
 }
 
 async function fail(
@@ -819,9 +886,20 @@ async function fail(
   const code = e instanceof ScanError ? e.code : "UNKNOWN";
   const message = e instanceof Error ? e.message : "Unexpected error.";
   console.error("scan failed", code, message);
+  const task =
+    process.env["MULTI_WORKER_ENABLED"] === "true"
+      ? await supabase.from("worker_tasks").select("id,status").eq("scan_id", scanId).maybeSingle()
+      : null;
+  if (task?.error) console.error("[scan] Could not load worker failure lifecycle", task.error.code);
+  const retryableWorker = task?.data && ["queued", "processing"].includes(task.data.status);
   const failed = await supabase
     .from("scans")
-    .update({ status: "failed", error: message, completed_at: new Date().toISOString() })
+    .update({
+      status: retryableWorker ? "running" : "failed",
+      ...(retryableWorker ? { stage: "queued" } : {}),
+      error: message,
+      completed_at: retryableWorker ? null : new Date().toISOString(),
+    })
     .eq("id", scanId);
   if (failed.error) console.error("[scan] Could not persist failure state", failed.error.code);
   await track(supabase, userId, scanId, "FAILED", t0, message, code);

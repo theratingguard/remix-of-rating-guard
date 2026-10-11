@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { budgetedAiFetch } from "./queue/ai-budget.server";
 import { getSettings } from "./settings.server";
 import { modelKeys, type ModelId } from "./settings";
 export const modelStatusSchema = z.object({
@@ -61,7 +62,7 @@ export async function testModel(model: ModelId): Promise<ModelStatus> {
   ];
   try {
     const req = requests[index]!;
-    const response = await fetch(req.url, {
+    const response = await budgetedAiFetch(req.url, {
       method: "POST",
       headers: req.headers,
       body: JSON.stringify(req.body),

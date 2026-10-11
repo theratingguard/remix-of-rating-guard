@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { budgetedAiFetch } from "./queue/ai-budget.server";
 import { ScanError, type PlaceReview } from "./google-places.server";
 import type { ReviewAnalysis } from "./analysis.server";
 import { LEGAL_CITATIONS } from "./legal-analysis";
@@ -244,7 +245,7 @@ export async function analyzeWithThreeModels(
       const started = Date.now();
       try {
         const call = async (model: string) => {
-          const response = await fetch(request.url, {
+          const response = await budgetedAiFetch(request.url, {
             method: "POST",
             headers: request.headers,
             body: JSON.stringify({ ...request.body, ...(index === 0 ? { model } : {}) }),
@@ -289,6 +290,7 @@ export async function analyzeWithThreeModels(
           if (
             index !== 0 ||
             indices.length !== 1 ||
+            (error instanceof ScanError && error.code === "AI_BUDGET_LIMIT") ||
             (error instanceof ProviderHttpError && error.permanent)
           )
             throw error;
@@ -327,19 +329,23 @@ export async function analyzeWithThreeModels(
       result.status === "rejected" ? [result.reason] : [],
     );
     const code = errors.some(
-      (error) => error instanceof ProviderHttpError && [401, 403].includes(error.status),
+      (error) => error instanceof ScanError && error.code === "AI_BUDGET_LIMIT",
     )
-      ? "AI_AUTH"
+      ? "AI_BUDGET_LIMIT"
       : errors.some(
-            (error) =>
-              error instanceof ProviderHttpError &&
-              error.permanent &&
-              [402, 429].includes(error.status),
+            (error) => error instanceof ProviderHttpError && [401, 403].includes(error.status),
           )
-        ? "AI_QUOTA"
-        : indices.every((index) => statuses[index] === 200)
-          ? "AI_INVALID_RESPONSE"
-          : "AI_UNAVAILABLE";
+        ? "AI_AUTH"
+        : errors.some(
+              (error) =>
+                error instanceof ProviderHttpError &&
+                error.permanent &&
+                [402, 429].includes(error.status),
+            )
+          ? "AI_QUOTA"
+          : indices.every((index) => statuses[index] === 200)
+            ? "AI_INVALID_RESPONSE"
+            : "AI_UNAVAILABLE";
     throw new ScanError(
       code,
       `Enabled-model analysis incomplete: ${settled

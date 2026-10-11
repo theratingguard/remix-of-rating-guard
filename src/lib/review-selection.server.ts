@@ -51,7 +51,8 @@ export async function createSelectedReport(
   });
   const apiKey = process.env["OPENAI_API_KEY"];
   if (!apiKey) throw new Error("AI request generation is not configured.");
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const { budgetedAiFetch } = await import("./queue/ai-budget.server");
+  const response = await budgetedAiFetch("https://api.openai.com/v1/responses", {
     method: "POST",
     signal: AbortSignal.timeout(45000),
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },

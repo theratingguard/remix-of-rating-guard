@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ANALYSIS_MODEL, AI_PROVIDER } from "./analysis.server";
 import { APP_VERSION } from "./version";
-import { scanFetchCore, scanAnalyzeCore, audit, type StageResponse } from "./scan-core.server";
+import { submitScanCore, scanAnalyzeCore, audit, type StageResponse } from "./scan-core.server";
 import { searchBusinesses } from "./google-places.server";
 import { getSettings } from "./settings.server";
 import { enabledModelIndices, modelNames } from "./settings";
@@ -143,16 +143,21 @@ export const scanFetch = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<StageResponse> =>
-    scanFetchCore(context.supabase, context.userId, data),
+    submitScanCore(context.supabase, context.userId, data),
   );
 
 /** Stage 2: analyze review signals, classify risk, prepare report. */
 export const scanAnalyze = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ scanId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }): Promise<StageResponse> =>
-    scanAnalyzeCore(context.supabase, context.userId, data),
-  );
+  .handler(async ({ data, context }): Promise<StageResponse> => {
+    if (process.env["MULTI_WORKER_ENABLED"] === "true") {
+      const { retryWorkerTask } = await import("./queue/pipeline.server");
+      await retryWorkerTask(data.scanId, context.userId);
+      return { ok: true, queued: true, scanId: data.scanId, reviews: 0 };
+    }
+    return scanAnalyzeCore(context.supabase, context.userId, data);
+  });
 
 export const logAudit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

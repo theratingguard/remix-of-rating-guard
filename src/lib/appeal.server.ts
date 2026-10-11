@@ -64,7 +64,8 @@ export async function generateRejectedAppeal(db: SupabaseClient<Database>, outco
     throw new Error("Current review analysis does not support a policy appeal.");
   const key = process.env["OPENAI_API_KEY"];
   if (!key) throw new Error("AI appeal generation is not configured.");
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const { budgetedAiFetch } = await import("./queue/ai-budget.server");
+  const response = await budgetedAiFetch("https://api.openai.com/v1/responses", {
     method: "POST",
     signal: AbortSignal.timeout(60000),
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },

@@ -231,7 +231,11 @@ export async function generateOwnedReportPdf(
     !scan.data ||
     !report.data ||
     (scan.data.status !== "complete" &&
-      !(completingScan && scan.data.status === "running" && scan.data.stage === "analyze")) ||
+      !(
+        completingScan &&
+        scan.data.status === "running" &&
+        ["analyze", "legal"].includes(scan.data.stage ?? "")
+      )) ||
     scan.data.is_seed
   )
     throw new Error("Only your completed, saved live reports can be published as PDFs.");

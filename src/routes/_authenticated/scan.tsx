@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2, Search, KeyRound, AlertTriangle, X } from "lucide-react";
@@ -34,7 +34,7 @@ const STEPS = [
   "Legal assessment and saving PDFs",
 ];
 // Steps 1-3 belong to the server "fetch" stage, 4-5 to the "analyze" stage.
-type Phase = "idle" | "fetch" | "analyze" | "done" | "error";
+type Phase = "idle" | "queued" | "fetch" | "analyze" | "legal" | "done" | "error";
 
 function looksLikeGoogleUrl(v: string) {
   return isGoogleMapsUrl(v);
@@ -55,6 +55,53 @@ function ScanPage() {
   const [failedAt, setFailedAt] = useState<"fetch" | "analyze" | null>(null);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [scanId, setScanId] = useState<string | null>(null);
+  const [background, setBackground] = useState(false);
+  const progress = useQuery({
+    ...scanQuery(scanId ?? ""),
+    enabled: background && Boolean(scanId),
+    refetchInterval: background ? 2000 : false,
+  });
+  useEffect(() => {
+    const saved = localStorage.getItem("rg-active-worker-scan");
+    if (saved) {
+      setScanId(saved);
+      setBackground(true);
+      setPhase("queued");
+    }
+  }, []);
+  useEffect(() => {
+    if (!background) return;
+    if (progress.error) {
+      setError({ code: "NETWORK", message: progress.error.message });
+      return;
+    }
+    const current = progress.data?.scan;
+    if (!current) return;
+    if (current.status === "complete" || current.status === "failed") {
+      setBackground(false);
+      localStorage.removeItem("rg-active-worker-scan");
+      if (current.status === "complete") {
+        setPhase("done");
+        toast.success("Background scan complete. Private report ready.");
+      } else {
+        setPhase("error");
+        setError({
+          code: "WORKER_ERROR",
+          message: current.error ?? "Worker scan failed. Inspect Error Center.",
+        });
+      }
+      void qc.invalidateQueries({ queryKey: ["scans"] });
+    } else
+      setPhase(
+        current.stage === "queued"
+          ? "queued"
+          : current.stage === "fetch"
+            ? "fetch"
+            : current.stage === "legal"
+              ? "legal"
+              : "analyze",
+      );
+  }, [background, progress.data, progress.error, qc]);
   const find = useServerFn(findBusinesses);
   const [businessQuery, setBusinessQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -83,7 +130,7 @@ function ScanPage() {
   }
 
   const urlValid = looksLikeGoogleUrl(url);
-  const running = phase === "fetch" || phase === "analyze";
+  const running = background || phase === "fetch" || phase === "analyze" || phase === "legal";
   const keyMissing = sys && !sys.googleConfigured;
 
   async function start(e: React.FormEvent) {
@@ -105,6 +152,13 @@ function ScanPage() {
         return;
       }
       setScanId(a.scanId);
+      if (a.queued) {
+        setBackground(true);
+        setPhase("queued");
+        localStorage.setItem("rg-active-worker-scan", a.scanId);
+        toast.success(`Scan queued, ID: ${a.scanId}`);
+        return;
+      }
       setPhase("analyze");
       requestStage = "analyze";
       const b = await analyzeStage({ data: { scanId: a.scanId } });
@@ -141,6 +195,7 @@ function ScanPage() {
     if (phase === "done") return "done";
     if (phase === "fetch") return inFetch ? "active" : "idle";
     if (phase === "analyze") return inFetch ? "done" : "active";
+    if (phase === "legal") return i < 4 ? "done" : "active";
     if (phase === "error") {
       if (failedAt === "fetch") return inFetch ? "failed" : "idle";
       return inFetch ? "done" : "failed";
@@ -379,6 +434,12 @@ function ScanPage() {
             <Button size="sm" variant="outline" asChild>
               <Link to="/settings">Configure API</Link>
             </Button>
+          )}
+          {background && (
+            <p role="status" className="surface mt-6 p-5">
+              {phase === "queued" ? "Scan queued" : "Processing..."} · ID: {scanId}. Background
+              progress is saved; reopening this browser resumes tracking.
+            </p>
           )}
         </div>
       )}
