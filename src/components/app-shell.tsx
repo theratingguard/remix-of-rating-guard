@@ -24,6 +24,7 @@ const nav = [
   { to: "/scan", label: "New Scan", Icon: ScanSearch },
   { to: "/history", label: "Scan History", Icon: History },
   { to: "/reports", label: "Reports", Icon: FileText },
+  { to: "/submissions", label: "Submissions", Icon: FileText },
   { to: "/settings", label: "Settings", Icon: Settings },
 ] as const;
 

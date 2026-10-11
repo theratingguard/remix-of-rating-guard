@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Rating Guard Submission Assistant",
+  "version": "0.1.0",
+  "description": "Prepare validated review evidence for manual Google reporting. Never submits automatically.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://ratingguard.online/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html" },
+  "content_scripts": [
+    { "matches": ["https://ratingguard.online/reports/*", "https://support.google.com/business/*"], "js": ["form-adapter.js", "content.js"] }
+  ]
+}

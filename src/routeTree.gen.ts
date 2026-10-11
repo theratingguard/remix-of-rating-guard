@@ -22,9 +22,11 @@ import { Route as AuthenticatedHomepagePreviewRouteImport } from './routes/_auth
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedScanRouteImport } from './routes/_authenticated/scan'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
 import { Route as AuthenticatedReportsIdRouteImport } from './routes/_authenticated/reports.$id'
+import { Route as ApiExtensionReportRouteImport } from './routes/api/extension/report'
 import { Route as ApiWorkersStatusRouteImport } from './routes/api/workers/status'
 import { Route as ApiPublicHooksScanWorkerRouteImport } from './routes/api/public/hooks/scan-worker'
 
@@ -93,6 +95,12 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSubmissionsRoute =
+  AuthenticatedSubmissionsRouteImport.update({
+    id: '/submissions',
+    path: '/submissions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -108,6 +116,11 @@ const AuthenticatedReportsIdRoute = AuthenticatedReportsIdRouteImport.update({
   id: '/reports/$id',
   path: '/reports/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiExtensionReportRoute = ApiExtensionReportRouteImport.update({
+  id: '/api/extension/report',
+  path: '/api/extension/report',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWorkersStatusRoute = ApiWorkersStatusRouteImport.update({
   id: '/api/workers/status',
@@ -134,8 +147,10 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/api/extension/report': typeof ApiExtensionReportRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
@@ -153,8 +168,10 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/api/extension/report': typeof ApiExtensionReportRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
@@ -174,8 +191,10 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/scan': typeof AuthenticatedScanRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/_authenticated/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/api/extension/report': typeof ApiExtensionReportRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
@@ -195,8 +214,10 @@ export interface FileRouteTypes {
     | '/profile'
     | '/scan'
     | '/settings'
+    | '/submissions'
     | '/api/health'
     | '/reports/$id'
+    | '/api/extension/report'
     | '/api/workers/status'
     | '/reports/'
     | '/api/public/hooks/scan-worker'
@@ -214,8 +235,10 @@ export interface FileRouteTypes {
     | '/profile'
     | '/scan'
     | '/settings'
+    | '/submissions'
     | '/api/health'
     | '/reports/$id'
+    | '/api/extension/report'
     | '/api/workers/status'
     | '/reports'
     | '/api/public/hooks/scan-worker'
@@ -234,8 +257,10 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/scan'
     | '/_authenticated/settings'
+    | '/_authenticated/submissions'
     | '/api/health'
     | '/_authenticated/reports/$id'
+    | '/api/extension/report'
     | '/api/workers/status'
     | '/_authenticated/reports/'
     | '/api/public/hooks/scan-worker'
@@ -250,6 +275,7 @@ export interface RootRouteChildren {
   ResponsibleUseRoute: typeof ResponsibleUseRoute
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiExtensionReportRoute: typeof ApiExtensionReportRoute
   ApiWorkersStatusRoute: typeof ApiWorkersStatusRoute
   ApiPublicHooksScanWorkerRoute: typeof ApiPublicHooksScanWorkerRoute
 }
@@ -347,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/submissions': {
+      id: '/_authenticated/submissions'
+      path: '/submissions'
+      fullPath: '/submissions'
+      preLoaderRoute: typeof AuthenticatedSubmissionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -367,6 +400,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/reports/$id'
       preLoaderRoute: typeof AuthenticatedReportsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/extension/report': {
+      id: '/api/extension/report'
+      path: '/api/extension/report'
+      fullPath: '/api/extension/report'
+      preLoaderRoute: typeof ApiExtensionReportRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/workers/status': {
       id: '/api/workers/status'
@@ -392,6 +432,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedScanRoute: typeof AuthenticatedScanRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
   AuthenticatedReportsIdRoute: typeof AuthenticatedReportsIdRoute
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
 }
@@ -403,6 +444,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedScanRoute: AuthenticatedScanRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,
   AuthenticatedReportsIdRoute: AuthenticatedReportsIdRoute,
   AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
 }
@@ -419,6 +461,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResponsibleUseRoute: ResponsibleUseRoute,
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiExtensionReportRoute: ApiExtensionReportRoute,
   ApiWorkersStatusRoute: ApiWorkersStatusRoute,
   ApiPublicHooksScanWorkerRoute: ApiPublicHooksScanWorkerRoute,
 }

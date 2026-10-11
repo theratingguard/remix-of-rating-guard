@@ -175,6 +175,55 @@ export type Database = {
         Update: { snapshot?: Json; updated_at?: string };
         Relationships: [];
       };
+      submission_status: {
+        Row: {
+          id: string;
+          removal_request_id: string;
+          status: string;
+          last_checked: string | null;
+          google_response: string | null;
+          response_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          removal_request_id: string;
+          status?: string;
+          last_checked?: string | null;
+          google_response?: string | null;
+          response_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          last_checked?: string;
+          status?: string;
+          google_response?: string | null;
+          response_at?: string | null;
+        };
+        Relationships: [];
+      };
+      submission_notifications: {
+        Row: {
+          id: string;
+          removal_request_id: string;
+          event: string;
+          message: string;
+          event_key: string;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          removal_request_id: string;
+          event: string;
+          message: string;
+          event_key: string;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: { read_at?: string };
+        Relationships: [];
+      };
       appeal_tracking: {
         Row: {
           id: string;
@@ -1050,6 +1099,10 @@ export type Database = {
       };
     };
     Functions: {
+      record_submission_followup: {
+        Args: { p_request_id: string; p_checked_at: string };
+        Returns: boolean;
+      };
       save_case_memory: {
         Args: { _review_id: string; _outcome: string };
         Returns: string;

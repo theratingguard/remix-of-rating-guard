@@ -1,14 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { generateRejectedAppeal } from "./appeal.server";
+import { prepareRecordedRejectionAppeal } from "./appeal-automation.server";
 
 export const generateAppealDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ outcomeId: z.string().uuid() }).parse(input))
   .handler(async ({ context, data }) => {
     try {
-      return await generateRejectedAppeal(context.supabase, data.outcomeId);
+      return await prepareRecordedRejectionAppeal(context.supabase, data.outcomeId);
     } catch (error) {
       console.error(
         "[appeal] Draft generation denied or failed",

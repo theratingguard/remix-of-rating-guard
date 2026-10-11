@@ -1,0 +1,19 @@
+[Unit]
+Description=Rating Guard local submission follow-ups (not Google moderation polling)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/rating-guard
+EnvironmentFile=/opt/rating-guard/.env
+EnvironmentFile=/opt/rating-guard/.env.production
+EnvironmentFile=/etc/ratingguard-worker.env
+ExecStart=/usr/local/bin/bun run scripts/check-removal-status.ts
+MemoryMax=256M
+TimeoutStartSec=300
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict

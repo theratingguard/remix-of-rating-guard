@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Rating Guard Submission Assistant</title></head>
+<body>
+  <h1>Rating Guard</h1>
+  <p>Use a short-lived Rating Guard session token. Stored in browser session only; never sent to Google.</p>
+  <label>Session API token <input id="token" type="password" autocomplete="off"></label>
+  <button id="connect">Connect</button>
+  <button id="disconnect">Disconnect</button>
+  <button id="load">Load current report</button>
+  <label>Supported review <select id="review"></select></label>
+  <button id="prepare">Submit to Google (prepare only)</button>
+  <p id="status" role="status"></p>
+  <p>You must review the form and click Google's Submit yourself. Opening a form does not record a submission.</p>
+  <script src="popup.js"></script>
+</body>
+</html>
