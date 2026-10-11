@@ -8,6 +8,9 @@ import { reportAccessQuery, RestrictedReportSummary } from "@/components/restric
 import { outcomeSummary } from "@/lib/removal-workflow";
 import { pageSlice, compactDate } from "@/lib/operations-ui";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { getExtensionReport } from "@/lib/extension.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/submissions")({
   head: () => ({ meta: [{ title: "Submissions — Rating Guard Remix" }] }),
@@ -76,6 +79,9 @@ function SubmissionsPage() {
     refetchInterval: 30000,
   });
   const [page, setPage] = useState(1);
+  const [scanId, setScanId] = useState("");
+  const [extensionStatus, setExtensionStatus] = useState("");
+  const [checking, setChecking] = useState(false);
   if (access.error) return <p role="alert">{access.error.message}</p>;
   if (access.data && access.data !== "super_admin") return <RestrictedReportSummary />;
   if (!query.data)
@@ -89,6 +95,42 @@ function SubmissionsPage() {
         title="Submissions"
         subtitle="Actual representative-recorded submissions and decisions. Not automatically submitted or verified by Google."
       />
+      <section className="surface mb-4 space-y-3 p-6 text-sm">
+        <h2 className="font-semibold">Chrome extension report readiness</h2>
+        <p>
+          Verify a scan ID before loading it in the extension. Only supported drafts with exact
+          source evidence and Google review URLs are eligible. This does not submit anything.
+        </p>
+        <Input
+          aria-label="Scan ID for extension"
+          value={scanId}
+          onChange={(event) => setScanId(event.target.value)}
+          placeholder="Scan UUID from your report URL"
+        />
+        <Button
+          disabled={checking || !scanId.trim()}
+          onClick={async () => {
+            setChecking(true);
+            setExtensionStatus("");
+            try {
+              const report = await getExtensionReport({ data: { scanId: scanId.trim() } });
+              setExtensionStatus(
+                `${report.business}: ${report.reviews.length} eligible review drafts. Signed in as ${report.user.email}.`,
+              );
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : "Extension report check failed.";
+              setExtensionStatus(message);
+              toast.error(message);
+            } finally {
+              setChecking(false);
+            }
+          }}
+        >
+          {checking ? "Checking..." : "Check report for extension"}
+        </Button>
+        <p role="status">{extensionStatus}</p>
+      </section>
       <section className="surface grid gap-4 p-6 text-sm sm:grid-cols-5">
         <p>
           Total submitted: <b>{summary.total}</b>
