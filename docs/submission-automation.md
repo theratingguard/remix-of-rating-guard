@@ -5,12 +5,19 @@ form integration. Load `chrome-extension` unpacked in Chrome developer mode. Its
 accepts a short-lived existing session JWT, stored only in `chrome.storage.session`.
 Privileged operations are popup-only and the report endpoint additionally requires
 Super Admin access. Service-role secrets must never be pasted into the extension.
+The extension rejects service-role/admin/anonymous JWTs, expired sessions, tokens
+without a UUID subject and tokens expiring more than 24 hours away before storage.
+These are shape checks only; signature and Super Admin authorization are always
+verified by the backend. Reconnection and expired sessions clear prepared evidence.
 
 Only source-validated supported drafts with HTTPS Google review URLs are returned.
 The popup re-fetches authorized report data before opening a selected review. The
 extension never clicks Google Submit and never records a submission just because
 a tab opens. Actual submission and response records retain existing explicit
 representative confirmation and source-reference requirements.
+The popup exposes a read-only draft, an official status/appeal-tool opener bound
+to the selected authorized review, and a return-to-report action for actual
+submission recording. The reason-only initial Google form remains manual.
 
 Google's initial report flow generally chooses a reason, not a generic business/
 evidence text form. The field adapter requires the business name and exact review evidence visibly
@@ -37,7 +44,7 @@ and recent in-app events, and remains Super Admin-only.
   five distinct notification events, daily reminder idempotency, rejection/future
   guards and ordinary/anonymous privacy. Test submissions were rolled back; there
   are zero actual recorded submissions and notifications.
-- Local and VPS: 232 tests passed in 47 files, type-check and app/worker builds
+- Local and VPS initial deployment: 232 tests passed in 47 files, type-check and app/worker builds
   passed; lint has zero errors and ten existing warnings.
 - `/submissions` is live; authenticated report-readiness UI returned
   "The Hudson: 0 eligible review drafts". Normal reviews are not offered for reporting.
@@ -57,3 +64,14 @@ Phase 3 is not fully complete: live Google field filling, actual submission,
 Google confirmation/status capture and a live rejected-case appeal still require
 an authorized Business Profile/account and a genuinely reportable review.
 No Google report or appeal was submitted during verification.
+
+Further hardening adds seven session-token guard tests (239 tests in 48 files
+locally), a read-only popup evidence draft, an explicit official status/appeal tool
+opener and actual-submission handoff. A failed dashboard refresh now surfaces an
+error instead of silently showing stale submission counts. Local Windows temporary
+file rename/copy-lock failures were transient; test/build retries passed unchanged.
+
+The existing AI appeal generator is explicitly Super Admin-authorized and is not
+silently bypassed by the service-role follow-up job. Rejections create in-app
+appeal-needed events; the authorized dashboard generates the validated draft.
+Unattended background AI drafting is not enabled.

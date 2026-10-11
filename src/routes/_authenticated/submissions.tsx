@@ -84,8 +84,8 @@ function SubmissionsPage() {
   const [checking, setChecking] = useState(false);
   if (access.error) return <p role="alert">{access.error.message}</p>;
   if (access.data && access.data !== "super_admin") return <RestrictedReportSummary />;
-  if (!query.data)
-    return query.error ? <p role="alert">{query.error.message}</p> : <p>Loading submissions...</p>;
+  if (query.error) return <p role="alert">Submission refresh failed: {query.error.message}</p>;
+  if (!query.data) return <p>Loading submissions...</p>;
   const data = query.data;
   const summary = outcomeSummary(data.outcomes);
   const paging = pageSlice(data.outcomes, page);

@@ -1,5 +1,12 @@
 const status = document.getElementById("status");
 let report;
+function showDraft() {
+  const review = report?.reviews[Number(document.getElementById("review").value)];
+  document.getElementById("draft").value = review
+    ? `${report.business}\n${review.reviewUrl}\n${review.policy}\n${review.request}`
+    : "";
+}
+document.getElementById("review").addEventListener("change", showDraft);
 async function send(message) {
   const result = await chrome.runtime.sendMessage(message);
   if (result.error) throw new Error(result.error);
@@ -24,6 +31,7 @@ action("connect", async () => {
 action("disconnect", async () => {
   await send({ type: "disconnect" });
   report = undefined;
+  document.getElementById("draft").value = "";
   document.getElementById("review").replaceChildren();
   status.textContent = "Disconnected; token and prepared evidence cleared.";
 });
@@ -44,6 +52,20 @@ action("load", async () => {
     }),
   );
   status.textContent = `${report.user.email}: ${report.business}. ${report.reviews.length} supported review drafts.`;
+  showDraft();
+});
+action("manage", async () => {
+  const review = report?.reviews[Number(document.getElementById("review").value)];
+  if (!review) throw new Error("Load and select a validated review first.");
+  await send({ type: "manage", scanId: report.scanId, reviewId: review.reviewId });
+  status.textContent =
+    "Official tool opened. Requires Business Profile owner/manager access. Choose the matching business/review. No status has been inferred.";
+});
+action("record", async () => {
+  if (!report) throw new Error("Load an authorized report first.");
+  await chrome.tabs.create({ url: `https://ratingguard.online/reports/${report.scanId}` });
+  status.textContent =
+    "Record Actual Google Submission only after Google's confirmation. For a decision, record the official reference on Submissions.";
 });
 action("prepare", async () => {
   const review = report?.reviews[Number(document.getElementById("review").value)];

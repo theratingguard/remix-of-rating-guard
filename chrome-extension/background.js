@@ -1,3 +1,5 @@
+importScripts("session-token.js");
+
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (message.type === "prepared") {
     (async () => {
@@ -27,20 +29,23 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   }
   (async () => {
     if (message.type === "connect") {
-      if (
-        typeof message.token !== "string" ||
-        !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(message.token)
-      )
-        throw new Error("Use a short-lived signed-in session JWT, not a service-role/API secret.");
-      await chrome.storage.session.set({ token: message.token });
+      const token = globalThis.ratingGuardSessionToken(message.token);
+      await chrome.storage.session.clear();
+      await chrome.storage.session.set({ token });
       return { ok: true };
     }
     if (message.type === "disconnect") {
       await chrome.storage.session.clear();
       return { ok: true };
     }
-    const { token } = await chrome.storage.session.get("token");
-    if (!token) throw new Error("Connect your Rating Guard session first.");
+    const session = await chrome.storage.session.get("token");
+    let token;
+    try {
+      token = globalThis.ratingGuardSessionToken(session.token);
+    } catch (error) {
+      await chrome.storage.session.clear();
+      throw error;
+    }
     if (typeof message.scanId !== "string" || !/^[0-9a-f-]{36}$/.test(message.scanId))
       throw new Error("Invalid report ID.");
     const response = await fetch(
@@ -50,7 +55,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     const report = await response.json();
     if (!response.ok) throw new Error(report.error || `Report access failed (${response.status}).`);
     if (message.type === "report") return report;
-    if (message.type !== "prepare") throw new Error("Unsupported operation.");
+    if (!["prepare", "manage"].includes(message.type)) throw new Error("Unsupported operation.");
     const review = report.reviews.find((row) => row.reviewId === message.reviewId);
     if (!review) throw new Error("Selected review has no validated removal draft.");
     const tab = await chrome.tabs.create({ url: "about:blank" });
@@ -58,11 +63,17 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       prepared: {
         tabId: tab.id,
         expires: Date.now() + 15 * 60000,
+        scanId: report.scanId,
         business: report.business,
         ...review,
       },
     });
-    await chrome.tabs.update(tab.id, { url: review.reviewUrl });
+    await chrome.tabs.update(tab.id, {
+      url:
+        message.type === "manage"
+          ? "https://support.google.com/business/workflow/9945796?hl=en"
+          : review.reviewUrl,
+    });
     return { ok: true };
   })()
     .then(respond)
