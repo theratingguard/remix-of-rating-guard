@@ -53,7 +53,8 @@ implementation and the OpenAI credential remain unchanged.
 
 Run PM2 as root to read existing private environment files; child apps use the existing
 unprivileged ratingguard user. Keep PM2's dump private because it contains environment
-values. Do not run the legacy systemd app or scan-worker timer alongside PM2: duplicate
+values. Child log files live in the ratingguard-owned `/opt/ratingguard-worker-logs`
+directory, not inaccessible root-owned PM2 log paths. Do not run the legacy systemd app or scan-worker timer alongside PM2: duplicate
 process managers could process the same bulk queue. Save `pm2 save` only after all eight
 processes and a real scan chain are verified. Gracefully stop PM2 and restore the prior
 systemd deployment if cutover fails. Do not rewrite published Git history.
