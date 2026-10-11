@@ -27,6 +27,9 @@ URLs, authorization, billing and no-review failures are not pointlessly retried.
 
 Workers renew BullMQ locks, send heartbeats every 30s (90s expiry), and log cluster
 health every five minutes. PM2 restarts crashed workers with bounded restart backoff.
+The API has a 10-second shutdown timeout; workers retain a 300-second drain timeout.
+The `pm2-root` systemd drop-in sets `TimeoutStopSec=2400` so stopping the manager cannot
+interrupt its bounded drain sequence and leave an incomplete saved process list.
 Settings polls actual status every five seconds. `/api/workers/status` requires an
 authorized Super Admin bearer session, not a public API key.
 

@@ -44,6 +44,7 @@ module.exports = {
       script: ".output/server/index.mjs",
       instances: 1,
       max_memory_restart: "512M",
+      kill_timeout: 10000,
     },
     {
       ...base,
