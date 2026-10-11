@@ -52,6 +52,7 @@ function database(owner = true) {
             owner ? [{ id: "fixture", report_data: { pdf_url: "original" } }] : [],
           );
         if (table === "removal_history") return Response.json([]);
+        if (table === "learning_snapshots") return Response.json([]);
         return Response.json(
           ids.map((id) => ({
             id,

@@ -12,5 +12,6 @@ export async function loadOutcomeStrategyNotes(db: SupabaseClient<Database>) {
   if (rows.error) throw new Error("Could not load recorded outcome evidence for analysis.");
   if ((rows.count ?? 0) > 5000)
     throw new Error("Outcome evidence exceeds the supported complete-sample limit.");
-  return strategyNotes(rows.data);
+  const { loadLearningNotes } = await import("./learning.server");
+  return [...strategyNotes(rows.data), ...(await loadLearningNotes(db))];
 }

@@ -139,6 +139,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      case_memory: {
+        Row: {
+          id: string;
+          review_id: string;
+          business_type: string;
+          policy_type: string;
+          evidence_pattern: string;
+          evidence_strength: number | null;
+          review_text: string;
+          outcome: "approved" | "rejected" | "pending";
+          days_to_response: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          review_id: string;
+          business_type: string;
+          policy_type: string;
+          evidence_pattern: string;
+          evidence_strength: number | null;
+          review_text: string;
+          outcome: "approved" | "rejected" | "pending";
+          days_to_response: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: { outcome?: "approved" | "rejected" | "pending" };
+        Relationships: [];
+      };
+      learning_snapshots: {
+        Row: { id: string; snapshot: Json; updated_at: string };
+        Insert: { id: string; snapshot: Json; updated_at?: string };
+        Update: { snapshot?: Json; updated_at?: string };
+        Relationships: [];
+      };
       appeal_tracking: {
         Row: {
           id: string;
@@ -1014,6 +1050,10 @@ export type Database = {
       };
     };
     Functions: {
+      save_case_memory: {
+        Args: { _review_id: string; _outcome: string };
+        Returns: string;
+      };
       enqueue_worker_scan: { Args: { _url: string }; Returns: string };
       ensure_bulk_worker_task: { Args: { _job_id: string }; Returns: string };
       reserve_ai_budget: { Args: { _cost: number }; Returns: boolean };
