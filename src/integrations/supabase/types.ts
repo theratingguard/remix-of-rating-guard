@@ -1299,6 +1299,7 @@ export type Database = {
       };
       ensure_bulk_worker_task: { Args: { _job_id: string }; Returns: string };
       reserve_ai_budget: { Args: { _cost: number }; Returns: boolean };
+      reserve_business_search: { Args: Record<string, never>; Returns: undefined };
       worker_daily_stats: { Args: Record<string, never>; Returns: Json };
       smart_alerts_sample: { Args: Record<string, never>; Returns: Json };
       update_app_settings: { Args: { _settings: Json }; Returns: undefined };

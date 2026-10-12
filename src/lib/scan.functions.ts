@@ -9,13 +9,15 @@ import { getSettings } from "./settings.server";
 import { enabledModelIndices, modelNames } from "./settings";
 import { modelStatusSchema } from "./model-test.server";
 import { REGIONS } from "./regional-routing";
+import { reserveBusinessSearchSlot } from "./business-search-limit.server";
 
 export const findBusinesses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ query: z.string().trim().min(3).max(200) }).parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const key = process.env["GOOGLE_PLACES_API_KEY"];
     if (!key) throw new Error("Google business search is not configured.");
+    await reserveBusinessSearchSlot(() => context.supabase.rpc("reserve_business_search", {}));
     try {
       return await searchBusinesses(key, data.query);
     } catch (error) {
