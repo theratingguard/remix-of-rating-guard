@@ -486,8 +486,10 @@ function ReportDetail() {
           <p className="mt-3 text-sm">
             {flagged.length === 0 && (scan.requires_review_count > 0 || analyzed !== reviews.length)
               ? "Manually assess the unresolved reviews. No clean-result conclusion or reporting recommendation is available until they are reviewed."
-              : (report?.recommended_action ??
-                "Review flagged items and open them in Google Maps for manual review.")}
+              : report?.recommended_action?.includes("official Google reporting path")
+                ? `Review the ${flagged.length} flagged review(s) and verify the evidence. Rating Guard uses Google Places API for review data and cannot submit reports; open flagged reviews in Google Maps to check for any available manual reporting option.`
+                : (report?.recommended_action ??
+                  "Review flagged items and open them in Google Maps for manual review.")}
           </p>
           <h2 className="mt-6 text-sm font-bold uppercase tracking-wider text-muted-foreground">
             Google Maps reporting
