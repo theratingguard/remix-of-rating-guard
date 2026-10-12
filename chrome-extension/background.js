@@ -1,82 +1,170 @@
 importScripts("session-token.js");
 
+const API = "https://ratingguard.online/api/extension";
+
+function extensionPage(sender) {
+  return sender.id === chrome.runtime.id && sender.url?.startsWith(chrome.runtime.getURL(""));
+}
+
+function scanReportPage(sender, scanId) {
+  if (sender.id !== chrome.runtime.id || !sender.url || !sender.tab?.id) return false;
+  try {
+    const url = new URL(sender.url);
+    return (
+      url.origin === "https://ratingguard.online" &&
+      (url.pathname === `/scan-report/${scanId}` || url.pathname === `/scan-report/${scanId}/`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function authenticatedFetch(path, token, init = {}) {
+  const response = await fetch(`${API}/${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...init.headers,
+    },
+    cache: "no-store",
+  });
+  const result = await response.json();
+  if (!response.ok)
+    throw new Error(result.error || `Rating Guard request failed (${response.status}).`);
+  return result;
+}
+
+async function sessionToken() {
+  const session = await chrome.storage.session.get("token");
+  try {
+    return globalThis.ratingGuardSessionToken(session.token);
+  } catch (error) {
+    await chrome.storage.session.remove(["token", "prepared"]);
+    throw error;
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (message.type === "prepared") {
     (async () => {
       const { prepared } = await chrome.storage.session.get("prepared");
-      const url = new URL(sender.url);
       if (
         sender.id !== chrome.runtime.id ||
         !prepared ||
         prepared.tabId !== sender.tab?.id ||
         prepared.expires < Date.now() ||
-        url.origin !== "https://support.google.com" ||
-        !url.pathname.startsWith("/business/")
+        !/^https:\/\/(www|maps)\.google\.com\/maps\/reviews\//.test(sender.url ?? "") ||
+        !/^https:\/\/(www|maps)\.google\.com\/maps\/reviews\//.test(prepared.reviewUrl)
       )
-        throw new Error("No authorized, tab-bound preparation available.");
+        throw new Error("No active, exact-review preparation is available in this tab.");
       return prepared;
     })()
       .then(respond)
       .catch((error) => respond({ error: error.message }));
     return true;
   }
-  const allowed =
-    sender.id === chrome.runtime.id &&
-    (!sender.url || sender.url.startsWith(chrome.runtime.getURL("")));
-  if (!allowed) {
-    respond({ error: "Popup-only privileged operation." });
-    return false;
-  }
+
   (async () => {
     if (message.type === "connect") {
+      if (
+        !extensionPage(sender) &&
+        (typeof message.scanId !== "string" ||
+          !/^[0-9a-f-]{36}$/i.test(message.scanId) ||
+          !scanReportPage(sender, message.scanId))
+      )
+        throw new Error("Connect from the Rating Guard report page or extension popup.");
       const token = globalThis.ratingGuardSessionToken(message.token);
-      await chrome.storage.session.clear();
-      await chrome.storage.session.set({ token });
-      return { ok: true };
+      const status = await authenticatedFetch("status", token);
+      await chrome.storage.session.remove(["token", "prepared"]);
+      await chrome.storage.session.set({
+        token,
+        ...(message.scanId ? { activeReportId: message.scanId } : {}),
+      });
+      return { ok: true, email: status.email };
     }
     if (message.type === "disconnect") {
+      if (!extensionPage(sender)) throw new Error("Disconnect from the extension popup only.");
       await chrome.storage.session.clear();
       return { ok: true };
     }
-    const session = await chrome.storage.session.get("token");
-    let token;
-    try {
-      token = globalThis.ratingGuardSessionToken(session.token);
-    } catch (error) {
-      await chrome.storage.session.clear();
-      throw error;
+
+    if (message.type === "report") {
+      if (!extensionPage(sender) && !scanReportPage(sender, message.scanId))
+        throw new Error("Open a Rating Guard scan report to load its supported drafts.");
+      if (typeof message.scanId !== "string" || !/^[0-9a-f-]{36}$/i.test(message.scanId))
+        throw new Error("Invalid report ID.");
+      const token = await sessionToken();
+      const report = await authenticatedFetch(
+        `report/${encodeURIComponent(message.scanId)}`,
+        token,
+      );
+      await chrome.storage.session.set({ activeReportId: report.scanId });
+      return report;
     }
-    if (typeof message.scanId !== "string" || !/^[0-9a-f-]{36}$/.test(message.scanId))
-      throw new Error("Invalid report ID.");
-    const response = await fetch(
-      `https://ratingguard.online/api/extension/report?scanId=${encodeURIComponent(message.scanId)}`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
-    );
-    const report = await response.json();
-    if (!response.ok) throw new Error(report.error || `Report access failed (${response.status}).`);
-    if (message.type === "report") return report;
-    if (!["prepare", "manage"].includes(message.type)) throw new Error("Unsupported operation.");
-    const review = report.reviews.find((row) => row.reviewId === message.reviewId);
-    if (!review) throw new Error("Selected review has no validated removal draft.");
-    const tab = await chrome.tabs.create({ url: "about:blank" });
-    await chrome.storage.session.set({
-      prepared: {
-        tabId: tab.id,
-        expires: Date.now() + 15 * 60000,
-        scanId: report.scanId,
-        business: report.business,
-        ...review,
-      },
-    });
-    await chrome.tabs.update(tab.id, {
-      url:
-        message.type === "manage"
-          ? "https://support.google.com/business/workflow/9945796?hl=en"
-          : review.reviewUrl,
-    });
-    return { ok: true };
+
+    if (message.type === "prepare") {
+      if (!extensionPage(sender) && !scanReportPage(sender, message.scanId))
+        throw new Error("Prepare a report from Rating Guard or the extension popup.");
+      const token = await sessionToken();
+      const report = await authenticatedFetch(
+        `report/${encodeURIComponent(message.scanId)}`,
+        token,
+      );
+      const review = report.reviews.find((row) => row.reviewId === message.reviewId);
+      if (!review) throw new Error("Selected review has no source-validated policy draft.");
+      const tab = await chrome.tabs.create({ url: "about:blank" });
+      if (!tab.id) throw new Error("Could not open the exact Google Maps review.");
+      await chrome.storage.session.set({
+        activeReportId: report.scanId,
+        prepared: {
+          tabId: tab.id,
+          expires: Date.now() + 15 * 60000,
+          scanId: report.scanId,
+          business: report.business,
+          ...review,
+        },
+      });
+      await chrome.tabs.update(tab.id, { url: review.reviewUrl });
+      return { ok: true };
+    }
+
+    if (message.type === "record") {
+      if (!extensionPage(sender))
+        throw new Error("Record submissions from the extension popup only.");
+      if (
+        message.confirmed !== true ||
+        typeof message.verificationReference !== "string" ||
+        message.verificationReference.trim().length < 10 ||
+        typeof message.submittedAt !== "string"
+      )
+        throw new Error("Confirm the actual Google submission and provide its reference.");
+      const token = await sessionToken();
+      const { activeReportId } = await chrome.storage.session.get("activeReportId");
+      if (typeof activeReportId !== "string") throw new Error("Load a report before recording.");
+      const report = await authenticatedFetch(
+        `report/${encodeURIComponent(activeReportId)}`,
+        token,
+      );
+      const review = report.reviews.find((row) => row.reviewId === message.reviewId);
+      if (!review) throw new Error("Selected review has no source-validated policy draft.");
+      const result = await authenticatedFetch("submission", token, {
+        method: "POST",
+        body: JSON.stringify({
+          scanId: report.scanId,
+          reviewId: review.reviewId,
+          submittedAt: message.submittedAt,
+          verificationReference: message.verificationReference.trim(),
+          requestText: review.request,
+          confirmed: true,
+        }),
+      });
+      return { ok: true, ...result };
+    }
+
+    throw new Error("Unsupported extension action.");
   })()
     .then(respond)
-    .catch((error) => respond({ error: error.message }));
+    .catch((error) => respond({ error: error instanceof Error ? error.message : String(error) }));
   return true;
 });

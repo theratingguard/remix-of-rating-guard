@@ -1,48 +1,56 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { JSDOM } from "jsdom";
 
-const adapter = readFileSync(join(process.cwd(), "chrome-extension", "form-adapter.js"), "utf8");
+const filler = readFileSync(join(process.cwd(), "chrome-extension", "form-filler.js"), "utf8");
 const prepared = {
   business: "Example Cafe",
   evidence: "Buy my product at spam.example",
-  reviewUrl: "https://www.google.com/maps/reviews/example",
+  reviewUrl: "https://www.google.com/maps/reviews/data=review-id",
   policy: "Spam",
   request: "This review advertises: Buy my product at spam.example",
+  expires: Date.now() + 60_000,
 };
 
-describe("conservative extension form adapter", () => {
+describe("Google Maps extension helper", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
   });
-  function fill() {
-    return new Function(`${adapter};return globalThis.ratingGuardFillForm(document,arguments[0]);`)(
-      prepared,
+  async function runFor(url: string, body: string) {
+    const dom = new JSDOM(`<body>${body}</body>`, { url });
+    const sendMessage = vi.fn().mockResolvedValue(prepared);
+    new Function("chrome", "location", "document", filler)(
+      { runtime: { sendMessage } },
+      dom.window.location,
+      dom.window.document,
     );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return { dom, sendMessage };
   }
-  it("fills exact recognized labels and never clicks final Submit", () => {
-    document.body.innerHTML = `<main><p>Example Cafe: Buy my product at spam.example</p>
-      <input aria-label="Business name"><input aria-label="Review URL">
-      <textarea aria-label="Evidence"></textarea><button id="submit">Submit</button></main>`;
-    let submitted = false;
-    document.getElementById("submit")!.onclick = () => {
-      submitted = true;
-    };
-    expect(fill()).toBe(3);
-    expect(document.querySelector("textarea")!.value).toBe(prepared.request);
-    expect(submitted).toBe(false);
+
+  it("only shows a copy-only helper for the exact Google Maps review", async () => {
+    const { dom, sendMessage } = await runFor(
+      "https://www.google.com/maps/reviews/data=review-id",
+      `<main>Example Cafe Buy my product at spam.example</main><button id="submit">Submit</button>`,
+    );
+    expect(sendMessage).toHaveBeenCalledWith({ type: "prepared" });
+    expect(dom.window.document.querySelector('[aria-label="Verified request draft"]')?.value).toBe(
+      prepared.request,
+    );
+    expect(dom.window.document.getElementById("submit")?.textContent).toBe("Submit");
   });
-  it("rejects unrelated business/review even with known labels", () => {
-    document.body.innerHTML = `<main>Other cafe<textarea aria-label="Evidence"></textarea></main>`;
-    expect(fill).toThrow("exact review evidence");
-    expect(document.querySelector("textarea")!.value).toBe("");
+
+  it("does not reveal a draft if the exact source evidence is absent", async () => {
+    const { dom } = await runFor(
+      "https://www.google.com/maps/reviews/data=review-id",
+      "<main>Example Cafe unrelated text</main>",
+    );
+    expect(dom.window.document.querySelector('[aria-label="Verified request draft"]')).toBeNull();
   });
-  it("does not guess reason-only controls or unsupported policy options", () => {
-    document.body.innerHTML = `<main>Example Cafe: Buy my product at spam.example<input type="radio" aria-label="Policy type"></main>`;
-    expect(fill).toThrow("Unsupported form");
-    document.body.innerHTML = `<main>Example Cafe: Buy my product at spam.example<input aria-label="Business name">
-      <select aria-label="Policy type"><option>Off topic</option></select></main>`;
-    expect(fill).toThrow("Select the reason manually");
-    expect(document.querySelector("input")!.value).toBe("");
+
+  it("does not run on a non-Google page", async () => {
+    const { sendMessage } = await runFor("https://example.com/", "<main>Review</main>");
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 });

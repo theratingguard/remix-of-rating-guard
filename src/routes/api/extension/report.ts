@@ -5,6 +5,12 @@ export const Route = createFileRoute("/api/extension/report")({
     handlers: {
       GET: async ({ request }) => {
         try {
+          const authorization = request.headers.get("authorization");
+          if (!authorization?.startsWith("Bearer "))
+            return Response.json(
+              { error: "Unauthorized: A signed-in user session is required." },
+              { status: 401, headers: { "Cache-Control": "no-store" } },
+            );
           const { getExtensionReport } = await import("@/lib/extension.functions");
           const scanId = new URL(request.url).searchParams.get("scanId");
           return Response.json(await getExtensionReport({ data: { scanId } }), {

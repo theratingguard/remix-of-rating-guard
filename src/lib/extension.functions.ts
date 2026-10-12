@@ -2,13 +2,35 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { savedLegalAnalysis } from "./legal-analysis";
+import { isGoogleMapsUrl } from "./google-url";
+
+export const extensionSubmissionSchema = z
+  .object({
+    scanId: z.string().uuid(),
+    reviewId: z.string().uuid(),
+    submittedAt: z.string().datetime(),
+    verificationReference: z.string().trim().min(10).max(2000),
+    requestText: z.string().trim().min(1).max(12000),
+    confirmed: z.literal(true),
+  })
+  .refine((value) => Date.parse(value.submittedAt) <= Date.now(), {
+    message: "Submission date cannot be in the future.",
+  });
+
+async function requireExtensionAccess(supabase: {
+  rpc: (name: "report_access_level") => {
+    throwOnError: () => Promise<{ data: string }>;
+  };
+}) {
+  if ((await supabase.rpc("report_access_level").throwOnError()).data !== "super_admin")
+    throw new Error("Access Denied: extension report access is Super Admin only.");
+}
 
 export const getExtensionReport = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ scanId: z.string().uuid() }).parse(input))
   .handler(async ({ context, data }) => {
-    if ((await context.supabase.rpc("report_access_level").throwOnError()).data !== "super_admin")
-      throw new Error("Access Denied: extension report access is Super Admin only.");
+    await requireExtensionAccess(context.supabase);
     const [scan, report, reviews] = await Promise.all([
       context.supabase
         .from("scans")
@@ -40,12 +62,13 @@ export const getExtensionReport = createServerFn({ method: "GET" })
           !item.removal_request_text ||
           !item.evidence_quote ||
           !source?.text?.includes(item.evidence_quote) ||
-          !source.review_uri
+          !source.review_uri ||
+          !isGoogleMapsUrl(source.review_uri)
         )
           return [];
         const url = new URL(source.review_uri);
         if (
-          url.protocol !== "https:" ||
+          !/^\/maps\/reviews\//.test(url.pathname) ||
           !["www.google.com", "maps.google.com", "google.com"].includes(url.hostname)
         )
           return [];
@@ -59,5 +82,80 @@ export const getExtensionReport = createServerFn({ method: "GET" })
           },
         ];
       }),
+    };
+  });
+
+export const getExtensionStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireExtensionAccess(context.supabase);
+    return {
+      authenticated: true,
+      email: typeof context.claims.email === "string" ? context.claims.email : null,
+      access: "super_admin",
+    };
+  });
+
+export const recordExtensionSubmission = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => extensionSubmissionSchema.parse(input))
+  .handler(async ({ context, data }) => {
+    await requireExtensionAccess(context.supabase);
+    const [scan, report, review] = await Promise.all([
+      context.supabase
+        .from("scans")
+        .select("business_type")
+        .eq("id", data.scanId)
+        .single()
+        .throwOnError(),
+      context.supabase
+        .from("reports")
+        .select("report_data")
+        .eq("scan_id", data.scanId)
+        .single()
+        .throwOnError(),
+      context.supabase
+        .from("reviews")
+        .select("id,text")
+        .eq("id", data.reviewId)
+        .eq("scan_id", data.scanId)
+        .single()
+        .throwOnError(),
+    ]);
+    const legal = savedLegalAnalysis(report.data.report_data);
+    const prepared = legal?.reviews.find((item) => item.review_id === data.reviewId);
+    if (
+      !prepared?.violates_policy ||
+      !prepared.evidence_quote ||
+      !review.data.text?.includes(prepared.evidence_quote) ||
+      prepared.removal_request_text !== data.requestText
+    )
+      throw new Error("The request does not match a supported draft and its source review.");
+
+    const inserted = await context.supabase
+      .from("removal_outcomes")
+      .insert({
+        review_id: data.reviewId,
+        scan_id: data.scanId,
+        user_id: context.userId,
+        policy_type: prepared.policy_type,
+        business_type: scan.data.business_type,
+        submitted_at: data.submittedAt,
+        verification_reference: data.verificationReference,
+        request_text: prepared.removal_request_text,
+        evidence_used: {
+          quote: prepared.evidence_quote,
+          source:
+            "User-confirmed actual Google Maps submission; not independently verified by Google.",
+        },
+      })
+      .select("id,outcome,submitted_at")
+      .single()
+      .throwOnError();
+
+    return {
+      id: inserted.data.id,
+      outcome: inserted.data.outcome,
+      submittedAt: inserted.data.submitted_at,
     };
   });

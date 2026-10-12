@@ -30,7 +30,10 @@ import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedReportsIdRouteImport } from './routes/_authenticated/reports.$id'
 import { Route as AuthenticatedScanReportIdRouteImport } from './routes/_authenticated/scan-report.$id'
 import { Route as ApiExtensionReportRouteImport } from './routes/api/extension/report'
+import { Route as ApiExtensionStatusRouteImport } from './routes/api/extension/status'
+import { Route as ApiExtensionSubmissionRouteImport } from './routes/api/extension/submission'
 import { Route as ApiWorkersStatusRouteImport } from './routes/api/workers/status'
+import { Route as ApiExtensionReportIdRouteImport } from './routes/api/extension/report.$id'
 import { Route as ApiPublicHooksScanWorkerRouteImport } from './routes/api/public/hooks/scan-worker'
 
 const IndexRoute = IndexRouteImport.update({
@@ -142,10 +145,25 @@ const ApiExtensionReportRoute = ApiExtensionReportRouteImport.update({
   path: '/api/extension/report',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExtensionStatusRoute = ApiExtensionStatusRouteImport.update({
+  id: '/api/extension/status',
+  path: '/api/extension/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExtensionSubmissionRoute = ApiExtensionSubmissionRouteImport.update({
+  id: '/api/extension/submission',
+  path: '/api/extension/submission',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWorkersStatusRoute = ApiWorkersStatusRouteImport.update({
   id: '/api/workers/status',
   path: '/api/workers/status',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExtensionReportIdRoute = ApiExtensionReportIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiExtensionReportRoute,
 } as any)
 const ApiPublicHooksScanWorkerRoute =
   ApiPublicHooksScanWorkerRouteImport.update({
@@ -173,9 +191,12 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
   '/scan-report/$id': typeof AuthenticatedScanReportIdRoute
-  '/api/extension/report': typeof ApiExtensionReportRoute
+  '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
+  '/api/extension/status': typeof ApiExtensionStatusRoute
+  '/api/extension/submission': typeof ApiExtensionSubmissionRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
+  '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
 }
 export interface FileRoutesByTo {
@@ -197,9 +218,12 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
   '/scan-report/$id': typeof AuthenticatedScanReportIdRoute
-  '/api/extension/report': typeof ApiExtensionReportRoute
+  '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
+  '/api/extension/status': typeof ApiExtensionStatusRoute
+  '/api/extension/submission': typeof ApiExtensionSubmissionRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
+  '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
 }
 export interface FileRoutesById {
@@ -223,9 +247,12 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/_authenticated/reports/$id': typeof AuthenticatedReportsIdRoute
   '/_authenticated/scan-report/$id': typeof AuthenticatedScanReportIdRoute
-  '/api/extension/report': typeof ApiExtensionReportRoute
+  '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
+  '/api/extension/status': typeof ApiExtensionStatusRoute
+  '/api/extension/submission': typeof ApiExtensionSubmissionRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
+  '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
 }
 export interface FileRouteTypes {
@@ -250,8 +277,11 @@ export interface FileRouteTypes {
     | '/reports/$id'
     | '/scan-report/$id'
     | '/api/extension/report'
+    | '/api/extension/status'
+    | '/api/extension/submission'
     | '/api/workers/status'
     | '/reports/'
+    | '/api/extension/report/$id'
     | '/api/public/hooks/scan-worker'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -274,8 +304,11 @@ export interface FileRouteTypes {
     | '/reports/$id'
     | '/scan-report/$id'
     | '/api/extension/report'
+    | '/api/extension/status'
+    | '/api/extension/submission'
     | '/api/workers/status'
     | '/reports'
+    | '/api/extension/report/$id'
     | '/api/public/hooks/scan-worker'
   id:
     | '__root__'
@@ -299,8 +332,11 @@ export interface FileRouteTypes {
     | '/_authenticated/reports/$id'
     | '/_authenticated/scan-report/$id'
     | '/api/extension/report'
+    | '/api/extension/status'
+    | '/api/extension/submission'
     | '/api/workers/status'
     | '/_authenticated/reports/'
+    | '/api/extension/report/$id'
     | '/api/public/hooks/scan-worker'
   fileRoutesById: FileRoutesById
 }
@@ -313,7 +349,9 @@ export interface RootRouteChildren {
   ResponsibleUseRoute: typeof ResponsibleUseRoute
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
-  ApiExtensionReportRoute: typeof ApiExtensionReportRoute
+  ApiExtensionReportRoute: typeof ApiExtensionReportRouteWithChildren
+  ApiExtensionStatusRoute: typeof ApiExtensionStatusRoute
+  ApiExtensionSubmissionRoute: typeof ApiExtensionSubmissionRoute
   ApiWorkersStatusRoute: typeof ApiWorkersStatusRoute
   ApiPublicHooksScanWorkerRoute: typeof ApiPublicHooksScanWorkerRoute
 }
@@ -467,12 +505,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExtensionReportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/extension/status': {
+      id: '/api/extension/status'
+      path: '/api/extension/status'
+      fullPath: '/api/extension/status'
+      preLoaderRoute: typeof ApiExtensionStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/extension/submission': {
+      id: '/api/extension/submission'
+      path: '/api/extension/submission'
+      fullPath: '/api/extension/submission'
+      preLoaderRoute: typeof ApiExtensionSubmissionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/workers/status': {
       id: '/api/workers/status'
       path: '/api/workers/status'
       fullPath: '/api/workers/status'
       preLoaderRoute: typeof ApiWorkersStatusRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/extension/report/$id': {
+      id: '/api/extension/report/$id'
+      path: '/$id'
+      fullPath: '/api/extension/report/$id'
+      preLoaderRoute: typeof ApiExtensionReportIdRouteImport
+      parentRoute: typeof ApiExtensionReportRoute
     }
     '/api/public/hooks/scan-worker': {
       id: '/api/public/hooks/scan-worker'
@@ -517,6 +576,17 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface ApiExtensionReportRouteChildren {
+  ApiExtensionReportIdRoute: typeof ApiExtensionReportIdRoute
+}
+
+const ApiExtensionReportRouteChildren: ApiExtensionReportRouteChildren = {
+  ApiExtensionReportIdRoute: ApiExtensionReportIdRoute,
+}
+
+const ApiExtensionReportRouteWithChildren =
+  ApiExtensionReportRoute._addFileChildren(ApiExtensionReportRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -526,7 +596,9 @@ const rootRouteChildren: RootRouteChildren = {
   ResponsibleUseRoute: ResponsibleUseRoute,
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
-  ApiExtensionReportRoute: ApiExtensionReportRoute,
+  ApiExtensionReportRoute: ApiExtensionReportRouteWithChildren,
+  ApiExtensionStatusRoute: ApiExtensionStatusRoute,
+  ApiExtensionSubmissionRoute: ApiExtensionSubmissionRoute,
   ApiWorkersStatusRoute: ApiWorkersStatusRoute,
   ApiPublicHooksScanWorkerRoute: ApiPublicHooksScanWorkerRoute,
 }

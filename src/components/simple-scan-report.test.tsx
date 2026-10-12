@@ -17,7 +17,9 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/data", () => ({
   scanQuery: (id: string) => ({ queryKey: ["scan", id] }),
 }));
-vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { auth: { getSession: vi.fn() } },
+}));
 vi.mock("@/lib/report-pdf.functions", () => ({ saveReportPdf: {} }));
 vi.mock("@/lib/use-feature-settings", () => ({
   useFeatureSettings: () => ({
@@ -67,6 +69,7 @@ describe("Simple scan report", () => {
     expect(screen.getByText("A review to assess")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
     expect(screen.getByText("SUBMITTED")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Auto Report via Extension" })).toBeInTheDocument();
     expect(screen.queryByText(/Legal strength|Evidence readiness|Multi-model voting/)).toBeNull();
   });
 });

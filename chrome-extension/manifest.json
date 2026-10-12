@@ -1,13 +1,36 @@
 {
   "manifest_version": 3,
   "name": "Rating Guard Submission Assistant",
-  "version": "0.1.0",
-  "description": "Prepare validated review evidence for manual Google reporting. Never submits automatically.",
-  "permissions": ["storage", "activeTab"],
-  "host_permissions": ["https://ratingguard.online/*"],
-  "background": { "service_worker": "background.js" },
-  "action": { "default_popup": "popup.html" },
+  "version": "1.0.0",
+  "description": "Prepare verified Google Maps review reports for manual submission.",
+  "permissions": ["activeTab", "storage", "tabs", "clipboardWrite"],
+  "host_permissions": [
+    "https://ratingguard.online/*",
+    "https://www.google.com/maps/*",
+    "https://maps.google.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
   "content_scripts": [
-    { "matches": ["https://ratingguard.online/reports/*", "https://support.google.com/business/*"], "js": ["form-adapter.js", "content.js"] }
-  ]
+    {
+      "matches": ["https://ratingguard.online/scan-report/*"],
+      "js": ["content.js"]
+    },
+    {
+      "matches": [
+        "https://www.google.com/maps/reviews/*",
+        "https://maps.google.com/maps/reviews/*"
+      ],
+      "js": ["form-filler.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
 }

@@ -9,6 +9,7 @@ import { useFeatureSettings } from "@/lib/use-feature-settings";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 import { Button } from "@/components/ui/button";
 import { RemovalSubmissionForm } from "@/components/removal-workflow";
+import { ExtensionLauncher } from "@/components/extension-launcher";
 
 export function SimpleScanReport({ scanId }: { scanId: string }) {
   const access = useQuery(reportAccessQuery());
@@ -84,6 +85,8 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
           {scan.total_reviews?.toLocaleString() ?? "—"} fetched)
         </p>
       </header>
+
+      {access.data === "super_admin" && <ExtensionLauncher scanId={scanId} />}
 
       <section className="surface space-y-3 p-5">
         <h2 className="font-bold">REVIEWS</h2>
