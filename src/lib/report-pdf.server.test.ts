@@ -200,7 +200,7 @@ describe("VPS PDF persistence", () => {
     );
     expect(db.writes[0]).toHaveProperty(
       "report_data.removal_analysis.reviews.0.micro_checks_run",
-      250,
+      500,
     );
     expect(browserMock.javascript).toHaveBeenCalledWith(false);
     expect(browserMock.interception).toHaveBeenCalledWith(true);

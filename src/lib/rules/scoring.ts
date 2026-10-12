@@ -7,15 +7,19 @@ export const RULE_GROUP_LIMITS: Record<RuleGroup, number> = {
   crossPlatform: 15,
   network: 10,
   semantic: 5,
+  pattern: 0,
+  language: 0,
 };
 
 export const RULE_GROUP_COUNTS: Record<RuleGroup, number> = {
-  text: 60,
-  reviewer: 50,
-  temporal: 40,
-  crossPlatform: 40,
-  network: 30,
-  semantic: 30,
+  text: 100,
+  reviewer: 75,
+  temporal: 50,
+  crossPlatform: 75,
+  network: 50,
+  semantic: 50,
+  pattern: 50,
+  language: 50,
 };
 
 export const RULE_GROUP_LABELS: Record<RuleGroup, string> = {
@@ -25,6 +29,8 @@ export const RULE_GROUP_LABELS: Record<RuleGroup, string> = {
   crossPlatform: "Cross-Platform",
   network: "Network Forensics",
   semantic: "Semantic Forensics",
+  pattern: "Pattern Signals (advisory)",
+  language: "Language Signals (advisory)",
 };
 
 export const MICRO_RULE_CHECK_COUNT = Object.values(RULE_GROUP_COUNTS).reduce(

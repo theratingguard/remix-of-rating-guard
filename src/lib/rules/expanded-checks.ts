@@ -154,7 +154,7 @@ export const EXPANDED_RULE_CATALOGS = {
     "semantic-extra-topic-safety",
     "semantic-extra-topic-legality",
   ],
-} as const satisfies Record<RuleGroup, readonly string[]>;
+} as const satisfies Record<Exclude<RuleGroup, "pattern" | "language">, readonly string[]>;
 
 const knownAdvisoryCheckIds = new Set<string>([
   "text-extra-comma-overuse",

@@ -174,17 +174,19 @@ describe("Durable scan completion (unit fixtures only)", () => {
       micro_score: {
         score: 12,
         band: "normal",
-        checksRun: 250,
+        checksRun: 500,
         checksAssessed: 32,
         checksFlagged: 3,
         durationMs: 4,
         groups: {
-          text: { score: 5, maxScore: 30, checks: 60, assessed: 20, flagged: 2 },
-          reviewer: { score: 1, maxScore: 25, checks: 50, assessed: 3, flagged: 1 },
-          temporal: { score: 0, maxScore: 15, checks: 40, assessed: 2, flagged: 0 },
-          crossPlatform: { score: 0, maxScore: 15, checks: 40, assessed: 1, flagged: 0 },
-          network: { score: 5, maxScore: 10, checks: 30, assessed: 1, flagged: 0 },
-          semantic: { score: 1, maxScore: 5, checks: 30, assessed: 5, flagged: 0 },
+          text: { score: 5, maxScore: 30, checks: 100, assessed: 20, flagged: 2 },
+          reviewer: { score: 1, maxScore: 25, checks: 75, assessed: 3, flagged: 1 },
+          temporal: { score: 0, maxScore: 15, checks: 50, assessed: 2, flagged: 0 },
+          crossPlatform: { score: 0, maxScore: 15, checks: 75, assessed: 1, flagged: 0 },
+          network: { score: 5, maxScore: 10, checks: 50, assessed: 1, flagged: 0 },
+          semantic: { score: 1, maxScore: 5, checks: 50, assessed: 5, flagged: 0 },
+          pattern: { score: 0, maxScore: 0, checks: 50, assessed: 0, flagged: 0 },
+          language: { score: 0, maxScore: 0, checks: 50, assessed: 0, flagged: 0 },
         },
       },
       micro_checks: [],
@@ -201,7 +203,7 @@ describe("Durable scan completion (unit fixtures only)", () => {
     expect(db.analysisWrites[0]?.["verification"]).toMatchObject({
       rules_micro_check: {
         score: 12,
-        checksRun: 250,
+        checksRun: 500,
         checksAssessed: 32,
       },
     });

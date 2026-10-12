@@ -4,6 +4,7 @@ import { EVIDENCE_RULE_CATALOG } from "./evidence-rules";
 import { evaluateLinguisticRules, LINGUISTIC_RULE_CATALOG } from "./linguistic-rules";
 import { evaluatePatternRules, PATTERN_RULE_CATALOG } from "./pattern-rules";
 import { evaluateReviewerRules, REVIEWER_RULE_CATALOG } from "./reviewer-rules";
+import { ADDITIONAL_RULE_CATALOGS, evaluateAdditionalRules } from "./additional-checks";
 import { scoreRuleChecks } from "./scoring";
 import { evaluateTextRules, TEXT_RULE_CATALOG } from "./text-rules";
 import { evaluateTimingRules, TIMING_RULE_CATALOG } from "./timing-rules";
@@ -12,16 +13,35 @@ import type { MicroRuleResult, RuleCheck, RuleReviewContext, RuleScore } from ".
 export type { MicroRuleResult } from "./types";
 
 export const MICRO_RULE_CATALOGS = {
-  text: [...TEXT_RULE_CATALOG, ...EXPANDED_RULE_CATALOGS.text],
-  reviewer: [...REVIEWER_RULE_CATALOG, ...EXPANDED_RULE_CATALOGS.reviewer],
-  temporal: [...TIMING_RULE_CATALOG, ...EXPANDED_RULE_CATALOGS.temporal],
-  crossPlatform: [...CROSS_REFERENCE_RULE_CATALOG, ...EXPANDED_RULE_CATALOGS.crossPlatform],
-  network: [...PATTERN_RULE_CATALOG, ...EXPANDED_RULE_CATALOGS.network],
+  text: [...TEXT_RULE_CATALOG, ...EXPANDED_RULE_CATALOGS.text, ...ADDITIONAL_RULE_CATALOGS.text],
+  reviewer: [
+    ...REVIEWER_RULE_CATALOG,
+    ...EXPANDED_RULE_CATALOGS.reviewer,
+    ...ADDITIONAL_RULE_CATALOGS.reviewer,
+  ],
+  temporal: [
+    ...TIMING_RULE_CATALOG,
+    ...EXPANDED_RULE_CATALOGS.temporal,
+    ...ADDITIONAL_RULE_CATALOGS.temporal,
+  ],
+  crossPlatform: [
+    ...CROSS_REFERENCE_RULE_CATALOG,
+    ...EXPANDED_RULE_CATALOGS.crossPlatform,
+    ...ADDITIONAL_RULE_CATALOGS.crossPlatform,
+  ],
+  network: [
+    ...PATTERN_RULE_CATALOG,
+    ...EXPANDED_RULE_CATALOGS.network,
+    ...ADDITIONAL_RULE_CATALOGS.network,
+  ],
   semantic: [
     ...LINGUISTIC_RULE_CATALOG,
     ...EVIDENCE_RULE_CATALOG,
     ...EXPANDED_RULE_CATALOGS.semantic,
+    ...ADDITIONAL_RULE_CATALOGS.semantic,
   ],
+  pattern: ADDITIONAL_RULE_CATALOGS.pattern,
+  language: ADDITIONAL_RULE_CATALOGS.language,
 } as const;
 
 export const MICRO_RULE_CATALOG_COUNT = Object.values(MICRO_RULE_CATALOGS).reduce(
@@ -39,6 +59,7 @@ export function runMicroRules(input: RuleReviewContext): MicroRuleResult {
     ...evaluateLinguisticRules(input),
     ...evaluatePatternRules(input),
     ...evaluateExpandedRules(input),
+    ...evaluateAdditionalRules(input),
   ];
   return {
     checks,
@@ -83,9 +104,28 @@ export function readPersistedRuleScore(value: unknown): PersistedRuleScore | nul
     return null;
 
   const groups = item["groups"] as Record<string, unknown>;
-  const currentGroups = ["text", "reviewer", "temporal", "crossPlatform", "network", "semantic"];
+  const currentGroups = Object.keys(MICRO_RULE_CATALOGS);
   if (currentGroups.every((group) => isRuleGroupScore(groups[group]))) {
     return summary as PersistedRuleScore;
+  }
+
+  const previousCurrentGroups = [
+    "text",
+    "reviewer",
+    "temporal",
+    "crossPlatform",
+    "network",
+    "semantic",
+  ];
+  if (previousCurrentGroups.every((group) => isRuleGroupScore(groups[group]))) {
+    return {
+      ...item,
+      groups: {
+        ...groups,
+        pattern: emptyLegacyGroup(),
+        language: emptyLegacyGroup(),
+      },
+    } as PersistedRuleScore;
   }
 
   const legacyGroupMap = {
@@ -95,9 +135,15 @@ export function readPersistedRuleScore(value: unknown): PersistedRuleScore | nul
     crossPlatform: groups["crossReference"],
     network: groups["pattern"],
     semantic: groups["linguistic"],
+    pattern: emptyLegacyGroup(),
+    language: emptyLegacyGroup(),
   };
   if (!Object.values(legacyGroupMap).every(isRuleGroupScore)) return null;
   return { ...item, groups: legacyGroupMap } as PersistedRuleScore;
+}
+
+function emptyLegacyGroup() {
+  return { score: 0, maxScore: 0, checks: 0, assessed: 0, flagged: 0 };
 }
 
 function isRuleGroupScore(value: unknown): boolean {

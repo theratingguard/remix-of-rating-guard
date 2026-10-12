@@ -5,14 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft, Download, Flag } from "lucide-react";
-import {
-  scanQuery,
-  fmtDate,
-  reportNumber,
-  riskOf,
-  isFlagged,
-  savedPdfUrl,
-} from "@/lib/data";
+import { scanQuery, fmtDate, reportNumber, riskOf, isFlagged, savedPdfUrl } from "@/lib/data";
 import { logAudit } from "@/lib/scan.functions";
 import { Stars, RiskBadge, SeedBadge } from "@/components/review-ui";
 import { Button } from "@/components/ui/button";
@@ -362,7 +355,7 @@ function ReportDetail() {
                 {ruleCheckTotals.assessed} assessed · {ruleCheckTotals.flagged} signals
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                250 checks are evaluated per analyzed review. This recheck uses only the review text
+                500 checks are evaluated per analyzed review. This recheck uses only the review text
                 and same-scan review history available now; it does not alter the saved AI verdict.
                 Checks requiring unavailable profile, biometric, network, or event data remain
                 unassessed.

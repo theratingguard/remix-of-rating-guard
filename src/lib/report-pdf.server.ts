@@ -164,7 +164,7 @@ ${reviews
 <p>${escapeHtml(review.published_at || review.relative_time)}</p>
 <p class="text">${escapeHtml(review.text)}</p>
 <p>Policy category: ${escapeHtml(review.analysis?.category)} &middot; Confidence: ${escapeHtml(review.analysis?.confidence)}%</p>
-<p>Rules micro-check score: ${escapeHtml(review.analysis?.microRuleScore?.score)} / 100 (${escapeHtml(review.analysis?.microRuleScore?.band ?? "not recorded")}; ${escapeHtml(review.analysis?.microRuleScore?.checksAssessed ?? 0)} / ${escapeHtml(review.analysis?.microRuleScore?.checksRun ?? 250)} checks assessed). Advisory indicator only; not proof or probability.</p>
+<p>Rules micro-check score: ${escapeHtml(review.analysis?.microRuleScore?.score)} / 100 (${escapeHtml(review.analysis?.microRuleScore?.band ?? "not recorded")}; ${escapeHtml(review.analysis?.microRuleScore?.checksAssessed ?? 0)} / ${escapeHtml(review.analysis?.microRuleScore?.checksRun ?? 0)} checks assessed). Advisory indicator only; not proof or probability.</p>
 <p class="text">Reason: ${escapeHtml(review.analysis?.reason)}</p>
 <p class="text">Evidence: ${escapeHtml(review.analysis?.evidence)}</p>
 <p class="text">Review link: ${escapeHtml(review.review_uri)}</p></section>`,

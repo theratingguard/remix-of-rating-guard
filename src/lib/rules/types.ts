@@ -5,6 +5,8 @@ export const RULE_GROUPS = [
   "crossPlatform",
   "network",
   "semantic",
+  "pattern",
+  "language",
 ] as const;
 
 export type RuleGroup = (typeof RULE_GROUPS)[number];

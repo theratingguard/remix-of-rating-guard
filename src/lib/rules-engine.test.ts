@@ -521,9 +521,9 @@ describe("rules engine", () => {
       reviewDate: "2026-10-12T10:00:00Z",
     });
 
-    expect(result.micro_score?.checksRun).toBe(250);
-    expect(result.micro_checks).toHaveLength(250);
-    expect(result.micro_score?.groups.text.checks).toBe(60);
+    expect(result.micro_score?.checksRun).toBe(500);
+    expect(result.micro_checks).toHaveLength(500);
+    expect(result.micro_score?.groups.text.checks).toBe(100);
     expect(result.micro_score?.durationMs).toBeGreaterThanOrEqual(0);
   });
 
