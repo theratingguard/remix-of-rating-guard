@@ -77,6 +77,7 @@ function createSupabaseClient() {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
+      experimental: { recoveryCodes: true },
     },
   });
 }

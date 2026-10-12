@@ -625,27 +625,45 @@ export type Database = {
       profiles: {
         Row: {
           avatar_path: string | null;
+          business_type: string | null;
+          company_name: string | null;
           created_at: string;
+          email_notifications: boolean;
+          language: string;
           name: string;
+          phone: string | null;
           status: string;
+          timezone: string;
           updated_at: string;
           user_id: string;
           username: string | null;
         };
         Insert: {
           avatar_path?: string | null;
+          business_type?: string | null;
+          company_name?: string | null;
           created_at?: string;
+          email_notifications?: boolean;
+          language?: string;
           name?: string;
+          phone?: string | null;
           status?: string;
+          timezone?: string;
           updated_at?: string;
           user_id: string;
           username?: string | null;
         };
         Update: {
           avatar_path?: string | null;
+          business_type?: string | null;
+          company_name?: string | null;
           created_at?: string;
+          email_notifications?: boolean;
+          language?: string;
           name?: string;
+          phone?: string | null;
           status?: string;
+          timezone?: string;
           updated_at?: string;
           user_id?: string;
           username?: string | null;

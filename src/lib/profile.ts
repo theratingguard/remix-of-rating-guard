@@ -33,6 +33,12 @@ export const profileQuery = () =>
       return {
         name: p?.name ?? "User",
         username: p?.username ?? user.email ?? "",
+        phone: p?.phone ?? "",
+        companyName: p?.company_name ?? "",
+        businessType: p?.business_type ?? "",
+        emailNotifications: p?.email_notifications ?? true,
+        language: p?.language ?? "en",
+        timezone: p?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
         email: user.email ?? "",
         pendingEmail: user.new_email ?? null,
         status: p?.status ?? "active",

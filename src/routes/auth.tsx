@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import shield from "@/assets/icon-shield.png";
 import scanIcon from "@/assets/icon-scan.png";
 import reportIcon from "@/assets/icon-report.png";
 
@@ -177,7 +176,7 @@ function AuthPage() {
       <div className="bg-scanner relative hidden overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between">
         <div className="grid-lines absolute inset-0" />
         <Link to="/" className="relative flex items-center gap-3 font-display text-lg font-bold">
-          <img src={shield} alt="" width={40} height={40} className="icon-3d size-10" /> The Rating{" "}
+          <img src="/logo.svg" alt="" width={40} height={40} className="size-10" /> The Rating{" "}
           <span className="text-gradient">Guard</span>
         </Link>
         <div key={slide} className="animate-slide-in relative">
@@ -211,11 +210,11 @@ function AuthPage() {
           className="glass neon-outline relative w-full max-w-sm space-y-5 rounded-3xl p-8"
         >
           <img
-            src={shield}
+            src="/logo.svg"
             alt=""
             width={56}
             height={56}
-            className="icon-3d mx-auto size-14 lg:hidden"
+            className="mx-auto size-14 lg:hidden"
           />
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">

@@ -19,7 +19,6 @@ import {
   ListChecks,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import shield from "@/assets/icon-shield.png";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -40,7 +39,7 @@ const nav = [
 function Brand() {
   return (
     <div className="flex items-center gap-2.5 px-2">
-      <img src={shield} alt="" width={40} height={40} className="icon-3d size-10" />
+      <img src="/logo.svg" alt="" width={40} height={40} className="size-10" />
       <div className="leading-tight">
         <div className="font-display text-sm font-bold tracking-tight">
           Rating Guard <span className="text-gradient">Remix</span>
