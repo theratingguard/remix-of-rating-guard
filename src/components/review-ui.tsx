@@ -2,7 +2,6 @@ import { ReplyAssistant } from "@/components/reply-assistant";
 import {
   Star,
   ExternalLink,
-  Flag,
   ShieldAlert,
   ShieldCheck,
   ShieldQuestion,
@@ -10,14 +9,7 @@ import {
   Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  GOOGLE_REPORT_URL,
-  type AnalyzedReview,
-  type Risk,
-  type Scan,
-  fmtDate,
-  riskOf,
-} from "@/lib/data";
+import { type AnalyzedReview, type Risk, type Scan, fmtDate, riskOf } from "@/lib/data";
 import {
   Sheet,
   SheetContent,
@@ -191,14 +183,7 @@ export function ReviewCard({
         {!isSeed && review.review_uri && (
           <Button size="sm" variant="ghost" asChild>
             <a href={review.review_uri} target="_blank" rel="noreferrer">
-              <ExternalLink /> View on Google
-            </a>
-          </Button>
-        )}
-        {!isSeed && (risk === "high" || risk === "medium") && (
-          <Button size="sm" variant="ghost" asChild>
-            <a href={GOOGLE_REPORT_URL} target="_blank" rel="noreferrer">
-              <Flag /> Report for review
+              <ExternalLink /> Open review in Google Maps
             </a>
           </Button>
         )}
@@ -344,16 +329,11 @@ export function ReviewDrawer({
                       </a>
                     </Button>
                   )}
-                  <Button asChild>
-                    <a href={GOOGLE_REPORT_URL} target="_blank" rel="noreferrer">
-                      <Flag /> Open Google reporting path
-                    </a>
-                  </Button>
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                Google independently determines whether a review violates its policies and whether
-                removal is appropriate.
+                Open the review in Google Maps to access any available reporting option. Rating
+                Guard cannot submit or verify reports through the Places API.
               </p>
             </div>
           </>

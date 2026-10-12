@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { GOOGLE_REPORT_URL, scanQuery, type AnalyzedReview } from "@/lib/data";
+import { scanQuery, type AnalyzedReview } from "@/lib/data";
 import { supabase } from "@/integrations/supabase/client";
 import { saveReportPdf } from "@/lib/report-pdf.functions";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
@@ -53,7 +53,7 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
       await generateReport({ data: { scanId } });
       await queryClient.invalidateQueries({ queryKey: ["scan", scanId] });
       await queryClient.invalidateQueries({ queryKey: ["simple-scan-report-outcomes", scanId] });
-      toast.success("Report ready. Copy it and submit through Google.");
+      toast.success("Report ready. Nothing was submitted to Google.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Report could not be prepared.");
     } finally {
@@ -142,8 +142,12 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
                             Copy report
                           </Button>
                           <Button size="sm" variant="outline" asChild>
-                            <a href={GOOGLE_REPORT_URL} target="_blank" rel="noopener noreferrer">
-                              Submit
+                            <a
+                              href={review.review_uri ?? scan.maps_uri ?? scan.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Open in Google Maps
                             </a>
                           </Button>
                         </div>
@@ -233,11 +237,11 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
                         {outcome.outcome === "rejected" && (
                           <a
                             className="whitespace-nowrap text-brand underline"
-                            href={GOOGLE_REPORT_URL}
+                            href={scan.maps_uri ?? scan.source_url}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            Re-report
+                            Open in Google Maps
                           </a>
                         )}
                       </td>

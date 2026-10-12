@@ -86,11 +86,11 @@ export function LegalAnalysisPanel({
         )}
         <Button variant="outline" asChild>
           <a
-            href={scan.maps_uri?.trim() || "https://support.google.com/business/answer/4596773"}
+            href={scan.maps_uri?.trim() || scan.source_url}
             target="_blank"
             rel="noopener noreferrer"
           >
-            Report Google
+            Open business in Google Maps
           </a>
         </Button>
       </div>

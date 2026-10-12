@@ -119,7 +119,7 @@ export function ReviewSelection({
         </label>
         <span role="status">{selected.size} reviews selected</span>
         <Button disabled={busy || selected.size === 0} onClick={reportSelected}>
-          {busy ? "Generating selected requests and PDF..." : "Report Selected to Google"}
+          {busy ? "Generating selected requests and PDF..." : "Prepare reports for selected reviews"}
         </Button>
       </div>
       <div className="space-y-3">
@@ -245,14 +245,15 @@ export function ReviewSelection({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Report Google
+                  Open review in Google Maps
                 </a>
               </Button>
             </article>
           ))}
           <p className="text-sm">
-            Review the evidence, open Google, locate the exact review, choose the reporting tool,
-            and submit manually only if supported by policy. Nothing is submitted by Rating Guard.
+            Review the evidence, open the exact review in Google Maps, and use any available
+            reporting option only if supported by policy. Google Places API does not submit reports;
+            nothing is submitted by Rating Guard.
           </p>
         </div>
       )}

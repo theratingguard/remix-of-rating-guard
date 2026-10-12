@@ -15,7 +15,6 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => sendReport }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/data", () => ({
-  GOOGLE_REPORT_URL: "https://support.google.com/business/workflow/9945796",
   scanQuery: (id: string) => ({ queryKey: ["scan", id] }),
 }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));

@@ -65,7 +65,7 @@ describe("Manual review selection UI", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Select review by Reviewer 2" }));
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "selected" } });
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
-    fireEvent.click(screen.getByRole("button", { name: "Report Selected to Google" }));
+    fireEvent.click(screen.getByRole("button", { name: "Prepare reports for selected reviews" }));
     await waitFor(() =>
       expect(screen.getByText("Saved selected report: 2 reviews")).toBeInTheDocument(),
     );

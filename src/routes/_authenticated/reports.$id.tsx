@@ -9,7 +9,6 @@ import {
   scanQuery,
   fmtDate,
   reportNumber,
-  GOOGLE_REPORT_URL,
   riskOf,
   isFlagged,
   savedPdfUrl,
@@ -227,8 +226,16 @@ function ReportDetail() {
           )}
           {!scan.is_seed && (
             <Button asChild>
-              <a href={GOOGLE_REPORT_URL} target="_blank" rel="noopener noreferrer">
-                <Flag /> Report to Google
+              <a
+                href={
+                  flagged.find((review) => review.review_uri)?.review_uri ??
+                  scan.maps_uri?.trim() ??
+                  scan.source_url
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Flag /> Open flagged review in Google Maps
               </a>
             </Button>
           )}
@@ -480,14 +487,19 @@ function ReportDetail() {
             {flagged.length === 0 && (scan.requires_review_count > 0 || analyzed !== reviews.length)
               ? "Manually assess the unresolved reviews. No clean-result conclusion or reporting recommendation is available until they are reviewed."
               : (report?.recommended_action ??
-                "Review flagged items and use the official Google reporting path where appropriate.")}
+                "Review flagged items and open them in Google Maps for manual review.")}
           </p>
           <h2 className="mt-6 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-            Official Google reporting path
+            Google Maps reporting
           </h2>
+          <p className="mt-2 text-sm">
+            Rating Guard uses Google Places API to retrieve public review data; it cannot submit a
+            report or verify Google&apos;s decision. Open the specific review in Google Maps and use
+            its available reporting options.
+          </p>
           <p className="mt-2 break-all text-sm">
-            <a href={GOOGLE_REPORT_URL} className="text-brand">
-              {GOOGLE_REPORT_URL}
+            <a href={scan.maps_uri?.trim() || scan.source_url} className="text-brand">
+              Open {scan.business_name ?? "business"} in Google Maps
             </a>
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
