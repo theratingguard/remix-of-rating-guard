@@ -26,6 +26,7 @@ import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenti
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
 import { Route as AuthenticatedReportsIdRouteImport } from './routes/_authenticated/reports.$id'
+import { Route as AuthenticatedScanReportIdRouteImport } from './routes/_authenticated/scan-report.$id'
 import { Route as ApiExtensionReportRouteImport } from './routes/api/extension/report'
 import { Route as ApiWorkersStatusRouteImport } from './routes/api/workers/status'
 import { Route as ApiPublicHooksScanWorkerRouteImport } from './routes/api/public/hooks/scan-worker'
@@ -117,6 +118,12 @@ const AuthenticatedReportsIdRoute = AuthenticatedReportsIdRouteImport.update({
   path: '/reports/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedScanReportIdRoute =
+  AuthenticatedScanReportIdRouteImport.update({
+    id: '/scan-report/$id',
+    path: '/scan-report/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiExtensionReportRoute = ApiExtensionReportRouteImport.update({
   id: '/api/extension/report',
   path: '/api/extension/report',
@@ -150,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/scan-report/$id': typeof AuthenticatedScanReportIdRoute
   '/api/extension/report': typeof ApiExtensionReportRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
@@ -171,6 +179,7 @@ export interface FileRoutesByTo {
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/scan-report/$id': typeof AuthenticatedScanReportIdRoute
   '/api/extension/report': typeof ApiExtensionReportRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
@@ -194,6 +203,7 @@ export interface FileRoutesById {
   '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/_authenticated/reports/$id': typeof AuthenticatedReportsIdRoute
+  '/_authenticated/scan-report/$id': typeof AuthenticatedScanReportIdRoute
   '/api/extension/report': typeof ApiExtensionReportRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/submissions'
     | '/api/health'
     | '/reports/$id'
+    | '/scan-report/$id'
     | '/api/extension/report'
     | '/api/workers/status'
     | '/reports/'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/submissions'
     | '/api/health'
     | '/reports/$id'
+    | '/scan-report/$id'
     | '/api/extension/report'
     | '/api/workers/status'
     | '/reports'
@@ -260,6 +272,7 @@ export interface FileRouteTypes {
     | '/_authenticated/submissions'
     | '/api/health'
     | '/_authenticated/reports/$id'
+    | '/_authenticated/scan-report/$id'
     | '/api/extension/report'
     | '/api/workers/status'
     | '/_authenticated/reports/'
@@ -401,6 +414,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/scan-report/$id': {
+      id: '/_authenticated/scan-report/$id'
+      path: '/scan-report/$id'
+      fullPath: '/scan-report/$id'
+      preLoaderRoute: typeof AuthenticatedScanReportIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/extension/report': {
       id: '/api/extension/report'
       path: '/api/extension/report'
@@ -434,6 +454,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
   AuthenticatedReportsIdRoute: typeof AuthenticatedReportsIdRoute
+  AuthenticatedScanReportIdRoute: typeof AuthenticatedScanReportIdRoute
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
 }
 
@@ -446,6 +467,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,
   AuthenticatedReportsIdRoute: AuthenticatedReportsIdRoute,
+  AuthenticatedScanReportIdRoute: AuthenticatedScanReportIdRoute,
   AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
 }
 

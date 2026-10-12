@@ -223,13 +223,22 @@ function Dashboard() {
                       </td>
                       <td className="px-5 py-3 text-right">
                         {s.status === "complete" && (
-                          <Link
-                            to="/reports/$id"
-                            params={{ id: s.id }}
-                            className="text-brand hover:underline"
-                          >
-                            Open
-                          </Link>
+                          <div className="flex justify-end gap-3 whitespace-nowrap">
+                            <Link
+                              to="/scan-report/$id"
+                              params={{ id: s.id }}
+                              className="text-brand hover:underline"
+                            >
+                              View Simple Report
+                            </Link>
+                            <Link
+                              to="/reports/$id"
+                              params={{ id: s.id }}
+                              className="text-brand hover:underline"
+                            >
+                              View Detailed Report
+                            </Link>
+                          </div>
                         )}
                       </td>
                     </tr>

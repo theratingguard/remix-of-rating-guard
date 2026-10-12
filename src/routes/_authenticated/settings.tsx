@@ -19,6 +19,7 @@ import { APP_DOMAIN } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { summarizeAiLayerUsage } from "@/lib/ai-layer-usage.server";
 import {
   Dialog,
   DialogContent,
@@ -280,6 +281,23 @@ function SettingsPage() {
             k="Analysis settings"
             v="Conservative · negative ≠ violation · ambiguous → Requires review"
           />
+          {(() => {
+            const summary = summarizeAiLayerUsage();
+            return (
+              <div className="space-y-3 border-t pt-3 text-sm">
+                <div className="font-medium">AI Usage</div>
+                {summary.layers.map((layer) => (
+                  <Row
+                    key={layer.layer}
+                    k={`${layer.layer === "rules" ? "Layer 1 (Rules)" : layer.layer === "ollama" ? "Layer 2 (Ollama)" : "Layer 3 (GPT)"}`}
+                    v={`${layer.handled_percent}% · ₹${layer.cost_usd.toFixed(2)} · ${layer.avg_duration_ms}ms`}
+                  />
+                ))}
+                <Row k="Today" v={`$${summary.today_cost_usd.toFixed(2)}`} />
+                <Row k="Month" v={`$${summary.month_cost_usd.toFixed(2)}`} />
+              </div>
+            );
+          })()}
         </Card>
 
         <Card title="Database">

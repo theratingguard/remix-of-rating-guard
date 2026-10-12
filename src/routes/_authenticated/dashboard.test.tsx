@@ -13,7 +13,25 @@ vi.mock("@tanstack/react-query", () => ({
         ? "super_admin"
         : queryKey[0] === "dashboard-outcome-counts"
           ? { approved: 0, rejected: 0 }
-          : [],
+          : queryKey[0] === "scans"
+            ? [
+                {
+                  id: "scan-123",
+                  business_id: "business-123",
+                  business_name: "The Hudson",
+                  source_url: "https://example.com",
+                  status: "complete",
+                  error: null,
+                  created_at: "2026-01-01T00:00:00.000Z",
+                  is_seed: false,
+                  rating: 3.1,
+                  high_count: 1,
+                  medium_count: 0,
+                  normal_count: 0,
+                  requires_review_count: 0,
+                },
+              ]
+            : [],
     isLoading: false,
     isPending: false,
   }),
@@ -64,4 +82,6 @@ it("renders four compact KPI cards before a single analytics and alerts panel", 
   expect(screen.getAllByTestId("smart-alerts")).toHaveLength(1);
   const firstCard = screen.getByText("Total Scans").parentElement;
   expect(firstCard).not.toContainElement(analytics[0]!);
+  expect(screen.getByText("View Simple Report")).toBeInTheDocument();
+  expect(screen.getByText("View Detailed Report")).toBeInTheDocument();
 });

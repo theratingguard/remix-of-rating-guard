@@ -14,4 +14,13 @@ describe("App routing", () => {
 
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
   });
+
+  it("keeps the detailed report route and registers a separate simple report route", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+
+    expect(router.matchRoutes("/reports/123").at(-1)?.routeId).toBe("/_authenticated/reports/$id");
+    expect(router.matchRoutes("/scan-report/123").at(-1)?.routeId).toBe(
+      "/_authenticated/scan-report/$id",
+    );
+  });
 });

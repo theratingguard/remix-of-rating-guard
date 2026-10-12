@@ -16,6 +16,7 @@ import { getSettings } from "./settings.server";
 import { LEGAL_VERSION, LEGAL_DISCLAIMER } from "./legal-analysis";
 import { enrichPredictions } from "./removal-prediction.server";
 import { predictionBand, type RemovalPrediction } from "./removal-prediction";
+import { rulesEngine } from "./rules-engine.server";
 
 export const MAX_REPORT_PDF_BYTES = 24 * 1024 * 1024;
 const reportIdSchema = z.string().uuid();
@@ -283,10 +284,31 @@ export async function generateOwnedReportPdf(
   const legal = controls.legal_expert_enabled
     ? await enrichPredictions(supabase, baseLegal, business?.data?.category ?? null)
     : baseLegal;
+  const backgroundAnalysis = {
+    version: "report-analysis-v1",
+    generated_at: new Date().toISOString(),
+    reviews: reviews.map((review) => {
+      const ruleResult = review.text?.trim() ? rulesEngine({ text: review.text }) : null;
+      const legalReview = legal.reviews.find((item) => item.review_id === review.id) ?? null;
+      return {
+        review_id: review.id,
+        rules_score: ruleResult?.confidence ?? null,
+        rules_triggered: ruleResult?.rules_triggered ?? 0,
+        multi_model_consensus: review.analysis?.verification ?? null,
+        evidence_readiness: legalReview?.quality?.total ?? null,
+        prediction_score: legalReview?.prediction?.probability ?? null,
+        analysis_json: {
+          rules: ruleResult,
+          legal: legalReview,
+        },
+      };
+    }),
+  };
   const metadata = report.data.report_data;
   const newMetadata = {
     ...(metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {}),
     legal_analysis: legal,
+    removal_analysis: backgroundAnalysis,
   };
   const reportWithLegal = { ...report.data, report_data: newMetadata };
   const fullHtml = reportPdfHtml(scan.data, reportWithLegal, reviews);
