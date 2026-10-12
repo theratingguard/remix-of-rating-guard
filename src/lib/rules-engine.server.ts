@@ -1,10 +1,18 @@
 import { z } from "zod";
+import { runMicroRules, type MicroRuleResult } from "./rules/micro-rules";
+import type { RuleCheck, RuleScore } from "./rules/types";
 
 const reviewerSchema = z.object({
   name: z.string().nullish(),
   reviewedBusinessCount: z.number().int().nonnegative().nullish(),
   accountAgeDays: z.number().int().nonnegative().nullish(),
   hasPhoto: z.boolean().nullish(),
+  oneStarReviewCount: z.number().int().nonnegative().nullish(),
+  totalReviewCount: z.number().int().nonnegative().nullish(),
+  reviewsInLastHour: z.number().int().nonnegative().nullish(),
+  locationCountry: z.string().nullish(),
+  postingTimes: z.array(z.string()).optional(),
+  reviewedCompetitorNames: z.array(z.string()).optional(),
   negativeReviewCount: z.number().int().nonnegative().nullish(),
   recentReviewCount: z.number().int().nonnegative().nullish(),
   sharedTargetBusinessCount: z.number().int().nonnegative().nullish(),
@@ -12,6 +20,8 @@ const reviewerSchema = z.object({
 
 const businessSchema = z.object({
   name: z.string().nullish(),
+  country: z.string().nullish(),
+  competitorNames: z.array(z.string()).optional(),
   owner: z
     .object({
       name: z.string().nullish(),
@@ -22,6 +32,7 @@ const businessSchema = z.object({
 export const rulesReviewSchema = z.object({
   text: z.string().optional(),
   reviewText: z.string().optional(),
+  rating: z.number().int().min(1).max(5).optional(),
   reviewer: reviewerSchema.optional(),
   business: businessSchema.optional(),
   duplicateText: z.boolean().optional(),
@@ -29,6 +40,38 @@ export const rulesReviewSchema = z.object({
   duplicateReviewTexts: z.array(z.string()).optional(),
   comparisonReviewTexts: z.array(z.string()).optional(),
   reviewDate: z.string().datetime({ offset: true }).optional(),
+  timeZone: z.string().optional(),
+  expectedLanguage: z.string().optional(),
+  competitorNames: z.array(z.string()).optional(),
+  history: z
+    .array(
+      z.object({
+        text: z.string(),
+        rating: z.number().int().min(1).max(5).optional(),
+        publishedAt: z.string().optional(),
+        reviewerName: z.string().optional(),
+        platform: z.string().optional(),
+        businessName: z.string().optional(),
+      }),
+    )
+    .optional(),
+  context: z
+    .object({
+      isPublicHoliday: z.boolean().optional(),
+      previousCompetitorReviewAt: z.string().optional(),
+      businessEventDates: z.array(z.string()).optional(),
+      sameReviewerCompetitorCount: z.number().int().nonnegative().optional(),
+      sameDayOneStarCount: z.number().int().nonnegative().optional(),
+      multiPlatformPattern: z.boolean().optional(),
+      photoOrReceiptAvailable: z.boolean().optional(),
+      exactNames: z.array(z.string()).optional(),
+      exactDates: z.array(z.string()).optional(),
+      exactAmounts: z.array(z.string()).optional(),
+      explicitlyVagueTiming: z.boolean().optional(),
+      hearsayOnly: z.boolean().optional(),
+      businessCountry: z.string().optional(),
+    })
+    .optional(),
   reviewsInWindow: z.number().int().nonnegative().optional(),
   windowMinutes: z.number().positive().optional(),
   review_id: z.string().uuid().optional(),
@@ -44,6 +87,8 @@ export type RulesResult = {
   source: "rules";
   rules_triggered?: number;
   forensics?: ForensicSignal[];
+  micro_score?: RuleScore;
+  micro_checks?: RuleCheck[];
 };
 
 export type ForensicSignal = {
@@ -140,6 +185,7 @@ function buildResult(
   confidence: number,
   evidence: string,
   rulesTriggered = 0,
+  microRules: MicroRuleResult,
 ): RulesResult {
   return {
     violates,
@@ -148,6 +194,8 @@ function buildResult(
     evidence,
     source: "rules",
     rules_triggered: rulesTriggered,
+    micro_score: microRules.score,
+    micro_checks: microRules.checks,
   };
 }
 
@@ -157,6 +205,26 @@ export function rulesEngine(input: RulesReview | string): RulesResult {
   const normalizedText = normalizeFingerprint(text);
   const reviewer = record.reviewer ?? {};
   const business = record.business ?? {};
+  const competitorNames = record.competitorNames ?? business.competitorNames;
+  const microRules = runMicroRules({
+    text,
+    ...(record.rating !== undefined ? { rating: record.rating } : {}),
+    ...(record.reviewDate ? { reviewDate: record.reviewDate } : {}),
+    ...(record.timeZone ? { timeZone: record.timeZone } : {}),
+    ...(record.expectedLanguage ? { expectedLanguage: record.expectedLanguage } : {}),
+    ...(business.name ? { businessName: business.name } : {}),
+    ...(competitorNames ? { competitorNames } : {}),
+    ...(record.reviewer ? { reviewer: record.reviewer } : {}),
+    ...(record.history ? { history: record.history } : {}),
+    ...(record.context || business.country
+      ? {
+          context: {
+            ...record.context,
+            ...(business.country ? { businessCountry: business.country } : {}),
+          },
+        }
+      : {}),
+  });
   const duplicateText =
     Boolean(record.duplicateText) ||
     Boolean(record.repeatedAcrossScans) ||
@@ -438,7 +506,7 @@ export function rulesEngine(input: RulesReview | string): RulesResult {
 
   if (!ruleMatches.length) {
     return {
-      ...buildResult(false, "none", 0, "No rule-based policy signal triggered."),
+      ...buildResult(false, "none", 0, "No rule-based policy signal triggered.", 0, microRules),
       forensics: forensicSignals,
     };
   }
@@ -454,7 +522,14 @@ export function rulesEngine(input: RulesReview | string): RulesResult {
     confidence = Math.min(99, confidence + 12);
 
   return {
-    ...buildResult(true, primary.policy, confidence, primary.evidence, ruleMatches.length),
+    ...buildResult(
+      true,
+      primary.policy,
+      confidence,
+      primary.evidence,
+      ruleMatches.length,
+      microRules,
+    ),
     forensics: forensicSignals,
   };
 }

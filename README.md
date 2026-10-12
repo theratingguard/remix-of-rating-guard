@@ -33,7 +33,7 @@ and authorized for this deployment.
 ## Deployment
 
 The production deployment target and runtime entry point must be configured
-for the chosen host. Do not assume a Vercel or Cloudflare deployment target.
+for the chosen host. Do not assume a provider-specific deployment target.
 
 Production uses Nitro's Node server behind Nginx/systemd. Build with
 `npm run build`, then run `npm start`. Preserve private environment files and

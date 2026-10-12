@@ -10,7 +10,10 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: () => state.query,
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
-vi.mock("@tanstack/react-start", () => ({ useServerFn: () => vi.fn() }));
+vi.mock("@tanstack/react-start", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-start")>()),
+  useServerFn: () => vi.fn(),
+}));
 vi.mock("@/lib/appeal.functions", () => ({ generateAppealDraft: {} }));
 afterEach(cleanup);
 describe("Verified removal workflow UI", () => {

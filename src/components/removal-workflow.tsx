@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { generateAppealDraft } from "@/lib/appeal.functions";
+import { generateCountryLegalRequest } from "@/lib/legal-orchestrator.functions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,8 +58,15 @@ export function RemovalSubmissionForm({
 }) {
   const cache = useQueryClient();
   const workflow = useQuery(workflowQuery);
+  const makeCountryDraft = useServerFn(generateCountryLegalRequest);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [draftText, setDraftText] = useState(legal.removal_request_text);
+  const [workerNote, setWorkerNote] = useState<string | null>(null);
+  const [lawReferences, setLawReferences] = useState<
+    { name: string; citation: string; sourceUrl: string; sourceStatus: string }[]
+  >([]);
   if (workflow.error)
     return <p role="alert">Removal tracking unavailable: {workflow.error.message}</p>;
   const existing = workflow.data?.outcomes.find((row) => row.review_id === review.id);
@@ -167,11 +175,51 @@ export function RemovalSubmissionForm({
           </label>
           <label>
             Text actually submitted
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="my-2"
+              disabled={draftBusy}
+              onClick={async () => {
+                setDraftBusy(true);
+                try {
+                  const generated = await makeCountryDraft({
+                    data: { scanId: scan.id, reviewId: review.id, template: "primary" },
+                  });
+                  setDraftText(generated.text);
+                  setWorkerNote(`${generated.country ?? "Fallback"}: ${generated.legalNote}`);
+                  setLawReferences(generated.laws);
+                  toast.success(
+                    "Local country-policy template prepared. It has not been submitted.",
+                  );
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error ? error.message : "Could not prepare country draft.",
+                  );
+                } finally {
+                  setDraftBusy(false);
+                }
+              }}
+            >
+              {draftBusy ? "Preparing…" : "Use local country-policy template"}
+            </Button>
+            {workerNote && <p className="my-1 text-xs text-muted-foreground">{workerNote}</p>}
+            {lawReferences.map((law) => (
+              <p key={law.name} className="my-1 text-xs text-muted-foreground">
+                Legal context only: {law.name} ({law.citation}) —{" "}
+                <a href={law.sourceUrl} target="_blank" rel="noreferrer" className="underline">
+                  public source
+                </a>{" "}
+                [{law.sourceStatus}]
+              </p>
+            ))}
             <textarea
               name="request_text"
               required
               maxLength={12000}
-              defaultValue={legal.removal_request_text}
+              value={draftText}
+              onChange={(event) => setDraftText(event.target.value)}
               className={`${fieldClass} h-40`}
             />
           </label>

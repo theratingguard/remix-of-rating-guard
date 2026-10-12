@@ -12,6 +12,7 @@ import {
 } from "../scan-core.server";
 import { searchBusinesses, ScanError } from "../google-places.server";
 import { getSettings } from "../settings.server";
+import { type Region } from "../regional-routing";
 import {
   payloadSchema,
   stageSchema,
@@ -26,6 +27,7 @@ export async function submitWorkerScan(
   db: SupabaseClient<Database>,
   userId: string,
   url: string,
+  region?: Region,
 ): Promise<StageResponse> {
   if (!validGoogleUrl(url))
     return { ok: false, code: "INVALID_URL", message: "Use an official Google Maps business URL." };
@@ -33,7 +35,9 @@ export async function submitWorkerScan(
     if ((await db.rpc("report_access_level").throwOnError()).data !== "super_admin")
       throw new Error("Access Denied: detailed scan queue is Super Admin only.");
     if ((await queueRedis().ping()) !== "PONG") throw new Error("Redis did not respond.");
-    const id = (await db.rpc("enqueue_worker_scan", { _url: url }).throwOnError()).data;
+    const id = (
+      await db.rpc("enqueue_worker_scan", { _url: url, _region: region ?? null }).throwOnError()
+    ).data;
     await track(
       db,
       userId,

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { analyzeReview } from "./ai-orchestrator.server";
 
+vi.mock("./ai-layer-usage.server", () => ({
+  recordAiLayerUsage: vi.fn(async () => undefined),
+}));
+
 describe("ai orchestrator", () => {
   it("returns rules result immediately when confidence exceeds threshold", async () => {
     const rules = vi.fn(() => ({
@@ -105,5 +109,96 @@ describe("ai orchestrator", () => {
     );
     expect(result.confidence).toBeGreaterThanOrEqual(68);
     expect(result.source).toBe("ollama");
+  });
+
+  it("uses the rules layer at the inclusive 70 confidence threshold", async () => {
+    const rules = vi.fn(() => ({
+      violates: true,
+      policy: "spam",
+      confidence: 70,
+      evidence: "Contains a promotional link.",
+      source: "rules" as const,
+    }));
+    const ollama = { isAvailable: vi.fn(() => true), analyze: vi.fn() };
+    const gpt = { analyze: vi.fn() };
+
+    const result = await analyzeReview(
+      { text: "A long review with a promotional link." },
+      {
+        rules,
+        ollama,
+        gpt,
+        track: vi.fn(async () => undefined),
+      },
+    );
+
+    expect(result.source).toBe("rules");
+    expect(ollama.isAvailable).not.toHaveBeenCalled();
+    expect(gpt.analyze).not.toHaveBeenCalled();
+  });
+
+  it("falls through to GPT when Ollama throws", async () => {
+    const rules = vi.fn(() => ({
+      violates: false,
+      policy: "none",
+      confidence: 0,
+      evidence: "No rule match",
+      source: "rules" as const,
+    }));
+    const ollama = {
+      isAvailable: vi.fn(() => true),
+      analyze: vi.fn(async () => {
+        throw new Error("Ollama timeout");
+      }),
+    };
+    const gpt = {
+      analyze: vi.fn(async () => ({
+        violates: false,
+        policy: "none",
+        confidence: 80,
+        evidence: "",
+        source: "gpt" as const,
+      })),
+    };
+    const track = vi.fn(async () => undefined);
+
+    const result = await analyzeReview(
+      { text: "A detailed account of a normal visit." },
+      {
+        rules,
+        ollama,
+        gpt,
+        track,
+      },
+    );
+
+    expect(result.source).toBe("gpt");
+    expect(gpt.analyze).toHaveBeenCalledOnce();
+    expect(track).toHaveBeenCalledWith("gpt", expect.objectContaining({ costUsd: 0.01 }));
+  });
+
+  it("surfaces GPT failure when no model layer can complete the analysis", async () => {
+    const gpt = {
+      analyze: vi.fn(async () => {
+        throw new Error("GPT billing unavailable");
+      }),
+    };
+
+    await expect(
+      analyzeReview(
+        { text: "A detailed account of a normal visit." },
+        {
+          rules: () => ({
+            violates: false,
+            policy: "none",
+            confidence: 0,
+            evidence: "No rule match",
+          }),
+          ollama: { isAvailable: () => false, analyze: vi.fn() },
+          gpt,
+          track: vi.fn(async () => undefined),
+        },
+      ),
+    ).rejects.toThrow("GPT billing unavailable");
   });
 });

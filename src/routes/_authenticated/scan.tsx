@@ -15,6 +15,7 @@ import { BulkScan } from "@/components/bulk-scan";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
 import { isGoogleMapsUrl } from "@/lib/google-url";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { isRegion, REGION_OPTIONS, type Region } from "@/lib/regional-routing";
 
 export const Route = createFileRoute("/_authenticated/scan")({
   head: () => ({
@@ -50,6 +51,7 @@ function ScanPage() {
   const { data: sys } = useQuery({ queryKey: ["system-status"], queryFn: () => status() });
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [url, setUrl] = useState("");
+  const [regionOverride, setRegionOverride] = useState<Region | "">("");
   const [touched, setTouched] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [failedAt, setFailedAt] = useState<"fetch" | "analyze" | null>(null);
@@ -143,7 +145,9 @@ function ScanPage() {
     setPhase("fetch");
     let requestStage: "fetch" | "analyze" = "fetch";
     try {
-      const a = await fetchStage({ data: { url: url.trim() } });
+      const a = await fetchStage({
+        data: { url: url.trim(), ...(regionOverride ? { region: regionOverride } : {}) },
+      });
       if (!a.ok) {
         setFailedAt("fetch");
         setError(a);
@@ -375,6 +379,28 @@ function ScanPage() {
                   </span>
                 )}
               </p>
+              <label className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+                <span className="font-medium">Business country / region</span>
+                <select
+                  value={regionOverride}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setRegionOverride(isRegion(value) ? value : "");
+                  }}
+                  disabled={running}
+                  className="rounded border bg-card px-3 py-2"
+                >
+                  <option value="">Detect from Google business address</option>
+                  {REGION_OPTIONS.map((region) => (
+                    <option key={region.value} value={region.value}>
+                      {region.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs text-muted-foreground">
+                  Used only when the business country cannot be identified from its Google address.
+                </span>
+              </label>
             </>
           )}
 

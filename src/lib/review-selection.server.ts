@@ -79,6 +79,7 @@ export async function createSelectedReport(
     ownedScan.business_name || "Business",
     reviews,
     outcomeContext,
+    ownedScan.region ?? "OTHER",
   );
   const { enrichPredictions } = await import("./removal-prediction.server");
   const business = ownedScan.business_id

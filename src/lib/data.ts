@@ -1,6 +1,12 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import {
+  readPersistedRuleScore,
+  runMicroRules,
+  type MicroRuleResult,
+  type PersistedRuleScore,
+} from "./rules/micro-rules";
 
 export type Scan = Tables<"scans">;
 export type Report = Tables<"reports">;
@@ -27,6 +33,8 @@ export type AnalyzedReview = {
     evidence: string | null;
     confidence: number;
     model: string | null;
+    microRuleScore?: PersistedRuleScore | null;
+    microRuleRecheck?: MicroRuleResult;
   } | null;
 };
 
@@ -94,9 +102,37 @@ export const scanQuery = (id: string) =>
       if (r.error) throw r.error;
       if (rep.error) throw rep.error;
       const order: Record<string, number> = { high: 0, medium: 1, requires_review: 2, normal: 3 };
-      const reviews: AnalyzedReview[] = (r.data ?? []).map(({ review_analyses, ...rest }) => {
+      const rawReviews = r.data ?? [];
+      const reviews: AnalyzedReview[] = rawReviews.map(({ review_analyses, ...rest }) => {
         const a = Array.isArray(review_analyses) ? review_analyses[0] : review_analyses;
-        return { ...rest, analysis: a ? { ...a, risk: normalizeRisk(a.risk) } : null };
+        const history = rawReviews
+          .filter((item) => item.id !== rest.id)
+          .map((item) => ({
+            text: item.text ?? "",
+            rating: item.rating,
+            ...(item.published_at ? { publishedAt: item.published_at } : {}),
+            ...(item.author ? { reviewerName: item.author } : {}),
+            ...(s.data?.business_name ? { businessName: s.data.business_name } : {}),
+            platform: "Google",
+          }));
+        const microRuleRecheck = runMicroRules({
+          text: rest.text ?? "",
+          rating: rest.rating,
+          ...(rest.published_at ? { reviewDate: rest.published_at } : {}),
+          ...(s.data?.business_name ? { businessName: s.data.business_name } : {}),
+          history,
+        });
+        return {
+          ...rest,
+          analysis: a
+            ? {
+                ...a,
+                risk: normalizeRisk(a.risk),
+                microRuleScore: readPersistedRuleScore(a.verification),
+                microRuleRecheck,
+              }
+            : null,
+        };
       });
       const { savedLegalAnalysis } = await import("./legal-analysis");
       const legal = savedLegalAnalysis(rep.data?.report_data);

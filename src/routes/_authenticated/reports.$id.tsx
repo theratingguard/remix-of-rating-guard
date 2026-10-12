@@ -30,6 +30,7 @@ import { downloadPrivateReport } from "@/lib/private-report.functions";
 import { savePrivatePdf } from "@/lib/private-report";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
+import { RULE_GROUP_LABELS } from "@/lib/rules/scoring";
 
 export const Route = createFileRoute("/_authenticated/reports/$id")({
   validateSearch: z.object({ print: z.boolean().optional() }),
@@ -137,6 +138,17 @@ function ReportDetail() {
   const { scan, reviews, report } = data;
   const flagged = reviews.filter(isFlagged);
   const analyzed = reviews.filter((r) => r.analysis).length;
+  const ruleRechecks = reviews.flatMap((review) =>
+    review.analysis?.microRuleRecheck ? [review.analysis.microRuleRecheck.score] : [],
+  );
+  const ruleCheckTotals = ruleRechecks.reduce(
+    (totals, score) => ({
+      run: totals.run + score.checksRun,
+      assessed: totals.assessed + score.checksAssessed,
+      flagged: totals.flagged + score.checksFlagged,
+    }),
+    { run: 0, assessed: 0, flagged: 0 },
+  );
   const pdfUrl = savedPdfUrl(report.report_data);
   async function copyLink() {
     if (!pdfUrl) return;
@@ -328,6 +340,21 @@ function ReportDetail() {
               </div>
             ))}
           </div>
+          {ruleRechecks.length > 0 && (
+            <div className="mt-4 rounded-lg border p-4">
+              <div className="text-sm font-semibold">Retrospective local rules recheck</div>
+              <p className="mt-1 text-sm">
+                {ruleRechecks.length} reviews · {ruleCheckTotals.run} checks run ·{" "}
+                {ruleCheckTotals.assessed} assessed · {ruleCheckTotals.flagged} signals
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                250 checks are evaluated per analyzed review. This recheck uses only the review text
+                and same-scan review history available now; it does not alter the saved AI verdict.
+                Checks requiring unavailable profile, biometric, network, or event data remain
+                unassessed.
+              </p>
+            </div>
+          )}
           {!scan.is_seed && (
             <p className="mt-3 text-xs text-muted-foreground">
               Source: Google Places API (New). Google provides up to 5 reviews per business through
@@ -337,6 +364,57 @@ function ReportDetail() {
         </section>
         <RatingAnalysis scan={scan} reviews={reviews} />
         <RemovalSummary metadata={report.report_data} total={reviews.length} />
+        {ruleRechecks.length > 0 && (
+          <section className="border-t py-6">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              Retrospective rules recheck by review
+            </h2>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Recomputed locally from this report's available review text and same-scan history.
+              These results were not part of the original saved AI verdict and are not proof of a
+              policy violation.
+            </p>
+            <div className="mt-4 space-y-3">
+              {reviews.flatMap((review) => {
+                const recheck = review.analysis?.microRuleRecheck;
+                if (!recheck) return [];
+                const triggered = recheck.checks.filter((check) => check.status === "flagged");
+                return [
+                  <article key={review.id} className="rounded-lg border p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span className="font-medium">
+                        {review.author} · {review.rating}/5
+                      </span>
+                      <span>
+                        {recheck.score.checksAssessed}/{recheck.score.checksRun} assessed ·{" "}
+                        {triggered.length} signals
+                      </span>
+                    </div>
+                    {triggered.length > 0 ? (
+                      <ul className="mt-3 space-y-2">
+                        {triggered.map((check) => (
+                          <li key={check.id} className="text-xs">
+                            <span className="font-medium">
+                              {RULE_GROUP_LABELS[check.group]} · {check.id}
+                            </span>
+                            {check.evidence && (
+                              <span className="text-muted-foreground"> — {check.evidence}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        No retrospective rule signals. Checks requiring unavailable data remain
+                        unassessed.
+                      </p>
+                    )}
+                  </article>,
+                ];
+              })}
+            </div>
+          </section>
+        )}
         <section className="border-t py-6">
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             Flagged review details ({flagged.length})

@@ -20,6 +20,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedHomepagePreviewRouteImport } from './routes/_authenticated/homepage-preview'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedRemovalCenterRouteImport } from './routes/_authenticated/removal-center'
 import { Route as AuthenticatedScanRouteImport } from './routes/_authenticated/scan'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
@@ -86,6 +87,12 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRemovalCenterRoute =
+  AuthenticatedRemovalCenterRouteImport.update({
+    id: '/removal-center',
+    path: '/removal-center',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedScanRoute = AuthenticatedScanRouteImport.update({
   id: '/scan',
   path: '/scan',
@@ -152,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/removal-center': typeof AuthenticatedRemovalCenterRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
@@ -174,6 +182,7 @@ export interface FileRoutesByTo {
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/removal-center': typeof AuthenticatedRemovalCenterRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
@@ -198,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/removal-center': typeof AuthenticatedRemovalCenterRoute
   '/_authenticated/scan': typeof AuthenticatedScanRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/homepage-preview'
     | '/profile'
+    | '/removal-center'
     | '/scan'
     | '/settings'
     | '/submissions'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/homepage-preview'
     | '/profile'
+    | '/removal-center'
     | '/scan'
     | '/settings'
     | '/submissions'
@@ -267,6 +279,7 @@ export interface FileRouteTypes {
     | '/_authenticated/history'
     | '/_authenticated/homepage-preview'
     | '/_authenticated/profile'
+    | '/_authenticated/removal-center'
     | '/_authenticated/scan'
     | '/_authenticated/settings'
     | '/_authenticated/submissions'
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/removal-center': {
+      id: '/_authenticated/removal-center'
+      path: '/removal-center'
+      fullPath: '/removal-center'
+      preLoaderRoute: typeof AuthenticatedRemovalCenterRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/scan': {
       id: '/_authenticated/scan'
       path: '/scan'
@@ -450,6 +470,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedHomepagePreviewRoute: typeof AuthenticatedHomepagePreviewRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedRemovalCenterRoute: typeof AuthenticatedRemovalCenterRoute
   AuthenticatedScanRoute: typeof AuthenticatedScanRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
@@ -463,6 +484,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedHomepagePreviewRoute: AuthenticatedHomepagePreviewRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedRemovalCenterRoute: AuthenticatedRemovalCenterRoute,
   AuthenticatedScanRoute: AuthenticatedScanRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,

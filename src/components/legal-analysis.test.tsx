@@ -3,7 +3,10 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { LegalAnalysisPanel } from "./legal-analysis";
 import { LEGAL_DISCLAIMER, LEGAL_VERSION, unsupportedLegalReview } from "@/lib/legal-analysis";
 import type { Scan, Report, AnalyzedReview } from "@/lib/data";
-vi.mock("@tanstack/react-start", () => ({ useServerFn: () => vi.fn() }));
+vi.mock("@tanstack/react-start", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-start")>()),
+  useServerFn: () => vi.fn(),
+}));
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useQuery: () => ({ data: { outcomes: [], appeals: [] }, isPending: false, error: null }),

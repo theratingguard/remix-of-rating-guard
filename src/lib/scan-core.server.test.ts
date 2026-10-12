@@ -3,7 +3,7 @@ import { scanAnalyzeCore } from "./scan-core.server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
-import { analyzeReviews } from "./analysis.server";
+import { analyzeReview as analyzeReviewByLayer } from "./ai-orchestrator.server";
 import { generateOwnedReportPdf } from "./report-pdf.server";
 vi.mock("./settings.server", async () => {
   const { defaultSettings } = await import("./settings");
@@ -14,16 +14,6 @@ vi.mock("./report-pdf.server", () => ({
 }));
 
 vi.mock("./analysis.server", () => ({
-  analyzeReviews: vi.fn(async () => [
-    {
-      risk: "normal",
-      category: null,
-      signals: [],
-      reason: "Unit fixture",
-      evidence: null,
-      confidence: 70,
-    },
-  ]),
   enforceEvidence: (value: unknown) => value,
   verifyFlags: vi.fn(async () => []),
   reviewHash: vi.fn(),
@@ -32,10 +22,29 @@ vi.mock("./analysis.server", () => ({
   PROMPT_VERSION: "unit-version",
   THREE_MODEL_MODE: false,
 }));
+vi.mock("./ai-orchestrator.server", () => ({
+  analyzeReview: vi.fn(async () => ({
+    violates: false,
+    policy: "none",
+    confidence: 70,
+    evidence: "",
+    source: "gpt",
+    consensus: {
+      model: "unit-model",
+      provider: "unit-provider",
+      agrees: false,
+      risk: "normal",
+      reason: "Unit fixture",
+      checked_at: new Date().toISOString(),
+      votes: [],
+    },
+  })),
+}));
 
 function database(failure?: "report" | "completion", scanStatus = "running") {
   const updates: Record<string, unknown>[] = [];
   const reportWrites: Record<string, unknown>[] = [];
+  const analysisWrites: Record<string, unknown>[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : input.toString());
     const table = url.pathname.split("/").at(-1);
@@ -77,9 +86,17 @@ function database(failure?: "report" | "completion", scanStatus = "running") {
       typeof init?.body === "string"
         ? z.record(z.unknown()).safeParse(JSON.parse(init.body))
         : null;
+    const rows =
+      typeof init?.body === "string"
+        ? z.array(z.record(z.string(), z.unknown())).safeParse(JSON.parse(init.body))
+        : null;
     const status = patch?.success ? patch.data["status"] : null;
     if (table === "scans" && patch?.success) updates.push(patch.data);
     if (table === "reports" && patch?.success) reportWrites.push(patch.data);
+    if (table === "review_analyses") {
+      if (rows?.success) analysisWrites.push(...rows.data);
+      else if (patch?.success) analysisWrites.push(patch.data);
+    }
     if (
       (table === "reports" && failure === "report") ||
       (table === "scans" && status === "complete" && failure === "completion")
@@ -100,7 +117,7 @@ function database(failure?: "report" | "completion", scanStatus = "running") {
       auth: { persistSession: false, autoRefreshToken: false },
     },
   );
-  return { client, updates, reportWrites };
+  return { client, updates, reportWrites, analysisWrites };
 }
 
 describe("Durable scan completion (unit fixtures only)", () => {
@@ -144,11 +161,46 @@ describe("Durable scan completion (unit fixtures only)", () => {
   });
   it("returns success only after mandatory writes succeed", async () => {
     vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
+    vi.mocked(analyzeReviewByLayer).mockResolvedValueOnce({
+      violates: false,
+      policy: "none",
+      confidence: 70,
+      evidence: "",
+      source: "rules",
+      micro_score: {
+        score: 12,
+        band: "normal",
+        checksRun: 250,
+        checksAssessed: 32,
+        checksFlagged: 3,
+        durationMs: 4,
+        groups: {
+          text: { score: 5, maxScore: 30, checks: 60, assessed: 20, flagged: 2 },
+          reviewer: { score: 1, maxScore: 25, checks: 50, assessed: 3, flagged: 1 },
+          temporal: { score: 0, maxScore: 15, checks: 40, assessed: 2, flagged: 0 },
+          crossPlatform: { score: 0, maxScore: 15, checks: 40, assessed: 1, flagged: 0 },
+          network: { score: 5, maxScore: 10, checks: 30, assessed: 1, flagged: 0 },
+          semantic: { score: 1, maxScore: 5, checks: 30, assessed: 5, flagged: 0 },
+        },
+      },
+      micro_checks: [],
+    });
     const db = database();
     expect(await scanAnalyzeCore(db.client, "owner", { scanId: "scan-fixture" })).toMatchObject({
       ok: true,
     });
+    expect(analyzeReviewByLayer).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Unit fixture", rating: 4 }),
+      { usageContext: { scanId: "scan-fixture", reviewId: "review-fixture" } },
+    );
     expect(db.updates.at(-1)).toMatchObject({ status: "complete", error: null });
+    expect(db.analysisWrites[0]?.["verification"]).toMatchObject({
+      rules_micro_check: {
+        score: 12,
+        checksRun: 250,
+        checksAssessed: 32,
+      },
+    });
   });
   it("re-enters the running analysis lifecycle before publishing a failed scan retry", async () => {
     vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
@@ -166,16 +218,13 @@ describe("Durable scan completion (unit fixtures only)", () => {
   });
   it("does not recommend a clean result when model assessments require manual review", async () => {
     vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
-    vi.mocked(analyzeReviews).mockResolvedValueOnce([
-      {
-        risk: "requires_review",
-        category: null,
-        signals: [],
-        reason: "Ambiguous unit fixture",
-        evidence: null,
-        confidence: 50,
-      },
-    ]);
+    vi.mocked(analyzeReviewByLayer).mockResolvedValueOnce({
+      violates: false,
+      policy: "none",
+      confidence: 50,
+      evidence: "",
+      source: "gpt",
+    });
     const db = database();
     expect(await scanAnalyzeCore(db.client, "owner", { scanId: "scan-fixture" })).toMatchObject({
       ok: true,

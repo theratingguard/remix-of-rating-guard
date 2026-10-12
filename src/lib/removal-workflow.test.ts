@@ -10,7 +10,10 @@ import {
 } from "./removal-workflow";
 const outcome: RemovalOutcome = {
   id: "00000000-0000-4000-8000-000000000001",
+  country: "US",
+  method: "google-policy-review",
   review_id: "00000000-0000-4000-8000-000000000002",
+  review_type: "Spam",
   scan_id: "00000000-0000-4000-8000-000000000003",
   user_id: "00000000-0000-4000-8000-000000000004",
   policy_type: "Spam",

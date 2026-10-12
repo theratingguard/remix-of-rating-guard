@@ -2,6 +2,7 @@ import { SystemQuality, ErrorCenter } from "@/components/ops-panels";
 import { HomepageEditor } from "@/components/homepage-editor";
 import { AiControlPanel } from "@/components/ai-control-panel";
 import { WorkersStatus } from "@/components/workers-status";
+import { LegalWorkersPanel } from "@/components/legal-workers-panel";
 import { MemoryStatus } from "@/components/memory-status";
 import { reportAccessQuery } from "@/components/restricted-report-summary";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
@@ -19,7 +20,10 @@ import { APP_DOMAIN } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { summarizeAiLayerUsage } from "@/lib/ai-layer-usage.server";
+import { AI_LAYER_TARGETS, estimateAiSavingsPercent } from "@/lib/ai-layer-usage";
+import { getAiLayerUsage } from "@/lib/ai-layer-usage.functions";
+import { MICRO_RULE_CHECK_COUNT, RULE_GROUP_COUNTS, RULE_GROUP_LABELS } from "@/lib/rules/scoring";
+import { QUALITY_BOOSTERS, summarizeQualityBoosters } from "@/lib/rules/quality-boosters";
 import {
   Dialog,
   DialogContent,
@@ -88,6 +92,12 @@ function SettingsPage() {
   const integrationsQ = useQuery({
     queryKey: ["integration-checks"],
     queryFn: () => integrations(),
+    enabled: access.data === "super_admin",
+  });
+  const getAiUsage = useServerFn(getAiLayerUsage);
+  const aiUsageQ = useQuery({
+    queryKey: ["ai-layer-usage"],
+    queryFn: () => getAiUsage(),
     enabled: access.data === "super_admin",
   });
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -281,23 +291,106 @@ function SettingsPage() {
             k="Analysis settings"
             v="Conservative · negative ≠ violation · ambiguous → Requires review"
           />
-          {(() => {
-            const summary = summarizeAiLayerUsage();
-            return (
-              <div className="space-y-3 border-t pt-3 text-sm">
-                <div className="font-medium">AI Usage</div>
-                {summary.layers.map((layer) => (
+          {access.data === "super_admin" && (
+            <div className="space-y-3 border-t pt-3 text-sm">
+              <div className="font-medium">AI Usage</div>
+              {(["rules", "ollama", "gpt"] as const).map((layer) => {
+                const actual = aiUsageQ.data?.layers.find((item) => item.layer === layer);
+                const target = AI_LAYER_TARGETS[layer];
+                const label =
+                  layer === "rules"
+                    ? "Layer 1 (Rules)"
+                    : layer === "ollama"
+                      ? "Layer 2 (Ollama)"
+                      : "Layer 3 (GPT)";
+                return (
                   <Row
-                    key={layer.layer}
-                    k={`${layer.layer === "rules" ? "Layer 1 (Rules)" : layer.layer === "ollama" ? "Layer 2 (Ollama)" : "Layer 3 (GPT)"}`}
-                    v={`${layer.handled_percent}% · ₹${layer.cost_usd.toFixed(2)} · ${layer.avg_duration_ms}ms`}
+                    key={layer}
+                    k={label}
+                    v={`Actual ${actual?.handled_percent.toFixed(1) ?? "0.0"}% (${actual?.cases ?? 0}) · $${(actual?.cost_usd ?? 0).toFixed(4)} · ${actual?.avg_duration_ms ?? 0}ms avg · target ${target.handledPercent}%`}
+                  />
+                );
+              })}
+              <Row
+                k="Today"
+                v={`$${(aiUsageQ.data?.today_cost_usd ?? 0).toFixed(4)} · ${aiUsageQ.data?.today_cases ?? 0} cases`}
+              />
+              <Row
+                k="Month"
+                v={`$${(aiUsageQ.data?.month_cost_usd ?? 0).toFixed(4)} · ${aiUsageQ.data?.month_cases ?? 0} cases`}
+              />
+              <Row
+                k="Estimated savings vs GPT-only"
+                v={`$${Math.max(
+                  0,
+                  (aiUsageQ.data?.month_cases ?? 0) * AI_LAYER_TARGETS.gpt.costUsd -
+                    (aiUsageQ.data?.month_cost_usd ?? 0),
+                ).toFixed(4)} · ${
+                  estimateAiSavingsPercent(
+                    aiUsageQ.data?.month_cases ?? 0,
+                    aiUsageQ.data?.month_cost_usd ?? 0,
+                  )?.toFixed(1) ?? "—"
+                }%`}
+              />
+              {aiUsageQ.isError && (
+                <p className="text-sm text-destructive">Could not load recorded AI usage.</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Costs and savings are estimates using $0.01 per GPT-only review; verify against
+                provider billing. No INR conversion is applied.
+              </p>
+              <div className="space-y-2 border-t pt-3 text-sm">
+                <div className="font-medium">Rules Engine Stats</div>
+                {Object.entries(RULE_GROUP_COUNTS).map(([group, count]) => (
+                  <Row
+                    key={group}
+                    k={RULE_GROUP_LABELS[group as keyof typeof RULE_GROUP_LABELS]}
+                    v={`${count} checks`}
                   />
                 ))}
-                <Row k="Today" v={`$${summary.today_cost_usd.toFixed(2)}`} />
-                <Row k="Month" v={`$${summary.month_cost_usd.toFixed(2)}`} />
+                <Row k="Configured micro-checks per review" v={MICRO_RULE_CHECK_COUNT} />
+                <div className="space-y-2 border-t pt-3">
+                  <div className="font-medium">Quality boosters · implementation status</div>
+                  <Row
+                    k="Available · limited · unavailable"
+                    v={(() => {
+                      const summary = summarizeQualityBoosters();
+                      return `${summary.available} · ${summary.limited} · ${summary.unavailable}`;
+                    })()}
+                  />
+                  {QUALITY_BOOSTERS.map((booster) => (
+                    <Row
+                      key={booster.id}
+                      k={`${booster.name} · ${booster.status}`}
+                      v={<span className="text-xs text-muted-foreground">{booster.scope}</span>}
+                    />
+                  ))}
+                  <p className="text-xs text-muted-foreground">
+                    No calibration curve or accuracy percentage is claimed. A booster marked limited
+                    or unavailable must not be interpreted as verified evidence.
+                  </p>
+                </div>
+                <Row
+                  k="Target rules-layer runtime"
+                  v={`${AI_LAYER_TARGETS.rules.avgDurationMs} ms per review`}
+                />
+                <Row
+                  k="Average rules-layer runtime"
+                  v={
+                    aiUsageQ.data?.layers.find((item) => item.layer === "rules")?.cases
+                      ? `${aiUsageQ.data.layers.find((item) => item.layer === "rules")?.avg_duration_ms} ms (recorded)`
+                      : "No recorded rules runs"
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Check inventory is not the same as assessed evidence. Checks needing unavailable
+                  profile, platform, network, or event data are marked unassessed; no IP/device
+                  fingerprinting or external enrichment is performed. The 0–100 score is advisory,
+                  uncalibrated, and is not a probability, policy verdict, or proof of removal.
+                </p>
               </div>
-            );
-          })()}
+            </div>
+          )}
         </Card>
 
         <Card title="Database">
@@ -449,6 +542,7 @@ function SettingsPage() {
       </section>
       <SystemQuality health={sys?.checks} />
       {access.data === "super_admin" && <WorkersStatus />}
+      {access.data === "super_admin" && <LegalWorkersPanel />}
       {access.data === "super_admin" && <MemoryStatus />}
       <ErrorCenter />
     </>

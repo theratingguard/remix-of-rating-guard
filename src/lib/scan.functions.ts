@@ -8,6 +8,7 @@ import { searchBusinesses } from "./google-places.server";
 import { getSettings } from "./settings.server";
 import { enabledModelIndices, modelNames } from "./settings";
 import { modelStatusSchema } from "./model-test.server";
+import { REGIONS } from "./regional-routing";
 
 export const findBusinesses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -139,7 +140,11 @@ export const scanFetch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z
-      .object({ url: z.string().trim().min(5).max(2000), batchId: z.string().uuid().optional() })
+      .object({
+        url: z.string().trim().min(5).max(2000),
+        batchId: z.string().uuid().optional(),
+        region: z.enum(REGIONS).optional(),
+      })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<StageResponse> =>

@@ -514,6 +514,19 @@ describe("rules engine", () => {
     expect(result).toMatchObject({ violates: false, policy: "none", source: "rules" });
   });
 
+  it("includes the full micro-rule score and check details in each rules result", () => {
+    const result = rulesEngine({
+      text: "The food was cold, but the staff replaced it quickly and apologized.",
+      reviewer: { accountAgeDays: 150, hasPhoto: true },
+      reviewDate: "2026-10-12T10:00:00Z",
+    });
+
+    expect(result.micro_score?.checksRun).toBe(250);
+    expect(result.micro_checks).toHaveLength(250);
+    expect(result.micro_score?.groups.text.checks).toBe(60);
+    expect(result.micro_score?.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
   it("supports string input shorthand", () => {
     const result = rulesEngine("Click here now and get a discount for this store");
     expect(result.violates).toBe(true);

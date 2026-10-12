@@ -1,3 +1,5 @@
+import type { Region } from "@/lib/regional-routing";
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
@@ -79,6 +81,32 @@ export type Database = {
         Update: { reserved_usd?: number; calls?: number };
         Relationships: [];
       };
+      ai_layer_usage: {
+        Row: {
+          id: string;
+          scan_id: string | null;
+          review_id: string | null;
+          layer: "rules" | "ollama" | "gpt";
+          duration_ms: number;
+          cost_usd: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          scan_id?: string | null;
+          review_id?: string | null;
+          layer: "rules" | "ollama" | "gpt";
+          duration_ms: number;
+          cost_usd?: number;
+          created_at?: string;
+        };
+        Update: {
+          layer?: "rules" | "ollama" | "gpt";
+          duration_ms?: number;
+          cost_usd?: number;
+        };
+        Relationships: [];
+      };
       service_checks: {
         Row: { service: string; success: boolean; detail: string; checked_at: string };
         Insert: { service: string; success: boolean; detail: string; checked_at?: string };
@@ -100,7 +128,10 @@ export type Database = {
       removal_outcomes: {
         Row: {
           id: string;
+          country: string;
+          method: string;
           review_id: string;
+          review_type: string;
           scan_id: string;
           user_id: string;
           policy_type: string;
@@ -115,7 +146,10 @@ export type Database = {
         };
         Insert: {
           id?: string;
+          country?: string;
+          method?: string;
           review_id: string;
+          review_type?: string;
           scan_id: string;
           user_id?: string;
           policy_type: string;
@@ -137,6 +171,17 @@ export type Database = {
           policy_type?: string;
           business_type?: string;
         };
+        Relationships: [];
+      };
+      legal_country_workers: {
+        Row: {
+          country: string;
+          enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { country: string; enabled?: boolean; created_at?: string; updated_at?: string };
+        Update: { enabled?: boolean; updated_at?: string };
         Relationships: [];
       };
       case_memory: {
@@ -911,6 +956,9 @@ export type Database = {
           place_id: string | null;
           rating: number | null;
           rating_mismatch: boolean;
+          region: Region | null;
+          region_source: "google_places" | "address" | "manual" | "unresolved" | null;
+          removal_method: string | null;
           requires_review_count: number;
           review_health_score: number | null;
           reviews_failed_analysis: number;
@@ -945,6 +993,9 @@ export type Database = {
           place_id?: string | null;
           rating?: number | null;
           rating_mismatch?: boolean;
+          region?: Region | null;
+          region_source?: "google_places" | "address" | "manual" | "unresolved" | null;
+          removal_method?: string | null;
           requires_review_count?: number;
           review_health_score?: number | null;
           reviews_failed_analysis?: number;
@@ -979,6 +1030,9 @@ export type Database = {
           place_id?: string | null;
           rating?: number | null;
           rating_mismatch?: boolean;
+          region?: Region | null;
+          region_source?: "google_places" | "address" | "manual" | "unresolved" | null;
+          removal_method?: string | null;
           requires_review_count?: number;
           review_health_score?: number | null;
           reviews_failed_analysis?: number;
@@ -1107,7 +1161,14 @@ export type Database = {
         Args: { _review_id: string; _outcome: string };
         Returns: string;
       };
-      enqueue_worker_scan: { Args: { _url: string }; Returns: string };
+      enqueue_worker_scan: { Args: { _url: string; _region?: string | null }; Returns: string };
+      regional_removal_stats: { Args: Record<string, never>; Returns: Json };
+      legal_worker_stats: { Args: Record<string, never>; Returns: Json };
+      country_legal_worker_enabled: { Args: { _country: string }; Returns: boolean };
+      set_country_legal_worker: {
+        Args: { _country: string; _enabled: boolean };
+        Returns: boolean;
+      };
       ensure_bulk_worker_task: { Args: { _job_id: string }; Returns: string };
       reserve_ai_budget: { Args: { _cost: number }; Returns: boolean };
       worker_daily_stats: { Args: Record<string, never>; Returns: Json };

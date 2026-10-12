@@ -17,6 +17,7 @@ import { LEGAL_VERSION, LEGAL_DISCLAIMER } from "./legal-analysis";
 import { enrichPredictions } from "./removal-prediction.server";
 import { predictionBand, type RemovalPrediction } from "./removal-prediction";
 import { rulesEngine } from "./rules-engine.server";
+import { readPersistedRuleScore } from "./rules/micro-rules";
 
 export const MAX_REPORT_PDF_BYTES = 24 * 1024 * 1024;
 const reportIdSchema = z.string().uuid();
@@ -163,6 +164,7 @@ ${reviews
 <p>${escapeHtml(review.published_at || review.relative_time)}</p>
 <p class="text">${escapeHtml(review.text)}</p>
 <p>Policy category: ${escapeHtml(review.analysis?.category)} &middot; Confidence: ${escapeHtml(review.analysis?.confidence)}%</p>
+<p>Rules micro-check score: ${escapeHtml(review.analysis?.microRuleScore?.score)} / 100 (${escapeHtml(review.analysis?.microRuleScore?.band ?? "not recorded")}; ${escapeHtml(review.analysis?.microRuleScore?.checksAssessed ?? 0)} / ${escapeHtml(review.analysis?.microRuleScore?.checksRun ?? 250)} checks assessed). Advisory indicator only; not proof or probability.</p>
 <p class="text">Reason: ${escapeHtml(review.analysis?.reason)}</p>
 <p class="text">Evidence: ${escapeHtml(review.analysis?.evidence)}</p>
 <p class="text">Review link: ${escapeHtml(review.review_uri)}</p></section>`,
@@ -258,6 +260,7 @@ export async function generateOwnedReportPdf(
             ...analysis,
             risk:
               risk === "high" || risk === "medium" || risk === "normal" ? risk : "requires_review",
+            microRuleScore: readPersistedRuleScore(analysis.verification),
           }
         : null,
     };
@@ -265,7 +268,12 @@ export async function generateOwnedReportPdf(
   const outcomeContext = await loadOutcomeStrategyNotes(supabase);
   const controls = await getSettings();
   const baseLegal: LegalAnalysis = controls.legal_expert_enabled
-    ? await generateLegalAnalysis(scan.data.business_name || "Business", reviews, outcomeContext)
+    ? await generateLegalAnalysis(
+        scan.data.business_name || "Business",
+        reviews,
+        outcomeContext,
+        scan.data.region ?? "OTHER",
+      )
     : {
         version: LEGAL_VERSION,
         generated_at: new Date().toISOString(),
@@ -292,8 +300,10 @@ export async function generateOwnedReportPdf(
       const legalReview = legal.reviews.find((item) => item.review_id === review.id) ?? null;
       return {
         review_id: review.id,
-        rules_score: ruleResult?.confidence ?? null,
+        rules_score: ruleResult?.micro_score?.score ?? null,
+        rules_confidence: ruleResult?.confidence ?? null,
         rules_triggered: ruleResult?.rules_triggered ?? 0,
+        micro_checks_run: ruleResult?.micro_score?.checksRun ?? 0,
         multi_model_consensus: review.analysis?.verification ?? null,
         evidence_readiness: legalReview?.quality?.total ?? null,
         prediction_score: legalReview?.prediction?.probability ?? null,

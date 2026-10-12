@@ -178,25 +178,30 @@ describe("VPS PDF persistence", () => {
   it("preserves report metadata and persists its PDF URL only for the owner", async () => {
     const db = database();
     const result = await generateOwnedReportPdf(db.client, "owner", scanId);
-    expect(db.writes).toEqual([
-      {
-        report_data: {
-          business: "Unit fixture",
-          pdf_url: result.url,
-          pdf_saved_at: expect.any(String),
-          pdf_status: "ready",
-          report_url: result.url,
-          legal_pdf_url: result.legalUrl,
-          legal_pdf_saved_at: expect.any(String),
-          legal_analysis: expect.objectContaining({
-            version: "legal-v1",
-            reviews: expect.arrayContaining([
-              expect.objectContaining({ violates_policy: false, removal_likelihood: 0 }),
-            ]),
-          }),
-        },
+    expect(db.writes).toHaveLength(1);
+    expect(db.writes[0]).toMatchObject({
+      report_data: {
+        business: "Unit fixture",
+        pdf_url: result.url,
+        pdf_status: "ready",
+        report_url: result.url,
+        legal_pdf_url: result.legalUrl,
       },
-    ]);
+    });
+    expect(db.writes[0]).toHaveProperty("report_data.legal_analysis.version", "legal-v1");
+    expect(db.writes[0]).toHaveProperty(
+      "report_data.legal_analysis.reviews.0.violates_policy",
+      false,
+    );
+    expect(db.writes[0]).toHaveProperty("report_data.removal_analysis.reviews.0.rules_score", 1);
+    expect(db.writes[0]).toHaveProperty(
+      "report_data.removal_analysis.reviews.0.rules_confidence",
+      38,
+    );
+    expect(db.writes[0]).toHaveProperty(
+      "report_data.removal_analysis.reviews.0.micro_checks_run",
+      250,
+    );
     expect(browserMock.javascript).toHaveBeenCalledWith(false);
     expect(browserMock.interception).toHaveBeenCalledWith(true);
     expect(browserMock.close).toHaveBeenCalledTimes(2);
@@ -206,6 +211,7 @@ describe("VPS PDF persistence", () => {
     expect(html).not.toContain("No reporting action recommended.");
     expect(html).toContain("Legal Expert Analysis");
     expect(html).toContain("Not estimable");
+    expect(html).toContain("Rules micro-check score");
     expect(await readdir(join(directory, "shared"))).toEqual([
       `${scanId}.pdf`,
       `${scanId}_legal.pdf`,

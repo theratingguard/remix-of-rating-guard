@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { RemovalBadge } from "./removal-summary";
+import { RULE_GROUP_LABELS } from "@/lib/rules/scoring";
 
 export function Stars({ value, size = 14 }: { value: number; size?: number }) {
   return (
@@ -140,6 +141,20 @@ export function ReviewCard({
       <p className="mt-4 line-clamp-4 text-[15px] leading-relaxed">
         {review.text || <em className="text-muted-foreground">No review text</em>}
       </p>
+      {a?.microRuleScore && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Rule micro-checks: {a.microRuleScore.score}/100 ({a.microRuleScore.band} advisory) ·{" "}
+          {a.microRuleScore.checksAssessed}/{a.microRuleScore.checksRun} assessed ·{" "}
+          {a.microRuleScore.durationMs} ms
+        </p>
+      )}
+      {a?.microRuleRecheck && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Retrospective rules recheck: {a.microRuleRecheck.score.checksRun} checks run ·{" "}
+          {a.microRuleRecheck.score.checksAssessed} assessed ·{" "}
+          {a.microRuleRecheck.score.checksFlagged} signals
+        </p>
+      )}
       <div className="mt-2">
         <RemovalBadge item={review.legal} />
         {review.legal?.quality && (
@@ -256,6 +271,54 @@ export function ReviewDrawer({
                       label="Detected signals"
                       value={a.signals.length ? a.signals.join(" · ") : "None"}
                     />
+                    {a.microRuleScore && (
+                      <>
+                        <Field
+                          label="Rule micro-check score"
+                          value={`${a.microRuleScore.score}/100 (${a.microRuleScore.band}, advisory) · ${a.microRuleScore.checksAssessed}/${a.microRuleScore.checksRun} checks assessed · ${a.microRuleScore.checksFlagged} signals`}
+                        />
+                        <div className="space-y-1 text-sm">
+                          <div className="font-medium">Check groups</div>
+                          {Object.entries(a.microRuleScore.groups).map(([group, summary]) => (
+                            <div key={group} className="flex justify-between gap-3 text-xs">
+                              <span>
+                                {RULE_GROUP_LABELS[group as keyof typeof RULE_GROUP_LABELS]}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {summary.score}/{summary.maxScore} · {summary.assessed}/
+                                {summary.checks} assessed
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {a.microRuleRecheck && (
+                      <div className="space-y-2">
+                        <Field
+                          label="Retrospective rules recheck"
+                          value={`${a.microRuleRecheck.score.checksAssessed}/${a.microRuleRecheck.score.checksRun} checks assessed · ${a.microRuleRecheck.score.checksFlagged} signals · not part of the original saved AI verdict`}
+                        />
+                        {a.microRuleRecheck.checks
+                          .filter((check) => check.status === "flagged")
+                          .map((check) => (
+                            <div key={check.id} className="rounded-md bg-muted p-2 text-xs">
+                              <div className="font-medium">
+                                {RULE_GROUP_LABELS[check.group]} · {check.id}
+                              </div>
+                              {check.evidence && (
+                                <div className="mt-1 text-muted-foreground">{check.evidence}</div>
+                              )}
+                            </div>
+                          ))}
+                        {a.microRuleRecheck.score.checksFlagged === 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            No retrospective micro-check signals. Checks needing unavailable data
+                            remain unassessed.
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <Field label="Evidence" value={a.evidence ?? "—"} />
                     <Confidence value={a.confidence} />
                     <p className="text-xs text-muted-foreground">

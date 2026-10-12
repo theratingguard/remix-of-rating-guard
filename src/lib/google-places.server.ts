@@ -9,6 +9,15 @@ const placeSchema = z.object({
   id: z.string().min(1),
   displayName: z.object({ text: z.string().min(1) }),
   formattedAddress: z.string().optional(),
+  addressComponents: z
+    .array(
+      z.object({
+        longText: z.string().optional(),
+        shortText: z.string().optional(),
+        types: z.array(z.string()),
+      }),
+    )
+    .optional(),
   rating: z.number().min(0).max(5).optional(),
   userRatingCount: z.number().int().nonnegative().optional(),
   googleMapsUri: z.string().optional(),
@@ -61,6 +70,7 @@ export type PlaceResult = {
   name: string;
   category: string | null;
   address: string | null;
+  countryCode?: string | null;
   rating: number | null;
   totalReviews: number | null;
   mapsUri: string | null;
@@ -234,7 +244,7 @@ export function parseMapsUrl(raw: string): Parsed {
 }
 
 const DETAILS_MASK =
-  "id,displayName,formattedAddress,rating,userRatingCount,googleMapsUri,primaryTypeDisplayName,reviews,location";
+  "id,displayName,formattedAddress,addressComponents,rating,userRatingCount,googleMapsUri,primaryTypeDisplayName,reviews,location";
 
 export async function searchBusinesses(apiKey: string, query: string) {
   const result = z
@@ -365,6 +375,9 @@ export async function resolveAndFetchPlace(
     name: d.displayName.text,
     category: d.primaryTypeDisplayName?.text ?? null,
     address: d.formattedAddress ?? null,
+    countryCode:
+      d.addressComponents?.find((component) => component.types.includes("country"))?.shortText ??
+      null,
     rating: d.rating ?? null,
     totalReviews: d.userRatingCount ?? null,
     mapsUri: d.googleMapsUri ?? null,

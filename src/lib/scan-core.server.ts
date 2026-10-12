@@ -1,8 +1,9 @@
 // Shared scan pipeline used by app server functions and the /api REST routes.
 // Every stage transition is recorded in scan_events; failures are recorded in error_events.
 import { ScanError, resolveAndFetchPlace, type PlaceResult } from "./google-places.server";
+import { getRegionalStrategy, type Region } from "./regional-routing";
+import { detectBusinessRegion } from "./region-detect.server";
 import {
-  analyzeReviews,
   enforceEvidence,
   verifyFlags,
   reviewHash,
@@ -13,6 +14,8 @@ import {
   type ReviewAnalysis,
   type Verification,
 } from "./analysis.server";
+import { analyzeReview as analyzeReviewByLayer } from "./ai-orchestrator.server";
+import { persistedRuleScore } from "./rules/micro-rules";
 import { APP_VERSION } from "./version";
 import { isGoogleMapsUrl, normalizeGoogleUrl } from "./google-url";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -234,7 +237,12 @@ function healthScore(
 export async function scanFetchCore(
   supabase: ScanClient,
   userId: string,
-  data: { url: string; batchId?: string | undefined; queuedScanId?: string },
+  data: {
+    url: string;
+    batchId?: string | undefined;
+    queuedScanId?: string;
+    region?: Region | undefined;
+  },
 ): Promise<StageResponse> {
   if (!validGoogleUrl(data.url))
     return {
@@ -290,7 +298,7 @@ export async function scanFetchCore(
   const existing = data.queuedScanId
     ? await supabase
         .from("scans")
-        .select("id,stage,reviews_retrieved")
+        .select("id,stage,reviews_retrieved,region")
         .eq("id", data.queuedScanId)
         .eq("user_id", userId)
         .single()
@@ -308,6 +316,8 @@ export async function scanFetchCore(
         stage: "fetch",
         data_source: "google_places",
         batch_id: data.batchId ?? null,
+        region: data.region ?? null,
+        region_source: data.region ? "manual" : null,
       })
       .select("id")
       .single());
@@ -347,6 +357,13 @@ export async function scanFetchCore(
         return hit?.[0]?.place_id ?? null;
       }),
     );
+    const detectedRegion = detectBusinessRegion({
+      countryCode: place.countryCode ?? null,
+      formattedAddress: place.address,
+      manualSelection: data.region ?? existing?.data?.region ?? null,
+    });
+    const region = detectedRegion.region;
+    const removalMethod = getRegionalStrategy(region).removalMethod;
     await track(supabase, userId, scan.id, "BUSINESS_RESOLVED", t, place.name);
     const biz = await supabase
       .from("businesses")
@@ -424,6 +441,9 @@ export async function scanFetchCore(
         rating: place.rating,
         total_reviews: place.totalReviews,
         maps_uri: place.mapsUri,
+        region,
+        region_source: detectedRegion.source,
+        removal_method: removalMethod,
         reviews_retrieved: place.reviews.length,
         api_rating_raw: place.rating,
         api_total_reviews_raw: place.totalReviews,
@@ -518,7 +538,7 @@ export async function scanAnalyzeCore(
     await track(supabase, userId, scan.id, "REVIEWS_ANALYZING", t, `${reviews.length} review(s)`);
     const controls = await getSettings();
     const enabled = enabledModelIndices(controls);
-    const configVersion = `${PROMPT_VERSION}:${controls.multi_model_enabled}:${enabled.join(",")}${process.env["MULTI_WORKER_ENABLED"] === "true" ? ":workers-v1" : ""}`;
+    const configVersion = `${PROMPT_VERSION}:rules-ollama-gpt-v1:micro-rules-v1:${controls.multi_model_enabled}:${enabled.join(",")}${process.env["MULTI_WORKER_ENABLED"] === "true" ? ":workers-v1" : ""}`;
 
     // Cache: reuse an earlier analysis of identical text+rating with the same prompt & app version.
     const hashes = reviews
@@ -536,30 +556,88 @@ export async function scanAnalyzeCore(
       : { data: [] };
     const cache = new Map((cachedRows ?? []).map((c) => [c.content_hash, c]));
     const todo = reviews.filter((r) => !cache.has(r.content_hash));
-    const fresh = todo.length
-      ? await analyzeReviews(
-          aiKey,
-          scan.business_name ?? "",
-          scan.category,
-          todo.map((r) => ({
-            author: r.author,
-            authorUri: r.author_uri,
-            rating: r.rating,
-            publishedAt: r.published_at,
-            relativeTime: r.relative_time,
-            text: r.text ?? "",
-            reviewUri: r.review_uri,
-          })),
-        )
-      : [];
+    const layered = await Promise.all(
+      todo.map(async (review) => {
+        const text = review.text ?? "";
+        const reviewTimestamp = review.published_at ? Date.parse(review.published_at) : NaN;
+        const comparisonHistory = reviews
+          .filter((item) => item.id !== review.id)
+          .map((item) => ({
+            text: item.text ?? "",
+            rating: item.rating,
+            ...(item.published_at ? { publishedAt: item.published_at } : {}),
+            ...(item.author ? { reviewerName: item.author } : {}),
+            ...(scan.business_name ? { businessName: scan.business_name } : {}),
+          }));
+        const sameDayOneStarCount =
+          Number.isFinite(reviewTimestamp) && review.published_at
+            ? comparisonHistory.filter(
+                (item) =>
+                  item.rating === 1 &&
+                  item.publishedAt &&
+                  new Date(item.publishedAt).toDateString() ===
+                    new Date(review.published_at!).toDateString(),
+              ).length
+            : undefined;
+        const result = await analyzeReviewByLayer(
+          {
+            text,
+            rating: review.rating,
+            ...(review.published_at ? { reviewDate: review.published_at } : {}),
+            history: comparisonHistory,
+            ...(sameDayOneStarCount !== undefined ? { context: { sameDayOneStarCount } } : {}),
+            reviewer: { name: review.author },
+            business: { name: scan.business_name ?? undefined },
+          },
+          { usageContext: { scanId: scan.id, reviewId: review.id } },
+        );
+        const supportedQuote =
+          result.source !== "rules" && result.evidence && text.includes(result.evidence)
+            ? result.evidence
+            : null;
+        const analysis: ReviewAnalysis = {
+          ...(result.consensus ? { consensus: result.consensus } : {}),
+          risk: result.violates
+            ? result.confidence >= 85
+              ? "high"
+              : "medium"
+            : result.confidence < 60
+              ? "requires_review"
+              : "normal",
+          category: result.violates ? result.policy : null,
+          signals: result.violates ? [result.evidence] : [],
+          reason:
+            result.source === "rules"
+              ? `Rules engine detected a ${result.policy} signal. This is an automated indicator, not proof of a policy violation.`
+              : `Analyzed by ${result.source}; classification is advisory and based on the supplied review text.`,
+          evidence: supportedQuote,
+          confidence: result.confidence,
+        };
+        return {
+          review,
+          source: result.source,
+          microScore: result.micro_score ?? null,
+          analysis: enforceEvidence(analysis, text),
+        };
+      }),
+    );
     const freshById = new Map<string, ReviewAnalysis>(
-      todo.map((r, i) => [r.id, enforceEvidence(fresh[i]!, r.text ?? "")]),
+      layered.map(({ review, analysis }) => [review.id, analysis]),
+    );
+    const layerById = new Map(layered.map(({ review, source }) => [review.id, source]));
+    const microScoreById = new Map(
+      layered.map(({ review, microScore }) => [
+        review.id,
+        microScore ? persistedRuleScore(microScore) : null,
+      ]),
     );
 
     // Second-model verification for new high/medium flags.
     const toVerify = todo.filter(
       (r) =>
-        !freshById.get(r.id)!.consensus && ["high", "medium"].includes(freshById.get(r.id)!.risk),
+        layerById.get(r.id) !== "rules" &&
+        !freshById.get(r.id)!.consensus &&
+        ["high", "medium"].includes(freshById.get(r.id)!.risk),
     );
     const verdicts = await verifyFlags(
       aiKey,
@@ -598,7 +676,20 @@ export async function scanAnalyzeCore(
           reason: `${a.reason} Independent verification unavailable: ${v.error}`,
         };
       const { consensus, ...storedAnalysis } = a;
-      return { review: r, a: storedAnalysis, verification: consensus ?? v ?? null, cached: false };
+      const previousVerification = consensus ?? v ?? null;
+      const microScore = microScoreById.get(r.id);
+      const verification =
+        microScore === undefined || microScore === null
+          ? previousVerification
+          : {
+              ...(previousVerification &&
+              typeof previousVerification === "object" &&
+              !Array.isArray(previousVerification)
+                ? previousVerification
+                : {}),
+              rules_micro_check: microScore,
+            };
+      return { review: r, a: storedAnalysis, verification, cached: false };
     });
     const ins = await supabase.from("review_analyses").upsert(
       final.map((f) => ({
@@ -608,16 +699,26 @@ export async function scanAnalyzeCore(
           f.verification &&
           typeof f.verification === "object" &&
           !Array.isArray(f.verification) &&
+          "model" in f.verification &&
           typeof f.verification.model === "string"
             ? f.verification.model
-            : "gpt-4o",
+            : layerById.get(f.review.id) === "rules"
+              ? "rating-guard-rules-v1"
+              : layerById.get(f.review.id) === "ollama"
+                ? (process.env["OLLAMA_MODEL"] ?? "llama3.1:8b")
+                : "gpt-4o",
         analysis_provider:
           f.verification &&
           typeof f.verification === "object" &&
           !Array.isArray(f.verification) &&
+          "provider" in f.verification &&
           typeof f.verification.provider === "string"
             ? f.verification.provider
-            : "OpenAI",
+            : layerById.get(f.review.id) === "rules"
+              ? "Rating Guard Rules"
+              : layerById.get(f.review.id) === "ollama"
+                ? "Ollama"
+                : "OpenAI",
         analysis_version: APP_VERSION,
         prompt_version: configVersion,
         content_hash: f.review.content_hash,
@@ -652,7 +753,7 @@ export async function scanAnalyzeCore(
       scan.id,
       "ANALYSIS_COMPLETED",
       t,
-      `${todo.length} analyzed, ${reviews.length - todo.length} reused from cache, ${enabled.length} enabled-provider assessment; validated source ballots`,
+      `${todo.length} analyzed via rules/Ollama/GPT fallback, ${reviews.length - todo.length} reused from cache`,
     );
 
     const analysis = final.map((f) => f.a);
@@ -868,11 +969,11 @@ export async function scanFinalizeCore(
 export async function submitScanCore(
   supabase: ScanClient,
   userId: string,
-  data: { url: string },
+  data: { url: string; region?: Region | undefined },
 ): Promise<StageResponse> {
   if (process.env["MULTI_WORKER_ENABLED"] !== "true") return scanFetchCore(supabase, userId, data);
   const { submitWorkerScan } = await import("./queue/pipeline.server");
-  return submitWorkerScan(supabase, userId, data.url);
+  return submitWorkerScan(supabase, userId, data.url, data.region);
 }
 
 async function fail(

@@ -213,6 +213,24 @@ describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
     expect(place.totalReviews).toBeNull();
   });
 
+  it("extracts the ISO country code from the business address components", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json({
+          id: "test-place",
+          displayName: { text: "Unit test fixture" },
+          addressComponents: [
+            { longText: "United Kingdom", shortText: "GB", types: ["country", "political"] },
+          ],
+        }),
+      ),
+    );
+    await expect(resolveAndFetchPlace("test-key", url)).resolves.toMatchObject({
+      countryCode: "GB",
+    });
+  });
+
   it("rejects invalid reviews instead of inventing a zero rating", async () => {
     vi.stubGlobal(
       "fetch",

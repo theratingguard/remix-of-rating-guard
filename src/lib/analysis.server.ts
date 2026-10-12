@@ -7,6 +7,7 @@ import { analyzeWithThreeModels, type Consensus } from "./multi-model.server";
 import { assessReviewQuality } from "./review-quality";
 import { getSettings } from "./settings.server";
 import { enabledModelIndices } from "./settings";
+import { getRegionalStrategy, isRegion, type Region } from "./regional-routing";
 import { requireProviderResponse, ProviderHttpError } from "./ai-retry.server";
 import { budgetedAiFetch } from "./queue/ai-budget.server";
 import {
@@ -37,6 +38,7 @@ export async function generateLegalAnalysis(
   businessName: string,
   reviews: AnalyzedReview[],
   outcomeContext: string[] = [],
+  region: Region = "OTHER",
 ): Promise<LegalAnalysis> {
   const flagged = reviews.filter(
     (review) => review.analysis?.risk === "high" || review.analysis?.risk === "medium",
@@ -69,6 +71,7 @@ export async function generateLegalAnalysis(
                 role: "user",
                 content: JSON.stringify({
                   businessName,
+                  regional_strategy: getRegionalStrategy(isRegion(region) ? region : "OTHER"),
                   policies: LEGAL_CITATIONS,
                   templates: LEGAL_TEMPLATES,
                   reviews: flagged,

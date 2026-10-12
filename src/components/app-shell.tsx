@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   Star,
+  Globe2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import shield from "@/assets/icon-shield.png";
@@ -25,6 +26,7 @@ const nav = [
   { to: "/history", label: "Scan History", Icon: History },
   { to: "/reports", label: "Reports", Icon: FileText },
   { to: "/submissions", label: "Submissions", Icon: FileText },
+  { to: "/removal-center", label: "Removal Center", Icon: Globe2 },
   { to: "/settings", label: "Settings", Icon: Settings },
 ] as const;
 
