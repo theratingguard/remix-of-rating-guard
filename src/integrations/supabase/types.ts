@@ -107,6 +107,62 @@ export type Database = {
         };
         Relationships: [];
       };
+      auto_replies: {
+        Row: {
+          id: string;
+          review_id: string;
+          scan_id: string;
+          user_id: string;
+          reply_text: string;
+          status: "draft" | "approved" | "rejected";
+          source: "manual" | "automatic";
+          tone: string;
+          model: string;
+          decision_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          review_id: string;
+          scan_id: string;
+          user_id: string;
+          reply_text: string;
+          status?: "draft" | "approved" | "rejected";
+          source?: "manual" | "automatic";
+          tone: string;
+          model: string;
+          decision_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          reply_text?: string;
+          status?: "draft" | "approved" | "rejected";
+          decision_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      auto_reply_preferences: {
+        Row: {
+          user_id: string;
+          enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          enabled?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       service_checks: {
         Row: { service: string; success: boolean; detail: string; checked_at: string };
         Insert: { service: string; success: boolean; detail: string; checked_at?: string };

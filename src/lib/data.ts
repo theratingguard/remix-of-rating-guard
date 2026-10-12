@@ -168,5 +168,5 @@ export const fmtDate = (d: string | null) =>
     ? new Date(d).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
     : "—";
 
-export const GOOGLE_REPORT_URL = "https://support.google.com/business/workflow/9945796";
+export const GOOGLE_REPORT_URL = "https://support.google.com/business/troubleshooter/2690762";
 export const GOOGLE_POLICY_URL = "https://support.google.com/contributionpolicy/answer/7400114";

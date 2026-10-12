@@ -7,9 +7,6 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [
     tanstackStart({
-      router: {
-        routeFileIgnorePattern: "\\.BACKUP\\.tsx$",
-      },
       server: { entry: "server" },
     }),
     nitro({ preset: "node-server" }),

@@ -2,6 +2,7 @@ import { SystemQuality, ErrorCenter } from "@/components/ops-panels";
 import { HomepageEditor } from "@/components/homepage-editor";
 import { AiControlPanel } from "@/components/ai-control-panel";
 import { WorkersStatus } from "@/components/workers-status";
+import { ReplyAutomationSettings } from "@/components/reply-automation-settings";
 import { LegalWorkersPanel } from "@/components/legal-workers-panel";
 import { MemoryStatus } from "@/components/memory-status";
 import { reportAccessQuery } from "@/components/restricted-report-summary";
@@ -160,6 +161,7 @@ function SettingsPage() {
           />
           <Row k="Admin email" v={user.email} />
           <Row k="Domain" v={APP_DOMAIN} />
+          <ReplyAutomationSettings />
           <form onSubmit={changePw} className="space-y-3 border-t pt-4">
             <div className="text-sm font-medium">Password</div>
             <Label htmlFor="cur-pw" className="sr-only">

@@ -3,6 +3,9 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { ScanError } from "../google-places.server";
 import { recordError } from "../scan-core.server";
 import { processWorkerStage, dispatchWorkerTasks } from "./pipeline.server";
+import { isPermanentWorkerError } from "./retry-policy.server";
+import { startSubmissionFollowupPolling } from "../status-polling.server";
+import { startReplyAutomation } from "../reply-automation.server";
 import {
   queueNames,
   queueConnection,
@@ -128,11 +131,7 @@ export async function startWorker(stage: WorkerStage) {
           await job.moveToDelayed(tomorrow.getTime(), token);
           throw new DelayedError();
         }
-        const permanent =
-          error instanceof ScanError &&
-          ["AI_AUTH", "AI_QUOTA", "INVALID_URL", "AMBIGUOUS_BUSINESS", "NO_REVIEWS"].includes(
-            error.code,
-          );
+        const permanent = isPermanentWorkerError(error);
         if (permanent || job.attemptsMade + 1 >= 3) {
           await supabaseAdmin
             .from("worker_tasks")
@@ -230,10 +229,18 @@ export async function startWorker(stage: WorkerStage) {
           }
         }, 300000)
       : null;
+  const submissionFollowupTimer =
+    stage === "scanner" && name.endsWith("-1")
+      ? startSubmissionFollowupPolling(supabaseAdmin)
+      : null;
+  const replyAutomationTimer =
+    stage === "scanner" && name.endsWith("-1") ? startReplyAutomation(supabaseAdmin) : null;
   async function shutdown() {
     clearInterval(heartbeatTimer);
     if (dispatchTimer) clearInterval(dispatchTimer);
     if (healthTimer) clearInterval(healthTimer);
+    if (submissionFollowupTimer) clearInterval(submissionFollowupTimer);
+    if (replyAutomationTimer) clearInterval(replyAutomationTimer);
     await worker.close();
     await redis.del(`rg:health:${name}`);
     await dlq.close();

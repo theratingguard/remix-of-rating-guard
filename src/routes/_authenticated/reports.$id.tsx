@@ -215,13 +215,20 @@ function ReportDetail() {
             </>
           )}
           {!scan.is_seed && (
-            <Button asChild>
+            <Button variant="outline" asChild>
               <a
-                href={scan.maps_uri?.trim() || "https://support.google.com/business/answer/4596773"}
+                href={scan.maps_uri?.trim() || scan.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Flag /> Report Google
+                View on Google Maps
+              </a>
+            </Button>
+          )}
+          {!scan.is_seed && (
+            <Button asChild>
+              <a href={GOOGLE_REPORT_URL} target="_blank" rel="noopener noreferrer">
+                <Flag /> Report to Google
               </a>
             </Button>
           )}

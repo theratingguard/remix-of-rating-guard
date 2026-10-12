@@ -68,7 +68,7 @@ vi.mock("@/components/removal-workflow", () => ({
 vi.mock("@/components/smart-alerts", () => ({
   SmartAlerts: () => <div data-testid="smart-alerts" />,
 }));
-import { Route } from "./dashboard";
+import { Route } from "@/routes/_authenticated/dashboard";
 
 afterEach(cleanup);
 it("renders four compact KPI cards before a single analytics and alerts panel", () => {
