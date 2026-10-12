@@ -24,6 +24,7 @@ import { z } from "zod";
 import { generateOwnedReportPdf } from "./report-pdf.server";
 import { getSettings } from "./settings.server";
 import { enabledModelIndices, modelNames } from "./settings";
+import { collectReviewEvidence } from "./evidence.server";
 
 type ScanClient = SupabaseClient<Database>;
 type QualityScan = Pick<
@@ -730,6 +731,33 @@ export async function scanAnalyzeCore(
     );
     if (ins.error)
       throw new ScanError("DB_UNAVAILABLE", "Database unavailable — analysis could not be saved.");
+    const evidenceNeeded = final.filter(
+      (item) => item.a.risk === "high" || item.a.risk === "medium",
+    );
+    if (evidenceNeeded.length) {
+      for (const item of evidenceNeeded) {
+        try {
+          await collectReviewEvidence(supabase, {
+            reviewId: item.review.id,
+            text: item.review.text,
+            reviewUrl: item.review.review_uri,
+            author: item.review.author,
+            authorUri: item.review.author_uri,
+            rating: item.review.rating,
+          });
+        } catch (error) {
+          console.error("[scan] Could not persist flagged-review evidence", {
+            scanId: scan.id,
+            reviewId: item.review.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          throw new ScanError(
+            "DB_UNAVAILABLE",
+            "Flagged-review evidence could not be saved; the scan is not marked complete.",
+          );
+        }
+      }
+    }
     const failedIds = final
       .filter((f) => f.a.confidence === 0 && f.a.risk === "requires_review")
       .map((f) => f.review.id);

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Scan, AnalyzedReview } from "@/lib/data";
 import type { LegalReview } from "@/lib/legal-analysis";
+import { isGoogleMapsUrl } from "@/lib/google-url";
 import {
   appealDue,
   draftAppeal,
@@ -21,25 +22,33 @@ import { Button } from "./ui/button";
 
 const fieldClass = "my-1 w-full rounded border bg-transparent p-2";
 async function loadWorkflow() {
-  const [outcomes, appeals] = await Promise.all([
-    supabase
-      .from("removal_outcomes")
-      .select("*", { count: "exact" })
-      .order("submitted_at", { ascending: false })
-      .limit(5000)
-      .throwOnError(),
+  const outcomes = await supabase
+    .from("removal_outcomes")
+    .select("*", { count: "exact" })
+    .order("submitted_at", { ascending: false })
+    .limit(5000)
+    .throwOnError();
+  const reviewIds = [...new Set(outcomes.data.map((outcome) => outcome.review_id))];
+  const [appeals, reviews] = await Promise.all([
     supabase
       .from("appeal_tracking")
       .select("*", { count: "exact" })
       .order("due_at")
       .limit(5000)
       .throwOnError(),
+    reviewIds.length
+      ? supabase.from("reviews").select("id,review_uri").in("id", reviewIds).throwOnError()
+      : Promise.resolve({ data: [] as { id: string; review_uri: string | null }[] }),
   ]);
   if ((outcomes.count ?? 0) > 5000 || (appeals.count ?? 0) > 5000)
     throw new Error(
       "Workflow exceeds 5,000 records. Add paginated reporting before calculating complete rates.",
     );
-  return { outcomes: outcomes.data, appeals: appeals.data };
+  return {
+    outcomes: outcomes.data,
+    appeals: appeals.data,
+    reviewUrls: Object.fromEntries(reviews.data.map((review) => [review.id, review.review_uri])),
+  };
 }
 const workflowQuery = {
   queryKey: ["removal-workflow"],
@@ -237,9 +246,11 @@ export function RemovalSubmissionForm({
 function OutcomeFollowup({
   outcome,
   appeal,
+  reviewUrl,
 }: {
   outcome: RemovalOutcome;
   appeal: Appeal | undefined;
+  reviewUrl: string | null;
 }) {
   const generate = useServerFn(generateAppealDraft);
   const cache = useQueryClient();
@@ -369,23 +380,22 @@ function OutcomeFollowup({
         </label>
         <Button disabled={busy}>Record Verified Decision</Button>
       </form>
-      <a
-        className="text-brand underline"
-        href="https://support.google.com/business/workflow/9945796"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Check Google status / one-time appeal
-      </a>
-      {" · "}
-      <a
-        className="text-brand underline"
-        href="https://support.google.com/business/gethelp"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Google Business Support
-      </a>
+      {reviewUrl && isGoogleMapsUrl(reviewUrl) ? (
+        <a
+          className="text-brand underline"
+          href={reviewUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open review in Google Maps
+        </a>
+      ) : (
+        <p className="text-sm">No verified Google Maps review link is available.</p>
+      )}
+      <p className="mt-1 text-xs text-muted-foreground">
+        Google Places API does not expose report status or appeal submission. Check any available
+        options manually in Google Maps; this app does not submit appeals.
+      </p>
       {outcome.outcome === "rejected" &&
         appeal &&
         appeal.status !== "submitted" &&
@@ -565,6 +575,7 @@ export function RemovalAnalytics() {
           key={outcome.id}
           outcome={outcome}
           appeal={query.data.appeals.find((appeal) => appeal.removal_request_id === outcome.id)}
+          reviewUrl={query.data.reviewUrls[outcome.review_id] ?? null}
         />
       ))}
     </section>

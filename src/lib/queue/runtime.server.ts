@@ -1,5 +1,6 @@
 import { Worker, DelayedError, UnrecoverableError } from "bullmq";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { startWeeklyLearningRefresh } from "../learning.server";
 import { ScanError } from "../google-places.server";
 import { recordError } from "../scan-core.server";
 import { processWorkerStage, dispatchWorkerTasks } from "./pipeline.server";
@@ -233,6 +234,8 @@ export async function startWorker(stage: WorkerStage) {
     stage === "scanner" && name.endsWith("-1")
       ? startSubmissionFollowupPolling(supabaseAdmin)
       : null;
+  const learningTimer =
+    stage === "legal" && name.endsWith("-1") ? startWeeklyLearningRefresh(supabaseAdmin) : null;
   const replyAutomationTimer =
     stage === "scanner" && name.endsWith("-1") ? startReplyAutomation(supabaseAdmin) : null;
   async function shutdown() {
@@ -241,6 +244,7 @@ export async function startWorker(stage: WorkerStage) {
     if (healthTimer) clearInterval(healthTimer);
     if (submissionFollowupTimer) clearInterval(submissionFollowupTimer);
     if (replyAutomationTimer) clearInterval(replyAutomationTimer);
+    if (learningTimer) clearInterval(learningTimer);
     await worker.close();
     await redis.del(`rg:health:${name}`);
     await dlq.close();

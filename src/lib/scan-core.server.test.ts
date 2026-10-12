@@ -45,6 +45,7 @@ function database(failure?: "report" | "completion", scanStatus = "running") {
   const updates: Record<string, unknown>[] = [];
   const reportWrites: Record<string, unknown>[] = [];
   const analysisWrites: Record<string, unknown>[] = [];
+  const evidenceWrites: Record<string, unknown>[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : input.toString());
     const table = url.pathname.split("/").at(-1);
@@ -93,6 +94,7 @@ function database(failure?: "report" | "completion", scanStatus = "running") {
     const status = patch?.success ? patch.data["status"] : null;
     if (table === "scans" && patch?.success) updates.push(patch.data);
     if (table === "reports" && patch?.success) reportWrites.push(patch.data);
+    if (table === "review_evidence" && patch?.success) evidenceWrites.push(patch.data);
     if (table === "review_analyses") {
       if (rows?.success) analysisWrites.push(...rows.data);
       else if (patch?.success) analysisWrites.push(patch.data);
@@ -106,6 +108,8 @@ function database(failure?: "report" | "completion", scanStatus = "running") {
         { status: 500 },
       );
     }
+    if (table === "review_evidence" && patch?.success)
+      return Response.json({ id: "evidence-fixture", ...patch.data });
     if (table === "scans" && status === "running") return Response.json([{ id: "scan-fixture" }]);
     return new Response(null, { status: 204 });
   };
@@ -117,7 +121,7 @@ function database(failure?: "report" | "completion", scanStatus = "running") {
       auth: { persistSession: false, autoRefreshToken: false },
     },
   );
-  return { client, updates, reportWrites, analysisWrites };
+  return { client, updates, reportWrites, analysisWrites, evidenceWrites };
 }
 
 describe("Durable scan completion (unit fixtures only)", () => {
@@ -199,6 +203,29 @@ describe("Durable scan completion (unit fixtures only)", () => {
         score: 12,
         checksRun: 250,
         checksAssessed: 32,
+      },
+    });
+  });
+  it("persists a Places evidence snapshot when analysis flags a review", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
+    vi.mocked(analyzeReviewByLayer).mockResolvedValueOnce({
+      violates: true,
+      policy: "spam",
+      confidence: 90,
+      evidence: "Unit fixture",
+      source: "rules",
+    });
+    const db = database();
+    expect(await scanAnalyzeCore(db.client, "owner", { scanId: "scan-fixture" })).toMatchObject({
+      ok: true,
+    });
+    expect(db.evidenceWrites).toHaveLength(1);
+    expect(db.evidenceWrites[0]).toMatchObject({
+      review_id: "review-fixture",
+      screenshot_url: null,
+      metadata: {
+        source: "google_places",
+        screenshot: { status: "unavailable" },
       },
     });
   });

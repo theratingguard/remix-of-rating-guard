@@ -106,7 +106,7 @@ export function ReplyAutomationSettings() {
         <div>
           <p className="text-sm font-medium">Auto-post</p>
           <p className="text-xs text-muted-foreground">
-            Unavailable: Google Business Profile reply posting is not connected.
+            Unavailable: Google Places API does not support posting review replies.
           </p>
         </div>
         <Switch aria-label="Auto-post" checked={false} disabled />

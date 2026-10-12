@@ -12,12 +12,18 @@ export function RemovalPredictionPanel({
       </p>
     );
   const band = prediction.probability === null ? null : predictionBand(prediction.probability);
+  const unavailableLabel =
+    prediction.status === "low_confidence"
+      ? "Low confidence — not enough cases to show a percentage"
+      : prediction.status === "unsupported"
+        ? "Not estimable — evidence not supported"
+        : "Not estimable";
   return (
     <section className="my-3 rounded border p-3">
       <h4 className="font-semibold" style={{ backgroundColor: band?.color }}>
         Removal prediction:{" "}
         {prediction.probability === null
-          ? "Not estimable"
+          ? unavailableLabel
           : `${prediction.probability}% — ${band?.label}`}
       </h4>
       {prediction.interval && (

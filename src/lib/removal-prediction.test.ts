@@ -23,7 +23,10 @@ function cases(n: number, approved = 26): HistoryCase[] {
 describe("Evidence-grounded historical predictions", () => {
   it("never invents probability in cold-start or insufficient data", () => {
     expect(predictRemoval(input, []).probability).toBeNull();
-    expect(predictRemoval(input, cases(29)).status).toBe("insufficient_data");
+    expect(predictRemoval(input, cases(9)).status).toBe("not_estimable");
+    expect(predictRemoval(input, cases(10)).status).toBe("low_confidence");
+    expect(predictRemoval(input, cases(29)).status).toBe("low_confidence");
+    expect(predictRemoval(input, cases(29)).probability).toBeNull();
   });
   it("calculates an 87% cohort estimate with support and uncertainty, not model memory", () => {
     const result = predictRemoval(input, cases(30));

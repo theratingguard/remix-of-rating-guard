@@ -2,6 +2,7 @@ import type { AnalyzedReview, Scan } from "./data";
 import { getLegalWorker } from "./legal-workers.server";
 import { regionForAddress, regionForCountryCode } from "./regional-routing";
 import { getCountryTemplates } from "./legal-templates/country-templates";
+import { selectLegalChannel } from "./legal-channel.server";
 
 export async function detectCountry(
   scan: Pick<Scan, "region" | "address"> & { country_code?: string | null },
@@ -36,22 +37,31 @@ export async function generateLegalRequest(
     evidenceQuote,
   };
 
-  if (worker && options.workerEnabled !== false) return worker.generateRequest(input, template);
+  const generated =
+    worker && options.workerEnabled !== false
+      ? await worker.generateRequest(input, template)
+      : null;
 
-  const fallback = getCountryTemplates()
-    [template].replaceAll("{{businessName}}", input.businessName)
-    .replaceAll("{{reviewUrl}}", input.reviewUrl ?? "[add the original review URL]")
-    .replaceAll("{{reviewerName}}", input.reviewerName)
-    .replaceAll("{{policy}}", input.policy)
-    .replaceAll("{{evidenceQuote}}", input.evidenceQuote);
-  return {
-    country: null,
-    template,
-    method: "google-policy-review" as const,
-    text: fallback,
-    policyUrl: "https://support.google.com/contributionpolicy/answer/7400114",
-    laws: [],
-    legalNote:
-      "No country-specific legal worker is configured. This is a platform-policy draft only, not legal advice.",
-  };
+  const result =
+    generated ??
+    (() => {
+      const fallback = getCountryTemplates()
+        [template].replaceAll("{{businessName}}", input.businessName)
+        .replaceAll("{{reviewUrl}}", input.reviewUrl ?? "[add the original review URL]")
+        .replaceAll("{{reviewerName}}", input.reviewerName)
+        .replaceAll("{{policy}}", input.policy)
+        .replaceAll("{{evidenceQuote}}", input.evidenceQuote);
+      return {
+        country: null,
+        template,
+        method: "google-policy-review" as const,
+        text: fallback,
+        policyUrl: "https://support.google.com/contributionpolicy/answer/7400114",
+        laws: [],
+        legalNote:
+          "No country-specific legal worker is configured. This is a platform-policy draft only, not legal advice.",
+      };
+    })();
+  const channel = selectLegalChannel(input.policy, input.reviewUrl);
+  return { ...result, ...channel };
 }

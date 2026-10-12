@@ -13,7 +13,7 @@ export const historyCaseSchema = z.object({
 export type HistoryCase = z.infer<typeof historyCaseSchema>;
 export const predictionSchema = z.object({
   version: z.literal("history-cohort-v1"),
-  status: z.enum(["estimated", "insufficient_data", "unsupported"]),
+  status: z.enum(["estimated", "low_confidence", "not_estimable", "unsupported"]),
   probability: z.number().int().min(0).max(100).nullable(),
   interval: z.tuple([z.number(), z.number()]).nullable(),
   sample_size: z.number().int().nonnegative(),
@@ -25,6 +25,7 @@ export const predictionSchema = z.object({
 });
 export type RemovalPrediction = z.infer<typeof predictionSchema>;
 export const MIN_PREDICTION_CASES = 30;
+export const LOW_CONFIDENCE_MIN_CASES = 10;
 export function predictionBand(probability: number) {
   if (probability >= 80)
     return { label: "Very high estimated chance (not almost certain)", color: "#fee2e2" };
@@ -82,8 +83,9 @@ export function predictRemoval(
     `Evidence strength: ${input.evidence_strength === null ? "unavailable" : `${input.evidence_strength}/100; matching 20-point band`}.`,
     `${approved}/${cohort.length} comparable decided cases approved; current review excluded; duplicate reviews counted once.`,
   ];
-  const enough =
-    input.supported && input.evidence_strength !== null && cohort.length >= MIN_PREDICTION_CASES;
+  const supported = input.supported && input.evidence_strength !== null;
+  const enough = supported && cohort.length >= MIN_PREDICTION_CASES;
+  const lowConfidence = supported && cohort.length >= LOW_CONFIDENCE_MIN_CASES && !enough;
   const n = cohort.length,
     p = n ? approved / n : 0,
     z = 1.96;
@@ -94,7 +96,13 @@ export function predictRemoval(
   const days = cohort.map((row) => row.days_to_response).sort((a, b) => a - b);
   return {
     version: "history-cohort-v1",
-    status: !input.supported ? "unsupported" : enough ? "estimated" : "insufficient_data",
+    status: !supported
+      ? "unsupported"
+      : enough
+        ? "estimated"
+        : lowConfidence
+          ? "low_confidence"
+          : "not_estimable",
     probability: enough ? Math.round(p * 100) : null,
     interval: enough
       ? [
@@ -109,7 +117,9 @@ export function predictRemoval(
       ? basis
       : [
           ...basis,
-          `At least ${MIN_PREDICTION_CASES} comparable decided cases and supported evidence required; no invented probability.`,
+          lowConfidence
+            ? `Low confidence: ${cohort.length} comparable decisions are below the ${MIN_PREDICTION_CASES}-case reporting threshold; no percentage is shown.`
+            : `Not estimable: fewer than ${LOW_CONFIDENCE_MIN_CASES} comparable decided cases or supported evidence is unavailable; no percentage is shown.`,
         ],
     unavailable,
     generated_at: now.toISOString(),

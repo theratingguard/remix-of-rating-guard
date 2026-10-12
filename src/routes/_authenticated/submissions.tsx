@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getExtensionReport } from "@/lib/extension.functions";
 import { toast } from "sonner";
+import { isGoogleMapsUrl } from "@/lib/google-url";
 
 export const Route = createFileRoute("/_authenticated/submissions")({
   head: () => ({ meta: [{ title: "Submissions — Rating Guard Remix" }] }),
@@ -53,7 +54,7 @@ async function loadSubmissions() {
         .throwOnError(),
       supabase
         .from("reviews")
-        .select("id,text")
+        .select("id,text,review_uri")
         .in(
           "id",
           batch.map((row) => row.review_id),
@@ -194,16 +195,22 @@ function SubmissionsPage() {
                   >
                     View details
                   </Link>
-                  {row.outcome === "rejected" && (
-                    <a
-                      className="ml-3 text-brand underline"
-                      href="https://support.google.com/business/workflow/9945796"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Appeal Now
-                    </a>
-                  )}
+                  {row.outcome === "rejected" &&
+                    (() => {
+                      const reviewUrl = data.reviews.find(
+                        (review) => review.id === row.review_id,
+                      )?.review_uri;
+                      return reviewUrl && isGoogleMapsUrl(reviewUrl) ? (
+                        <a
+                          className="ml-3 text-brand underline"
+                          href={reviewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Open review in Google Maps
+                        </a>
+                      ) : null;
+                    })()}
                 </td>
               </tr>
             ))}

@@ -153,7 +153,7 @@ td { padding:7px; border-bottom:1px solid #e1e5eb; } .note { font-size:10px; col
 &middot; High risk: ${reviews.filter((review) => review.analysis?.risk === "high").length} &middot; Medium risk: ${reviews.filter((review) => review.analysis?.risk === "medium").length}
 &middot; Normal: ${reviews.filter((review) => review.analysis?.risk === "normal").length} &middot; Requires review: ${unresolved}</p>
 <p class="note">Source: Google Places API (New). The official API provides up to 5 reviews per business, not all reviews.</p>
-<p>${reviews.length} of ${escapeHtml(scan.total_reviews)} reviews fetched. Fetched star breakdown: ${stars.map((count, index) => `${index + 1}-star: ${count}`).join(" / ")}. Full breakdown requires the client's Google Business Profile.</p>
+<p>${reviews.length} of ${escapeHtml(scan.total_reviews)} reviews fetched. Fetched star breakdown: ${stars.map((count, index) => `${index + 1}-star: ${count}`).join(" / ")}. A complete star breakdown is not available through this Places API integration.</p>
 <h2>Removal Possibility Summary</h2><p>High (red): ${removal.high} / Medium (orange): ${removal.medium} / Low (yellow): ${removal.low}</p><p class="note">Uncalibrated advisory scores, not verified chances. High 70-100, medium 40-69, low 0-39. Unsupported cases are not estimable.</p>
 <h2>Review details and AI assessments</h2>
 ${reviews
@@ -173,7 +173,6 @@ ${reviews
 <h2>Recommended action</h2><p class="text">${escapeHtml(recommended)}</p>
 <h2>Google reporting instructions</h2>
 <p>Open the business in Google Maps, select the relevant review and use Google's reporting tools when supported by evidence.</p>
-<p>https://support.google.com/business/answer/4596773</p>
 <p class="note">This report has not been submitted to Google. Classification is automated and advisory, not proof of a policy violation. Google independently determines whether removal is appropriate.</p>
 ${legal ? legalAnalysisHtml(legal, reviews) : ""}
 <h2>Action Plan</h2><p>Prioritize supported high-score policy concerns, then supported medium-score concerns. Review each source quote and authentic supporting facts before manually submitting via Google. Do not report genuine complaints merely because they are negative. Retain submitted request and case references for follow-up. Google controls review and appeal timelines; no fixed removal date can be predicted or guaranteed.</p>

@@ -256,6 +256,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      review_evidence: {
+        Row: {
+          id: string;
+          review_id: string;
+          content_hash: string;
+          screenshot_url: string | null;
+          review_url: string | null;
+          captured_at: string;
+          metadata: Json;
+        };
+        Insert: {
+          id?: string;
+          review_id: string;
+          content_hash: string;
+          screenshot_url?: string | null;
+          review_url?: string | null;
+          captured_at?: string;
+          metadata?: Json;
+        };
+        Update: {
+          screenshot_url?: string | null;
+          review_url?: string | null;
+          captured_at?: string;
+          metadata?: Json;
+        };
+        Relationships: [];
+      };
       legal_country_workers: {
         Row: {
           country: string;

@@ -19,6 +19,30 @@ export async function updateLearning(db: SupabaseClient<Database>) {
   return snapshot;
 }
 
+export function startWeeklyLearningRefresh(
+  db: SupabaseClient<Database>,
+  intervalMs = 7 * 24 * 60 * 60 * 1000,
+) {
+  let running = false;
+  const refresh = async () => {
+    if (running) return;
+    running = true;
+    try {
+      const snapshot = await updateLearning(db);
+      console.info("[learning] Weekly outcome snapshot refreshed", {
+        sampleSize: snapshot.sample_size,
+        patterns: snapshot.patterns.length,
+      });
+    } catch (error) {
+      console.error("[learning] Weekly outcome snapshot refresh failed", error);
+    } finally {
+      running = false;
+    }
+  };
+  void refresh();
+  return setInterval(() => void refresh(), intervalMs);
+}
+
 export async function loadLearningNotes(db: SupabaseClient<Database>) {
   const row = await db
     .from("learning_snapshots")
@@ -52,6 +76,6 @@ export async function loadLearningNotes(db: SupabaseClient<Database>) {
     .slice(0, 20)
     .map(
       (pattern) =>
-        `Recorded historical cohort (${pattern.policy}, evidence band ${pattern.band * 20}-${pattern.band * 20 + 19}): ${pattern.approved}/${pattern.total} approved (${Math.round((pattern.approved / pattern.total) * 100)}%). Observational representative-entered cases, not proof about this review; do not override verified policy or source evidence.`,
+        `Recorded historical cohort (${pattern.policy}, evidence band ${pattern.band * 20}-${pattern.band * 20 + 19}): ${pattern.approved} approved and ${pattern.total - pattern.approved} rejected of ${pattern.total} decisions (${Math.round((pattern.approved / pattern.total) * 100)}% approval). Observational, manually recorded outcomes only; use failures as caution, not a reason to reject supported evidence or override policy.`,
     );
 }

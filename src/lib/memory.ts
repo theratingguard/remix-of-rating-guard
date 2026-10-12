@@ -77,7 +77,9 @@ export function memoryPrediction(input: MemoryReview, rows: MemoryCase[], now = 
   ];
   const n = comparable.length;
   const approved = comparable.filter((row) => row.outcome === "approved").length;
-  const enough = input.supported && input.evidence_strength !== null && n >= 10;
+  const supported = input.supported && input.evidence_strength !== null;
+  const enough = supported && n >= 30;
+  const lowConfidence = supported && n >= 10 && !enough;
   const p = n ? approved / n : 0;
   const z = 1.96;
   const center = (p + (z * z) / (2 * Math.max(1, n))) / (1 + (z * z) / Math.max(1, n));
@@ -86,7 +88,13 @@ export function memoryPrediction(input: MemoryReview, rows: MemoryCase[], now = 
     (1 + (z * z) / Math.max(1, n));
   return {
     version: "case-memory-cohort-v1" as const,
-    status: enough ? ("estimated" as const) : ("insufficient_data" as const),
+    status: !supported
+      ? ("unsupported" as const)
+      : enough
+        ? ("estimated" as const)
+        : lowConfidence
+          ? ("low_confidence" as const)
+          : ("not_estimable" as const),
     removal_likelihood: enough ? Math.round(p * 100) : null,
     confidence_interval: enough
       ? ([
@@ -95,7 +103,7 @@ export function memoryPrediction(input: MemoryReview, rows: MemoryCase[], now = 
         ] as [number, number])
       : null,
     sample_size: n,
-    reasoning: `${enough ? `${approved}/${n} comparable cases approved.` : "Not enough data: at least 10 comparable decided cases and supported evidence required."} Exact policy/business type and matching evidence-strength band; pending, current, duplicate and future decisions excluded. Representative-entered outcomes, not independently verified Google decisions; observational estimate, not a calibrated removal guarantee.`,
+    reasoning: `${enough ? `${approved}/${n} comparable cases approved.` : lowConfidence ? `${n} cases available: low confidence; no percentage shown until 30 comparable decisions.` : "Not estimable: fewer than 10 comparable decided cases or supported evidence unavailable."} Exact policy/business type and matching evidence-strength band; pending, current, duplicate and future decisions excluded. Representative-entered outcomes, not independently verified Google decisions; observational estimate, not a calibrated removal guarantee.`,
     similar_cases: similarMemoryCases(input, comparable, now).map((row) => row.id),
     generated_at: now.toISOString(),
   };

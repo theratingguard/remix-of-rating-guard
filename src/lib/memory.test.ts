@@ -24,8 +24,10 @@ const rows = (n: number): MemoryCase[] =>
     updated_at: "2026-10-02T00:00:00Z",
   }));
 describe("case memory", () => {
-  it("requires ten comparable decided cases and evidence", () => {
-    expect(memoryPrediction(review, rows(9)).removal_likelihood).toBeNull();
+  it("labels fewer than ten as not estimable and withholds percentages below thirty", () => {
+    expect(memoryPrediction(review, rows(9)).status).toBe("not_estimable");
+    expect(memoryPrediction(review, rows(10)).status).toBe("low_confidence");
+    expect(memoryPrediction(review, rows(29)).removal_likelihood).toBeNull();
     expect(
       memoryPrediction({ ...review, supported: false }, rows(10)).removal_likelihood,
     ).toBeNull();
@@ -33,12 +35,12 @@ describe("case memory", () => {
       memoryPrediction({ ...review, evidence_strength: null }, rows(10)).removal_likelihood,
     ).toBeNull();
   });
-  it("returns measured output and bounded Wilson interval at ten cases", () => {
-    const result = memoryPrediction(review, rows(10));
-    expect(result.removal_likelihood).toBe(80);
-    expect(result.sample_size).toBe(10);
+  it("returns measured output and bounded Wilson interval at thirty cases", () => {
+    const result = memoryPrediction(review, rows(30));
+    expect(result.removal_likelihood).toBe(27);
+    expect(result.sample_size).toBe(30);
     expect(result.confidence_interval?.[0]).toBeLessThan(80);
-    expect(result.confidence_interval?.[1]).toBeGreaterThan(80);
+    expect(result.confidence_interval?.[1]).toBeGreaterThan(27);
     expect(result.similar_cases).toHaveLength(10);
   });
   it("excludes pending, duplicate, current, future and incompatible cases", () => {

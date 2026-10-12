@@ -217,7 +217,7 @@ function ReplyDraftsPage() {
                     </Button>
                     <Button
                       disabled
-                      title="Google Business Profile reply posting is not connected."
+                      title="Google Places API does not support posting review replies."
                     >
                       Send
                     </Button>
