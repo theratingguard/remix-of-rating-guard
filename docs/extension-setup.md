@@ -6,13 +6,13 @@
 2. Open `chrome://extensions`, turn on **Developer mode**, and choose **Load unpacked**.
 3. Select the `chrome-extension` folder from this repository.
 4. Pin **Rating Guard Submission Assistant** from Chrome's Extensions menu.
-5. Open an authorized scan report at `https://ratingguard.online/scan-report/<scan-id>` and choose **Auto Report via Extension**.
+5. Open an authorized scan report at `https://ratingguard.online/scan-report/<scan-id>` and click the report page's **Auto Report via Extension** button.
 6. Choose a source-validated review and **Open exact review in Google Maps**.
 7. In Google Maps, inspect the review, open its three-dot menu, choose **Report review**, select the appropriate Google reason yourself, inspect the draft, and submit using Google's own controls.
 8. After actually submitting, open the extension popup, reload the scan report if needed, enter the actual submission date and Google confirmation/reference, confirm the declaration, and choose **Record actual submission**.
 9. Verify the entry on `https://ratingguard.online/submissions`.
 
-The app-to-extension bridge uses the current signed-in user's short-lived Supabase session only when the authorized user clicks the report-page button. The extension verifies that session against Rating Guard before retrieving data; its copy is held in `chrome.storage.session` and cleared when the browser session ends or the user disconnects. Never paste a service-role, publishable API key, password, or unrelated token into the extension.
+The report-page button sends only a non-secret launch signal to the extension. After the user clicks, the isolated extension content script reads the current Supabase user session from Rating Guard's same-origin local storage and sends it directly to its service worker; the session never travels through page `postMessage`. Rating Guard verifies the token before returning data. Its copy is held in `chrome.storage.session` and cleared when the browser session ends or the user disconnects. Never paste a service-role, publishable API key, password, or unrelated token into the extension.
 
 ## What the extension does (and does not do)
 

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 
 export function ExtensionLauncher({ scanId }: { scanId: string }) {
   const [status, setStatus] = useState("");
@@ -29,33 +28,14 @@ export function ExtensionLauncher({ scanId }: { scanId: string }) {
     };
     const timeout = window.setTimeout(() => {
       window.removeEventListener("message", onMessage);
-      setStatus(
-        "Extension not detected. Install the unpacked extension using docs/extension-setup.md.",
-      );
+      setStatus("Extension not detected. Install it using the setup guide.");
       setBusy(false);
-    }, 8000);
+    }, 2500);
     window.addEventListener("message", onMessage);
-    void supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
-        if (error) throw error;
-        if (!data.session?.access_token) throw new Error("Sign in to Rating Guard first.");
-        window.postMessage(
-          {
-            source: "rating-guard-app",
-            type: "open-assistant",
-            scanId,
-            token: data.session.access_token,
-          },
-          window.location.origin,
-        );
-      })
-      .catch((error: unknown) => {
-        window.clearTimeout(timeout);
-        window.removeEventListener("message", onMessage);
-        setBusy(false);
-        setStatus(error instanceof Error ? error.message : "Could not access the current session.");
-      });
+    window.postMessage(
+      { source: "rating-guard-app", type: "open-assistant", scanId },
+      window.location.origin,
+    );
   }
 
   return (
@@ -64,12 +44,22 @@ export function ExtensionLauncher({ scanId }: { scanId: string }) {
         {busy ? "Checking extension…" : "Auto Report via Extension"}
       </Button>
       <p className="text-sm text-muted-foreground">
-        Opens the exact Google Maps review and prepares the verified draft. You must inspect the
-        report and submit it yourself in Google Maps.
+        Opens the exact Google Maps review and prepares a verified draft. You must inspect it and
+        submit it yourself in Google Maps.
       </p>
       {status && (
         <p role="status" className="text-sm">
-          {status}
+          {status}{" "}
+          {status.startsWith("Extension not detected") && (
+            <a
+              className="text-brand underline"
+              href="https://github.com/theratingguard/remix-of-rating-guard/blob/main/docs/extension-setup.md"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Install guide
+            </a>
+          )}
         </p>
       )}
     </section>

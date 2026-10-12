@@ -2,6 +2,23 @@
   const match = /^\/scan-report\/([0-9a-f-]{36})\/?$/i.exec(location.pathname);
   if (!match || location.origin !== "https://ratingguard.online") return;
 
+  function makeButton(text, action) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = text;
+    Object.assign(button.style, {
+      padding: "9px 14px",
+      border: "1px solid #0f766e",
+      borderRadius: "8px",
+      background: "#0f766e",
+      color: "#fff",
+      cursor: "pointer",
+      font: "600 14px system-ui,sans-serif",
+    });
+    button.addEventListener("click", action);
+    return button;
+  }
+
   function notify(type, detail = {}) {
     window.postMessage(
       { source: "rating-guard-extension", type, scanId: match[1], ...detail },
@@ -9,18 +26,25 @@
     );
   }
 
-  function makeButton(text, action) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = text;
-    button.addEventListener("click", action);
-    return button;
+  function currentSessionToken() {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.includes("auth-token")) continue;
+      try {
+        const session = JSON.parse(localStorage.getItem(key));
+        if (typeof session?.access_token === "string") return session.access_token;
+      } catch {
+        continue;
+      }
+    }
+    throw new Error("No signed-in Rating Guard session was found. Sign in and reload this report.");
   }
 
   function openAssistant() {
     const existing = document.getElementById("rating-guard-extension-panel");
     if (existing) {
       existing.scrollIntoView({ behavior: "smooth", block: "center" });
+      notify("assistant-ready");
       return;
     }
     const panel = document.createElement("section");
@@ -49,8 +73,21 @@
     document.body.append(panel);
     notify("assistant-ready");
 
+    let token;
+    try {
+      token = currentSessionToken();
+    } catch (error) {
+      status.textContent = error.message;
+      notify("assistant-error", { message: error.message });
+      return;
+    }
+
     chrome.runtime
-      .sendMessage({ type: "report", scanId: match[1] })
+      .sendMessage({ type: "connect", scanId: match[1], token })
+      .then((connection) => {
+        if (connection.error) throw new Error(connection.error);
+        return chrome.runtime.sendMessage({ type: "report", scanId: match[1] });
+      })
       .then((report) => {
         if (report.error) throw new Error(report.error);
         status.textContent = report.reviews.length
@@ -110,6 +147,7 @@
       })
       .catch((error) => {
         status.textContent = `${error.message} Connect the extension with a current Rating Guard user session.`;
+        notify("assistant-error", { message: error.message });
       });
   }
 
@@ -119,18 +157,9 @@
       event.origin !== location.origin ||
       event.data?.source !== "rating-guard-app" ||
       event.data?.type !== "open-assistant" ||
-      event.data?.scanId !== match[1] ||
-      typeof event.data?.token !== "string"
+      event.data?.scanId !== match[1]
     )
       return;
-    chrome.runtime
-      .sendMessage({ type: "connect", scanId: match[1], token: event.data.token })
-      .then((result) => {
-        if (result.error) throw new Error(result.error);
-        openAssistant();
-      })
-      .catch((error) =>
-        notify("assistant-error", { message: error.message || "Could not authorize extension." }),
-      );
+    openAssistant();
   });
 })();

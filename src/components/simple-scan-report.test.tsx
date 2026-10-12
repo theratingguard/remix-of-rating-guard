@@ -1,6 +1,7 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SimpleScanReport } from "./simple-scan-report";
+import { ExtensionLauncher } from "./extension-launcher";
 
 const sendReport = vi.fn();
 
@@ -68,8 +69,32 @@ describe("Simple scan report", () => {
     expect(screen.getByText("REVIEWS")).toBeInTheDocument();
     expect(screen.getByText("A review to assess")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
-    expect(screen.getByText("SUBMITTED")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Auto Report via Extension" })).toBeInTheDocument();
+    expect(screen.getByText("SUBMITTED")).toBeInTheDocument();
     expect(screen.queryByText(/Legal strength|Evidence readiness|Multi-model voting/)).toBeNull();
+  });
+
+  it("sends a token-free launch signal and links the setup guide when the extension is absent", async () => {
+    vi.useFakeTimers();
+    const postMessage = vi.spyOn(window, "postMessage");
+    try {
+      render(<ExtensionLauncher scanId="scan-1" />);
+      fireEvent.click(screen.getByRole("button", { name: "Auto Report via Extension" }));
+      expect(postMessage).toHaveBeenCalledWith(
+        { source: "rating-guard-app", type: "open-assistant", scanId: "scan-1" },
+        window.location.origin,
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2500);
+      });
+      expect(screen.getByRole("link", { name: "Install guide" })).toHaveAttribute(
+        "href",
+        "https://github.com/theratingguard/remix-of-rating-guard/blob/main/docs/extension-setup.md",
+      );
+    } finally {
+      postMessage.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });
