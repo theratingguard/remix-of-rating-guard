@@ -8,6 +8,7 @@ import {
   ScanSearch,
   History,
   FileText,
+  MessageSquareText,
   Settings,
   LogOut,
   Menu,
@@ -26,6 +27,7 @@ const nav = [
   { to: "/history", label: "Scan History", Icon: History },
   { to: "/reports", label: "Reports", Icon: FileText },
   { to: "/submissions", label: "Submissions", Icon: FileText },
+  { to: "/replies", label: "Reply Drafts", Icon: MessageSquareText },
   { to: "/removal-center", label: "Removal Center", Icon: Globe2 },
   { to: "/settings", label: "Settings", Icon: Settings },
 ] as const;

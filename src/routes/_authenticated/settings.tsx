@@ -161,7 +161,6 @@ function SettingsPage() {
           />
           <Row k="Admin email" v={user.email} />
           <Row k="Domain" v={APP_DOMAIN} />
-          <ReplyAutomationSettings />
           <form onSubmit={changePw} className="space-y-3 border-t pt-4">
             <div className="text-sm font-medium">Password</div>
             <Label htmlFor="cur-pw" className="sr-only">
@@ -204,7 +203,9 @@ function SettingsPage() {
             </Button>
           </form>
         </Card>
-
+        <Card title="Auto Reply">
+          <ReplyAutomationSettings />
+        </Card>
         <Card title="Google API">
           <Row k="Service" v="Google Places API (New)" />
           <Row

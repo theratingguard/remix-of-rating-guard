@@ -148,17 +148,44 @@ export type Database = {
         Row: {
           user_id: string;
           enabled: boolean;
+          tone:
+            | "professional"
+            | "friendly"
+            | "formal"
+            | "calm"
+            | "apologetic"
+            | "firm"
+            | "short"
+            | "detailed";
           created_at: string;
           updated_at: string;
         };
         Insert: {
           user_id: string;
           enabled?: boolean;
+          tone?:
+            | "professional"
+            | "friendly"
+            | "formal"
+            | "calm"
+            | "apologetic"
+            | "firm"
+            | "short"
+            | "detailed";
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           enabled?: boolean;
+          tone?:
+            | "professional"
+            | "friendly"
+            | "formal"
+            | "calm"
+            | "apologetic"
+            | "firm"
+            | "short"
+            | "detailed";
           updated_at?: string;
         };
         Relationships: [];

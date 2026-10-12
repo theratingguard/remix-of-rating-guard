@@ -10,7 +10,7 @@ export const REPLY_AUTOMATION_INTERVAL_MS = 6 * 60 * 60 * 1000;
 export async function generateAutomaticReplyDrafts(db: SupabaseClient<Database>, now = new Date()) {
   const preferences = await db
     .from("auto_reply_preferences")
-    .select("user_id")
+    .select("user_id,tone")
     .eq("enabled", true)
     .limit(1000)
     .throwOnError();
@@ -56,7 +56,7 @@ export async function generateAutomaticReplyDrafts(db: SupabaseClient<Database>,
           db,
           preference.user_id,
           review.id,
-          "professional",
+          preference.tone,
           "automatic",
         );
         if (result.ok) {
