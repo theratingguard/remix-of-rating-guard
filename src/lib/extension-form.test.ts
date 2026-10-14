@@ -59,8 +59,7 @@ describe("Google Maps extension helper", () => {
     );
     expect(dom.window.document.querySelector('[aria-label="Verified request draft"]')).toBeNull();
 
-    dom.window.document.querySelector("main")!.textContent =
-      `Example Cafe ${prepared.evidence}`;
+    dom.window.document.querySelector("main")!.textContent = `Example Cafe ${prepared.evidence}`;
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(dom.window.document.querySelector('[aria-label="Verified request draft"]')?.value).toBe(

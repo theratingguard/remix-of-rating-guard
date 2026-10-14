@@ -5,11 +5,11 @@ import { WorkersStatus } from "@/components/workers-status";
 import { ReplyAutomationSettings } from "@/components/reply-automation-settings";
 import { LegalWorkersPanel } from "@/components/legal-workers-panel";
 import { MemoryStatus } from "@/components/memory-status";
-import { reportAccessQuery } from "@/components/restricted-report-summary";
+import { reportAccessQuery } from "@/lib/report-access";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { RefreshCw, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -571,13 +571,16 @@ function QueueCard() {
   const resume = useServerFn(resumeQueue);
   const [q, setQ] = useState<Awaited<ReturnType<typeof getQueueState>> | null>(null);
   const [busy, setBusy] = useState(false);
-  const load = () =>
-    getState()
-      .then(setQ)
-      .catch(() => setQ(null));
+  const load = useCallback(
+    () =>
+      getState()
+        .then(setQ)
+        .catch(() => setQ(null)),
+    [getState],
+  );
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
   return (
     <section className="surface p-6 lg:col-span-2">
       <h2 className="mb-5 font-semibold">Bulk scan queue</h2>

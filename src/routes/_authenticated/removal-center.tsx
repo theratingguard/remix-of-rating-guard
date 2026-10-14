@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, Globe2 } from "lucide-react";
 import { PageHeader } from "@/components/app-shell";
-import { reportAccessQuery } from "@/components/restricted-report-summary";
+import { reportAccessQuery } from "@/lib/report-access";
 import { getRegionalRemovalSummary } from "@/lib/regional-center.functions";
 import { REGION_OPTIONS, type Region } from "@/lib/regional-routing";
 import { Button } from "@/components/ui/button";

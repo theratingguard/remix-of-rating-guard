@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import type { LegalCountry } from "@/lib/legal-laws/country-laws";
 import { getLegalWorkers, setLegalWorkerEnabled } from "@/lib/worker-manager.functions";
-import { reportAccessQuery } from "./restricted-report-summary";
+import { reportAccessQuery } from "@/lib/report-access";
 import { Button } from "./ui/button";
 
 export function LegalWorkersPanel() {

@@ -8,7 +8,8 @@ import { PageHeader, EmptyState } from "@/components/app-shell";
 import { DevTag } from "@/components/review-ui";
 import { Button } from "@/components/ui/button";
 import { BatchInsightsPanel } from "@/components/batch-insights";
-import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { reportAccessQuery } from "@/lib/report-access";
 import { groupReports, compactDate } from "@/lib/operations-ui";
 import { ReportListActions } from "@/components/report-list-actions";
 

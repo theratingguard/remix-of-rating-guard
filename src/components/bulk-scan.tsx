@@ -11,11 +11,9 @@ import {
 } from "@/lib/queue.functions";
 import { parseBulkInput, csvCell } from "@/lib/review-metrics";
 import { Button } from "@/components/ui/button";
-import { isGoogleMapsUrl } from "@/lib/google-url";
 import { MAX_BULK_INPUTS } from "@/lib/bulk-import";
 import { uploadStorageFile } from "@/lib/storage.functions";
 import { supabase } from "@/integrations/supabase/client";
-export const isGoogleUrl = isGoogleMapsUrl;
 type BatchJobs = Awaited<ReturnType<typeof getBatchJobs>>;
 
 function encodeBase64(value: string) {

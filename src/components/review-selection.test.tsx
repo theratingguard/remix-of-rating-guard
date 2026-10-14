@@ -72,6 +72,6 @@ describe("Manual review selection UI", () => {
     expect(generate).toHaveBeenCalledWith({
       data: { scanId: scan.id, reviewIds: reviews.slice(0, 2).map((r) => r.id) },
     });
-    expect(screen.getByRole("button", { name: "Save Selected PDF" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Preview Selected PDF" })).toBeInTheDocument();
   });
 });

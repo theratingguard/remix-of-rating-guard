@@ -28,8 +28,10 @@ vi.mock("@/lib/use-feature-settings", () => ({
   }),
 }));
 vi.mock("@/components/restricted-report-summary", () => ({
-  reportAccessQuery: () => ({ queryKey: ["report-access-level"] }),
   RestrictedReportSummary: () => null,
+}));
+vi.mock("@/lib/report-access", () => ({
+  reportAccessQuery: () => ({ queryKey: ["report-access-level"] }),
 }));
 vi.mock("@/components/removal-workflow", () => ({ RemovalSubmissionForm: () => null }));
 
@@ -77,6 +79,7 @@ afterEach(() => {
     confidence: 80,
     model: "gpt-4o",
   };
+  scanData.reviews[0]!.legal = null;
   scanData.scan.source_url = "https://www.google.com/maps/place/The+Hudson";
   scanData.reviews[0]!.review_uri = null;
 });
@@ -91,11 +94,18 @@ describe("Simple scan report", () => {
     expect(screen.getByText("A review to assess")).toBeInTheDocument();
     expect(screen.getByText("No supported signal found")).toBeInTheDocument();
     expect(screen.getByText("No report recommended")).toBeInTheDocument();
+    expect(screen.getByText("Submission status: Not prepared — not submitted")).toBeInTheDocument();
     expect(screen.getByText("Not estimated")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Prepare report" })).toBeNull();
     expect(screen.getByRole("button", { name: "Auto Report via Extension" })).toBeInTheDocument();
     expect(screen.getByText("SUBMITTED")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Report timeline" })).toBeInTheDocument();
+    expect(screen.getByText("Current stage:")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Report ready — review it and submit through Google/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Submission recorded")).toBeInTheDocument();
     expect(screen.queryByText(/Legal strength|Evidence readiness|Multi-model voting/)).toBeNull();
   });
 
@@ -115,6 +125,7 @@ describe("Simple scan report", () => {
     expect(screen.getByText(/llama3\.2:3b/)).toBeInTheDocument();
     expect(screen.getByText("Book now for a discount")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Prepare report" })).toBeInTheDocument();
+    expect(screen.getByText("Submission status: Not prepared — not submitted")).toBeInTheDocument();
   });
 
   it("sends the selected review ID when preparing its report", async () => {
@@ -185,12 +196,102 @@ describe("Simple scan report", () => {
     expect(
       (screen.getByLabelText("Copy-ready single review request") as HTMLTextAreaElement).value,
     ).toContain("Please assess the complete review in context");
+    expect(
+      screen.getByText(/low rating or negative opinion alone is not a removal ground/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review Google’s content policies" })).toHaveAttribute(
+      "href",
+      "https://support.google.com/contributionpolicy/answer/7400114",
+    );
     expect(screen.getByRole("link", { name: "Open Google report form" })).toHaveAttribute(
       "href",
       "https://support.google.com/business/troubleshooter/2690762",
     );
+    expect(screen.getByRole("button", { name: "Copy request" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Submission status: Not submitted — report draft ready."),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/%|Not estimated|Not estimable/)).toBeNull();
     expect(screen.queryByText("Normal")).toBeNull();
+  });
+
+  it("shows report evidence, copy-ready text, form link, and manual submission status for a flagged business review", () => {
+    scanData.reviews[0]!.analysis = {
+      risk: "medium",
+      category: "Spam",
+      signals: ["Promotional solicitation"],
+      reason: "The review contains a direct promotional solicitation.",
+      evidence: "Book now for a discount",
+      confidence: 64,
+      model: "llama3.2:3b",
+    };
+    scanData.reviews[0]!.legal = {
+      review_id: "review-1",
+      violates_policy: true,
+      policy_type: "Spam",
+      policy_section: "Advertising & solicitation",
+      policy_url: "https://support.google.com/contributionpolicy/answer/7400114",
+      evidence_quote: "Book now for a discount",
+      legal_grounds: "No legal violation established.",
+      removal_request_text: "Please assess the exact quoted promotion.",
+      supporting_docs: [],
+      removal_likelihood: 0,
+      reasoning: "Verify the promotional wording in full context.",
+    };
+    scanData.reviews[0]!.review_uri = "https://www.google.com/maps/reviews/example";
+
+    render(<SimpleScanReport scanId="scan-1" />);
+    fireEvent.click(screen.getByText("View policy evidence and report text"));
+
+    expect(screen.getByText("Policy angle: Spam — Advertising & solicitation")).toBeInTheDocument();
+    expect(screen.getByText("Evidence quote: Book now for a discount")).toBeInTheDocument();
+    expect(screen.getByLabelText("Report text for Reviewer")).toHaveValue(
+      "Please assess the exact quoted promotion.",
+    );
+    expect(screen.getByRole("button", { name: "Copy report" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Google report form" })).toHaveAttribute(
+      "href",
+      "https://support.google.com/business/troubleshooter/2690762",
+    );
+    expect(screen.getByText("Submission status: Draft ready — not submitted")).toBeInTheDocument();
+  });
+
+  it("uses the validated strongest policy assessment and its evidence-backed request", () => {
+    const targetUrl = "https://www.google.com/maps/reviews/data=!4m8!14m7!1m6!1sreview-id";
+    const savedRequest =
+      'Please assess this review under the verified Fake Engagement policy. Exact evidence: "Never visited this place". Please investigate independently.';
+    scanData.scan.source_url = targetUrl;
+    scanData.reviews[0]!.review_uri = targetUrl;
+    scanData.reviews[0]!.text = "Never visited this place";
+    scanData.reviews[0]!.legal = {
+      review_id: "review-1",
+      violates_policy: true,
+      policy_type: "Fake Content",
+      policy_section: "Fake Engagement",
+      policy_url: "https://support.google.com/contributionpolicy/answer/7400114",
+      evidence_quote: "Never visited this place",
+      legal_grounds: "No legal violation established.",
+      removal_request_text: savedRequest,
+      supporting_docs: [],
+      removal_likelihood: 60,
+      reasoning: "The quoted text is the only supported signal; verify it in context.",
+    };
+
+    render(<SimpleScanReport scanId="scan-1" />);
+
+    expect(
+      screen.getByText(/Strongest supported policy angle: Fake Content — Fake Engagement/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/The quoted text is the only supported signal/).length,
+    ).toBeGreaterThan(0);
+    expect(
+      (screen.getByLabelText("Copy-ready single review request") as HTMLTextAreaElement).value,
+    ).toBe(savedRequest);
+    expect(
+      screen.getByText(/does not submit on your behalf or guarantee removal/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/60%/)).toBeNull();
   });
 
   it("does not invent review details when Google does not return the exact linked review", () => {

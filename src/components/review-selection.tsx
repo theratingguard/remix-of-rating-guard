@@ -119,7 +119,9 @@ export function ReviewSelection({
         </label>
         <span role="status">{selected.size} reviews selected</span>
         <Button disabled={busy || selected.size === 0} onClick={reportSelected}>
-          {busy ? "Generating selected requests and PDF..." : "Prepare reports for selected reviews"}
+          {busy
+            ? "Generating selected requests and PDF..."
+            : "Prepare reports for selected reviews"}
         </Button>
       </div>
       <div className="space-y-3">

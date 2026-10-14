@@ -43,8 +43,10 @@ vi.mock("@/lib/data", () => ({
   riskyCount: vi.fn(),
 }));
 vi.mock("@/components/restricted-report-summary", () => ({
-  reportAccessQuery: () => ({ queryKey: ["access"] }),
   RestrictedReportSummary: () => null,
+}));
+vi.mock("@/lib/report-access", () => ({
+  reportAccessQuery: () => ({ queryKey: ["access"] }),
 }));
 vi.mock("@/lib/use-feature-settings", () => ({
   useFeatureSettings: () => ({ data: { appeal_tracking_enabled: true } }),

@@ -76,13 +76,17 @@ describe("Private report PDF authorization", () => {
   });
   it("requires a server-registered ownership binding for selected snapshots", async () => {
     await saveReportToVPS(otherId, pdf, userId, "selected");
-    await expect(readPrivateReportPdf(client(), { scanId, variant: "selected" }, userId)).rejects.toThrow(
-      "Access Denied",
+    await expect(
+      readPrivateReportPdf(client(), { scanId, variant: "selected" }, userId),
+    ).rejects.toThrow("Access Denied");
+    const result = await readPrivateReportPdf(
+      client({ selected: true }),
+      {
+        scanId,
+        variant: "selected",
+      },
+      userId,
     );
-    const result = await readPrivateReportPdf(client({ selected: true }), {
-      scanId,
-      variant: "selected",
-    }, userId);
     expect(Buffer.from(result.base64, "base64")).toEqual(pdf);
   });
   it("rejects path traversal and unsupported variants", async () => {

@@ -1,14 +1,17 @@
 begin;
 create temporary table privacy_test_results(test text, result text);
-do $$ declare owner uuid; stranger uuid := gen_random_uuid(); foreign_scan uuid; begin
+do $$ declare owner uuid; stranger uuid := gen_random_uuid(); foreign_scan uuid; admin_scan uuid; begin
   select id into owner from auth.users where email='theratingguard@gmail.com';
   if owner is null then raise exception 'Authorized test owner missing'; end if;
   insert into auth.users(id,email) values(stranger,'private-report-transaction-fixture@invalid.example');
   insert into public.scans(user_id,source_url,business_name,total_reviews)
     values(stranger,'Transaction-only privacy fixture','Foreign fixture',7) returning id into foreign_scan;
+  insert into public.scans(user_id,source_url,business_name,total_reviews)
+    values(owner,'Transaction-only privacy fixture','Admin fixture',9) returning id into admin_scan;
   perform set_config('private_test.owner',owner::text,true);
   perform set_config('private_test.stranger',stranger::text,true);
   perform set_config('private_test.foreign_scan',foreign_scan::text,true);
+  perform set_config('private_test.admin_scan',admin_scan::text,true);
   perform set_config('request.jwt.claim.sub',owner::text,true);
 end $$;
 set local role authenticated;
@@ -17,6 +20,9 @@ do $$ begin
   if (select count(*) from public.reports)=0 then raise exception 'Super Admin lost report access'; end if;
   if not exists(select 1 from public.scans where id=current_setting('private_test.foreign_scan')::uuid) then
     raise exception 'Super Admin cannot read another owner'; end if;
+  if not exists(select 1 from public.private_report_summaries()
+    where scan_id=current_setting('private_test.foreign_scan')::uuid) then
+    raise exception 'Super Admin cannot read another owner summary'; end if;
 end $$;
 reset role;
 insert into privacy_test_results values('Designated Super Admin','Own and other-owner details visible');
@@ -28,16 +34,19 @@ do $$ declare t text; n integer; begin
     execute format('select count(*) from public.%I',t) into n;
     if n<>0 then raise exception 'Ordinary owner leaked % rows from %',n,t; end if;
   end loop;
-  if not exists(select 1 from public.private_report_summaries()) then raise exception 'Summary missing'; end if;
-  if not exists(select 1 from public.private_report_summaries() where scan_id=current_setting('private_test.foreign_scan')::uuid)
+  if (select count(*) from public.private_report_summaries())<>1
+    then raise exception 'Ordinary account can see another owner summary'; end if;
+  if not exists(select 1 from public.private_report_summaries()
+    where scan_id=current_setting('private_test.foreign_scan')::uuid)
     then raise exception 'Own summary missing'; end if;
-  if not exists(select 1 from public.private_report_summaries() where scan_id<>current_setting('private_test.foreign_scan')::uuid)
-    then raise exception 'Other-business summaries missing'; end if;
+  if exists(select 1 from public.private_report_summaries()
+    where scan_id=current_setting('private_test.admin_scan')::uuid)
+    then raise exception 'Another owner summary leaked'; end if;
   if public.can_read_report_owner(current_setting('private_test.stranger')::uuid)
     then raise exception 'Ownership bypasses Super Admin restriction'; end if;
 end $$;
 reset role;
-insert into privacy_test_results values('Ordinary owner','All nine detail tables denied; all-business summaries visible');
+insert into privacy_test_results values('Ordinary owner','All nine detail tables denied; only own summary visible');
 insert into public.user_roles(user_id,role) values(current_setting('private_test.stranger')::uuid,'admin');
 set local role authenticated;
 do $$ begin
@@ -77,6 +86,12 @@ insert into privacy_test_results values('Privilege mutation',
   case when has_table_privilege('authenticated','public.report_principals','insert')
     or has_function_privilege('authenticated','public.register_private_selected_artifact(uuid,uuid,uuid)','execute')
     then 'FAILED' else 'Browser cannot grant roles or register PDF ownership' end);
+do $$ begin
+  if not exists (
+    select 1 from pg_indexes
+    where schemaname='public' and indexname='removal_outcomes_scan_submitted_idx'
+  ) then raise exception 'Submission history scan/time index is missing'; end if;
+end $$;
 do $$ begin
   if exists(select 1 from privacy_test_results where result='FAILED') then raise exception 'Privilege mutation exposed'; end if;
 end $$;

@@ -105,8 +105,6 @@ describe("report PDF preview", () => {
 
   it("propagates capture failures without a success-shaped preview fallback", async () => {
     vi.mocked(toSvg).mockRejectedValue(new Error("Capture unavailable"));
-    await expect(renderReportPdfPreview(reportElement())).rejects.toThrow(
-      "Capture unavailable",
-    );
+    await expect(renderReportPdfPreview(reportElement())).rejects.toThrow("Capture unavailable");
   });
 });

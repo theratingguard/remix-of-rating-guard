@@ -7,7 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { saveReportPdf } from "@/lib/report-pdf.functions";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
 import { isGoogleReviewUrl, sameGoogleReviewUrl } from "@/lib/google-url";
-import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { reportAccessQuery } from "@/lib/report-access";
 import { Button } from "@/components/ui/button";
 import { RemovalSubmissionForm } from "@/components/removal-workflow";
 import { ExtensionLauncher } from "@/components/extension-launcher";
@@ -55,6 +56,33 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
       )
     : undefined;
   const visibleReviews = singleReviewMode && targetReview ? [targetReview] : reviews;
+  const visibleReviewIds = new Set(visibleReviews.map((review) => review.id));
+  const submissions = (outcomesQuery.data ?? []).filter((row) =>
+    visibleReviewIds.has(row.review_id),
+  );
+  const pendingSubmissions = submissions.filter((row) => row.outcome === "pending");
+  const rejectedSubmissions = submissions.filter((row) => row.outcome === "rejected");
+  const approvedSubmissions = submissions.filter((row) => row.outcome === "approved");
+  const currentStage =
+    singleReviewMode && !targetReview
+      ? "Exact review not matched"
+      : rejectedSubmissions.length
+        ? "Google response recorded — review the rejection and prepare an evidence-based appeal"
+        : pendingSubmissions.length
+          ? "Submission recorded — waiting for a manually recorded Google response"
+          : approvedSubmissions.length
+            ? "Google decision recorded — verify the review status in Google Maps"
+            : "Report ready — review it and submit through Google if appropriate";
+  const nextAction =
+    singleReviewMode && !targetReview
+      ? "Open the business page and provide a URL that matches an available review."
+      : rejectedSubmissions.length
+        ? "Review the rejection reason and prepare an appeal with new, verified evidence."
+        : pendingSubmissions.length
+          ? "Check the official Google Business Profile support channel; record a response only after receiving it."
+          : approvedSubmissions.length
+            ? "Verify the review on Google Maps; this app does not poll Google moderation status."
+            : "Use the Google form for a supported request, then record the actual submission below.";
   const counts = visibleReviews.reduce(
     (total, review) => {
       const risk = review.analysis?.risk ?? "requires_review";
@@ -108,6 +136,66 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
 
       {access.data === "super_admin" && <ExtensionLauncher scanId={scanId} />}
 
+      <section className="surface space-y-3 p-5" aria-label="Report timeline">
+        <h2 className="font-bold">REPORT TIMELINE</h2>
+        <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "URL submitted", done: true, at: scan.created_at },
+            { label: "Scan complete", done: true, at: scan.completed_at },
+            { label: "Review analysis complete", done: true, at: scan.completed_at },
+            { label: "Report generated", done: true, at: data.report.created_at },
+            {
+              label: "Submission recorded",
+              done: submissions.length > 0,
+              at: submissions[0]?.submitted_at,
+            },
+            {
+              label: "Google response recorded",
+              done: approvedSubmissions.length + rejectedSubmissions.length > 0,
+              at: [...approvedSubmissions, ...rejectedSubmissions]
+                .map((row) => row.response_at)
+                .filter((date): date is string => Boolean(date))
+                .sort()
+                .at(-1),
+            },
+            {
+              label: "Outcome verified",
+              done: approvedSubmissions.length > 0,
+              at: approvedSubmissions
+                .map((row) => row.response_at)
+                .filter((date): date is string => Boolean(date))
+                .sort()
+                .at(-1),
+            },
+          ].map((step) => (
+            <li className="rounded border p-3 text-sm" key={step.label}>
+              <p className="font-semibold">
+                <span aria-hidden>{step.done ? "✅" : "⏳"}</span> {step.label}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {step.done && step.at
+                  ? new Date(step.at).toLocaleString()
+                  : step.done
+                    ? "Complete"
+                    : "Pending"}
+              </p>
+            </li>
+          ))}
+        </ol>
+        <div className="rounded border p-3 text-sm">
+          <p>
+            <span className="font-semibold">Current stage:</span> {currentStage}
+          </p>
+          <p className="mt-1">
+            <span className="font-semibold">Next action:</span> {nextAction}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Submission and response statuses are recorded from information you provide. Google
+            review status and support replies are not polled automatically.
+          </p>
+        </div>
+      </section>
+
       <section className="surface space-y-3 p-5">
         <h2 className="font-bold">{singleReviewMode ? "SINGLE REVIEW" : "REVIEWS"}</h2>
         {singleReviewMode && (
@@ -127,7 +215,11 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
           {!singleReviewMode && <p>No signal identified: {counts.normal}</p>}
         </div>
         {singleReviewMode && targetReview && (
-          <SingleReviewDraft scanName={scan.business_name ?? "Business"} review={targetReview} />
+          <SingleReviewDraft
+            scanName={scan.business_name ?? "Business"}
+            review={targetReview}
+            onCopy={copyReport}
+          />
         )}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
@@ -191,6 +283,13 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
                         : "text-yellow-700";
                 const ruleScore = analysis?.microRuleScore;
                 const canPrepareReport = analysis?.risk === "high" || analysis?.risk === "medium";
+                const submissionStatus = outcome
+                  ? `${outcome.outcome} (manually recorded)`
+                  : legal?.removal_request_text
+                    ? "Draft ready — not submitted"
+                    : legal
+                      ? "No supported request — not submitted"
+                      : "Not prepared — not submitted";
                 return (
                   <tr className="border-b last:border-0" key={review.id}>
                     <td className="p-3">{index + 1}</td>
@@ -275,6 +374,15 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
                               Open in Google Maps
                             </a>
                           </Button>
+                          <Button size="sm" variant="outline" asChild>
+                            <a
+                              href="https://support.google.com/business/troubleshooter/2690762"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Open Google report form
+                            </a>
+                          </Button>
                         </div>
                       ) : legal ? (
                         <span className="text-muted-foreground">No supported report</span>
@@ -304,6 +412,32 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
                             <RemovalSubmissionForm scan={scan} review={review} legal={legal} />
                           </details>
                         )}
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Submission status: {submissionStatus}
+                      </p>
+                      {legal?.removal_request_text && (
+                        <>
+                          <details className="mt-2">
+                            <summary className="cursor-pointer text-xs">
+                              View policy evidence and report text
+                            </summary>
+                            <div className="mt-2 space-y-2 rounded border p-3 text-xs">
+                              <p>
+                                Policy angle: {legal.policy_type} — {legal.policy_section}
+                              </p>
+                              <p>Evidence quote: {legal.evidence_quote || "No verified quote"}</p>
+                              <p>{legal.reasoning}</p>
+                              <textarea
+                                aria-label={`Report text for ${review.author}`}
+                                readOnly
+                                value={legal.removal_request_text}
+                                rows={10}
+                                className="w-full rounded border bg-transparent p-2"
+                              />
+                            </div>
+                          </details>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );
@@ -394,10 +528,19 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
   );
 }
 
-function SingleReviewDraft({ scanName, review }: { scanName: string; review: AnalyzedReview }) {
+function SingleReviewDraft({
+  scanName,
+  review,
+  onCopy,
+}: {
+  scanName: string;
+  review: AnalyzedReview;
+  onCopy: (text: string) => Promise<void>;
+}) {
+  const legal = review.legal;
   const supportedEvidence = review.analysis?.evidence?.trim();
   const policySignal = review.analysis?.category?.trim();
-  const draft = [
+  const fallbackDraft = [
     "Please review this Google Maps review under the applicable content policies.",
     "",
     `Business: ${scanName}`,
@@ -415,12 +558,38 @@ function SingleReviewDraft({ scanName, review }: { scanName: string; review: Ana
   ]
     .filter((line) => line !== "")
     .join("\n");
+  const draft =
+    legal?.violates_policy && legal.removal_request_text
+      ? legal.removal_request_text
+      : fallbackDraft;
   return (
     <section className="rounded border p-4">
       <h3 className="font-semibold">Copy-ready request for Google</h3>
       <p className="my-2 text-sm">
-        Review the wording and evidence before submitting. Google decides the outcome; this app does
-        not submit on your behalf.
+        <span>
+          {legal?.violates_policy
+            ? `Strongest supported policy angle: ${legal.policy_type} — ${legal.policy_section}. Verify every fact and quote before submitting.`
+            : "No supported policy violation was established. A low rating or negative opinion alone is not a removal ground; review this neutral request and add only verifiable facts."}
+        </span>
+        <span className="ml-1">
+          Google decides the outcome; this app does not submit on your behalf or guarantee removal.
+        </span>
+      </p>
+      {legal?.reasoning && (
+        <p className="mb-2 text-sm text-muted-foreground">Assessment: {legal.reasoning}</p>
+      )}
+      <p className="mb-2 text-sm">
+        <a
+          className="text-brand underline"
+          href={legal?.policy_url ?? "https://support.google.com/contributionpolicy/answer/7400114"}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Review Google’s content policies
+        </a>
+      </p>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Submission status: Not submitted — report draft ready.
       </p>
       <textarea
         aria-label="Copy-ready single review request"
@@ -430,7 +599,7 @@ function SingleReviewDraft({ scanName, review }: { scanName: string; review: Ana
         className="w-full rounded border bg-transparent p-3 text-sm"
       />
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => void copyReport(draft)}>
+        <Button variant="outline" onClick={() => void onCopy(draft)}>
           Copy request
         </Button>
         <Button variant="outline" asChild>

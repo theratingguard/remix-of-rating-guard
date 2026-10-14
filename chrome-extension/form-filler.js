@@ -34,7 +34,8 @@
 
       const showVerifiedDraft = () => {
         const pageText = document.body.innerText ?? document.body.textContent ?? "";
-        if (!pageText.includes(prepared.business) || !pageText.includes(prepared.evidence)) return false;
+        if (!pageText.includes(prepared.business) || !pageText.includes(prepared.evidence))
+          return false;
 
         observer.disconnect();
         document.defaultView?.clearTimeout(timeout);

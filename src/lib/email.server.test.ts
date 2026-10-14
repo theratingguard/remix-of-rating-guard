@@ -49,7 +49,12 @@ describe("Owner-authorized SMTP share transport", () => {
   });
   it("rejects remote URLs and traversal before reading a file or opening SMTP", async () => {
     await expect(
-      sendReportEmail("client@fixture.invalid", "https://evil.invalid/report.pdf", "Fixture", userId),
+      sendReportEmail(
+        "client@fixture.invalid",
+        "https://evil.invalid/report.pdf",
+        "Fixture",
+        userId,
+      ),
     ).rejects.toThrow("Invalid");
     expect(nodemailer.createTransport).not.toHaveBeenCalled();
   });

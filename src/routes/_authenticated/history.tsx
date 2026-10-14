@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { selectedPdfUrl } from "@/lib/review-selection";
 import { savedLegalPdfUrl } from "@/lib/legal-analysis";
 import { PrivatePdfButton } from "@/components/private-pdf-button";
-import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { reportAccessQuery } from "@/lib/report-access";
 
 export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({

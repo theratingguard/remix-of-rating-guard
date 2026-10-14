@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { MapPin, ExternalLink, FileText, Info } from "lucide-react";
 import type { AnalyzedReview, Scan } from "@/lib/data";
-import { Stars, ReviewCard, ReviewDrawer, SeedBadge, ratingTone } from "./review-ui";
+import { Stars, ReviewCard, ReviewDrawer, SeedBadge } from "./review-ui";
+import { ratingTone } from "./review-ui.utils";
 import { Button } from "@/components/ui/button";
 
 export function BusinessHeader({ scan }: { scan: Scan }) {

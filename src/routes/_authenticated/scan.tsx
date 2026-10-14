@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { BulkScan } from "@/components/bulk-scan";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
 import { isGoogleMapsUrl, isGoogleReviewUrl } from "@/lib/google-url";
-import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { reportAccessQuery } from "@/lib/report-access";
 import { isRegion, REGION_OPTIONS, type Region } from "@/lib/regional-routing";
 import { TopBar } from "@/components/top-bar";
 import { ScanStatsCards } from "@/components/scan-stats-cards";
@@ -52,8 +53,9 @@ function looksLikeGoogleUrl(v: string) {
   return isGoogleMapsUrl(v);
 }
 
-function ScanPage() {
+export function ScanPage() {
   const routeSearch = Route.useSearch();
+  const navigate = useNavigate();
   const features = useFeatureSettings();
   const access = useQuery(reportAccessQuery());
   const status = useServerFn(getSystemStatus);
@@ -109,6 +111,8 @@ function ScanPage() {
         });
       }
       void qc.invalidateQueries({ queryKey: ["scans"] });
+      if (current.status === "complete")
+        void navigate({ to: "/scan-report/$id", params: { id: current.id } });
     } else
       setPhase(
         current.stage === "queued"
@@ -119,7 +123,7 @@ function ScanPage() {
               ? "legal"
               : "analyze",
       );
-  }, [background, progress.data, progress.error, qc]);
+  }, [background, navigate, progress.data, progress.error, qc]);
   const find = useServerFn(findBusinesses);
   const [businessQuery, setBusinessQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -224,6 +228,7 @@ function ScanPage() {
             ? "Report ready. PDF automatically saved on the VPS."
             : "Report ready. Auto-PDF disabled in Settings.",
       );
+      void navigate({ to: "/scan-report/$id", params: { id: a.scanId } });
     } catch (error) {
       setFailedAt(requestStage);
       setError({

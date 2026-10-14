@@ -20,7 +20,8 @@ import { PrivatePdfButton } from "@/components/private-pdf-button";
 import { downloadPrivateReport } from "@/lib/private-report.functions";
 import { openPdfPreview, openPrivatePdf } from "@/lib/private-report";
 import { renderReportPdfPreview } from "@/lib/report-pdf";
-import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { RestrictedReportSummary } from "@/components/restricted-report-summary";
+import { reportAccessQuery } from "@/lib/report-access";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
 import { RULE_GROUP_LABELS } from "@/lib/rules/scoring";
 

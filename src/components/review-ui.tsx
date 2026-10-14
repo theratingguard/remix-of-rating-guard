@@ -53,10 +53,6 @@ export function Stars({ value, size = 14 }: { value: number; size?: number }) {
   );
 }
 
-/** Rating tone: 4-5 positive, 3 neutral/warning, 1-2 negative. */
-export const ratingTone = (r: number) =>
-  r >= 4 ? "text-risk-normal" : r >= 3 ? "text-risk-medium" : "text-risk-high";
-
 const riskMeta: Record<Risk, { label: string; cls: string; Icon: typeof ShieldAlert }> = {
   high: { label: "High risk", cls: "bg-risk-high-soft text-risk-high", Icon: ShieldAlert },
   medium: {

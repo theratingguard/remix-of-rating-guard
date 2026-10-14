@@ -11,7 +11,7 @@ describe("Production multi-model enable flag", () => {
     vi.resetModules();
     const mode = await import("./analysis.server");
     expect(mode.THREE_MODEL_MODE).toBe(true);
-    expect(mode.PROMPT_VERSION).toBe("risk-consensus-v2-retry");
+    expect(mode.PROMPT_VERSION).toBe("risk-consensus-v3-layer-thresholds");
     expect(mode.AI_PROVIDER).toBe("OpenAI + Anthropic + Google");
   });
   it("preserves existing single-provider mode when not enabled", async () => {
