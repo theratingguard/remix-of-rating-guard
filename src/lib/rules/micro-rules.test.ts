@@ -75,6 +75,25 @@ describe("micro rule suite", () => {
     expect(rulesEngine({ text: "THIS PLACE IS MAKING PEOPLE SICK!!!!" }).violates).toBe(false);
   });
 
+  it("includes regional language, country context, defamation, and fake-engagement markers", () => {
+    const result = runMicroRules({
+      text: "bahut खराब service, paisa lekar fraud kiya; fake reviews and पैसे देकर खरीदे हुए रिव्यू.",
+      reviewer: { locationCountry: "US" },
+      context: { businessCountry: "IN" },
+    });
+    const checkStatus = (id: string) => result.checks.find((check) => check.id === id)?.status;
+
+    expect(checkStatus("language-hinglish-bahut")).toBe("flagged");
+    expect(checkStatus("language-hindi-kharab")).toBe("flagged");
+    expect(checkStatus("reviewer-extra-geographic-variation")).toBe("flagged");
+    expect(checkStatus("pattern-defamation-term")).toBe("flagged");
+    expect(checkStatus("language-defamation-fraud")).toBe("flagged");
+    expect(checkStatus("language-fake-paid-hindi")).toBe("flagged");
+    expect(checkStatus("language-fake-review-claim")).toBe("flagged");
+    expect(result.score.groups.pattern.score).toBe(0);
+    expect(result.score.groups.language.score).toBe(0);
+  });
+
   it("checks the 3 AM rule only when a business-local time zone is supplied", () => {
     const withoutZone = runMicroRules({
       text: "A detailed review of the actual service and meal experience.",

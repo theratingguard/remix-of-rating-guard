@@ -54,6 +54,36 @@ export function isGoogleMapsUrl(raw: string): boolean {
   }
 }
 
+export function isGoogleReviewUrl(raw: string): boolean {
+  if (!isGoogleMapsUrl(raw)) return false;
+  try {
+    const url = new URL(raw);
+    return (
+      /^\/maps\/reviews(?:\/|$)/i.test(url.pathname) ||
+      /^\/maps\/contrib\/[^/]+\/reviews(?:\/|$)/i.test(url.pathname) ||
+      url.searchParams.has("reviewId") ||
+      url.searchParams.has("review_id")
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function sameGoogleReviewUrl(left: string, right: string): boolean {
+  try {
+    const a = new URL(left);
+    const b = new URL(right);
+    if (!isGoogleMapsUrl(left) || !isGoogleMapsUrl(right)) return false;
+    a.hash = "";
+    b.hash = "";
+    a.searchParams.sort();
+    b.searchParams.sort();
+    return a.toString() === b.toString();
+  } catch {
+    return false;
+  }
+}
+
 export function normalizeGoogleUrl(raw: string): string {
   const url = new URL(raw.trim());
   url.hash = "";

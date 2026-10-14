@@ -15,6 +15,20 @@ vi.mock("./report-pdf.server", () => ({
 
 vi.mock("./analysis.server", () => ({
   enforceEvidence: (value: unknown) => value,
+  classifyLayerRisk: (result: {
+    source: "rules" | "ollama" | "gpt";
+    violates: boolean;
+    confidence: number;
+  }) =>
+    !result.violates
+      ? result.confidence >= 60
+        ? "normal"
+        : "requires_review"
+      : result.confidence >= (result.source === "rules" ? 70 : 60)
+        ? result.confidence >= 70
+          ? "high"
+          : "medium"
+        : "requires_review",
   verifyFlags: vi.fn(async () => []),
   reviewHash: vi.fn(),
   ANALYSIS_MODEL: "unit-model",
@@ -41,7 +55,11 @@ vi.mock("./ai-orchestrator.server", () => ({
   })),
 }));
 
-function database(failure?: "report" | "completion", scanStatus = "running") {
+function database(
+  failure?: "report" | "completion",
+  scanStatus = "running",
+  scanRegion: string | null = null,
+) {
   const updates: Record<string, unknown>[] = [];
   const reportWrites: Record<string, unknown>[] = [];
   const analysisWrites: Record<string, unknown>[] = [];
@@ -60,6 +78,7 @@ function database(failure?: "report" | "completion", scanStatus = "running") {
           rating: 4,
           reviews_retrieved: 1,
           business_name: "Unit fixture",
+          region: scanRegion,
           high_count: 0,
           medium_count: 0,
           normal_count: 0,
@@ -208,6 +227,31 @@ describe("Durable scan completion (unit fixtures only)", () => {
       },
     });
   });
+  it("passes a specific business country to the rules layer", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
+    const db = database(undefined, "running", "IN");
+
+    await scanAnalyzeCore(db.client, "owner", { scanId: "scan-fixture" });
+
+    expect(analyzeReviewByLayer).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        business: { name: "Unit fixture", country: "IN" },
+      }),
+      { usageContext: { scanId: "scan-fixture", reviewId: "review-fixture" } },
+    );
+  });
+  it.each(["EU", "AF", "OTHER"])(
+    "does not treat aggregate region %s as a specific business country",
+    async (region) => {
+      vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
+      const db = database(undefined, "running", region);
+
+      await scanAnalyzeCore(db.client, "owner", { scanId: "scan-fixture" });
+
+      const analysisInput = vi.mocked(analyzeReviewByLayer).mock.calls.at(-1)?.[0];
+      expect(analysisInput?.business).toEqual({ name: "Unit fixture" });
+    },
+  );
   it("persists a Places evidence snapshot when analysis flags a review", async () => {
     vi.stubEnv("OPENAI_API_KEY", "unit-test-only");
     vi.mocked(analyzeReviewByLayer).mockResolvedValueOnce({

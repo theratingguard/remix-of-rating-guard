@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   analyzeReviews,
+  classifyLayerRisk,
   enforceEvidence,
   reviewHash,
   type ReviewAnalysis,
@@ -22,6 +23,20 @@ const review: PlaceReview = {
 };
 describe("Analysis integrity (unit fixtures, not real AI results)", () => {
   afterEach(() => vi.unstubAllGlobals());
+  it.each([
+    [{ source: "rules", violates: true, confidence: 70 }, "high"],
+    [{ source: "rules", violates: true, confidence: 69 }, "requires_review"],
+    [{ source: "ollama", violates: true, confidence: 60 }, "medium"],
+    [{ source: "ollama", violates: true, confidence: 59 }, "requires_review"],
+    [{ source: "gpt", violates: true, confidence: 70 }, "high"],
+    [{ source: "gpt", violates: true, confidence: 40 }, "medium"],
+    [{ source: "gpt", violates: true, confidence: 39 }, "requires_review"],
+    [{ source: "gpt", violates: false, confidence: 59 }, "requires_review"],
+    [{ source: "gpt", violates: false, confidence: 60 }, "normal"],
+  ] as const)("applies the layer-specific evidence threshold to %o", (result, expected) => {
+    expect(classifyLayerRisk(result)).toBe(expected);
+  });
+
   it("rejects missing AI results instead of generating a completed analysis", async () => {
     vi.stubGlobal(
       "fetch",
@@ -68,6 +83,21 @@ describe("Analysis integrity (unit fixtures, not real AI results)", () => {
       signals: ["fixture"],
       reason: "Unit fixture",
       evidence: "Absent quote",
+      confidence: 90,
+    };
+    expect(enforceEvidence(analysis, review.text)).toMatchObject({
+      risk: "requires_review",
+      evidence: null,
+    });
+  });
+
+  it("downgrades a high-risk assessment that has no evidence or signal", () => {
+    const analysis: ReviewAnalysis = {
+      risk: "high",
+      category: "Spam",
+      signals: ["", "  "],
+      reason: "Unit fixture",
+      evidence: null,
       confidence: 90,
     };
     expect(enforceEvidence(analysis, review.text)).toMatchObject({

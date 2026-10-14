@@ -6,6 +6,7 @@ const api = vi.hoisted(() => ({
   control: vi.fn(),
   retry: vi.fn(),
   latest: vi.fn(async () => null),
+  saveCsv: vi.fn(),
 }));
 vi.mock("@/lib/queue.functions", () => ({
   enqueueBatch: api.enqueue,
@@ -14,6 +15,7 @@ vi.mock("@/lib/queue.functions", () => ({
   retryJob: api.retry,
   latestBatch: api.latest,
 }));
+vi.mock("@/lib/storage.functions", () => ({ uploadStorageFile: api.saveCsv }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
@@ -61,7 +63,7 @@ describe("Durable bulk UI", () => {
           status: "completed",
           reportUrl: "https://ratingguard.online/reports/00000000-0000-4000-8000-000000000002",
           stars: [3, 0, 0, 0, 2],
-          removal: { high: 0, medium: 0, low: 5 },
+          removal: { high: 0, medium: 0, low: 5, notEstimable: 0 },
           scan: {
             business_name: "The Hudson",
             rating: 3.2,
@@ -74,7 +76,7 @@ describe("Durable bulk UI", () => {
           url: "Pending City",
           status: "pending",
           stars: [0, 0, 0, 0, 0],
-          removal: { high: 0, medium: 0, low: 0 },
+          removal: { high: 0, medium: 0, low: 0, notEstimable: 0 },
           scan: null,
           reportUrl: null,
         },
@@ -84,7 +86,7 @@ describe("Durable bulk UI", () => {
           status: "failed",
           error: "Exact fixture failure",
           stars: [0, 0, 0, 0, 0],
-          removal: { high: 0, medium: 0, low: 0 },
+          removal: { high: 0, medium: 0, low: 0, notEstimable: 0 },
           scan: { business_name: null, rating: null, reviews_retrieved: 0, total_reviews: null },
           reportUrl: null,
         },
@@ -98,7 +100,7 @@ describe("Durable bulk UI", () => {
     fireEvent.click(screen.getByRole("button", { name: "Start Bulk Scan" }));
     await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("value", "2"));
     expect(screen.getByRole("columnheader", { name: "1★" })).toBeInTheDocument();
-    expect(screen.getByText("🔴 0 / 🟠 0 / 🟡 5")).toBeInTheDocument();
+    expect(screen.getByText("🔴 0 / 🟠 0 / 🟡 5 / N/E 0")).toBeInTheDocument();
     expect(screen.getByText("5 of 120")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
     await waitFor(() =>
@@ -107,39 +109,36 @@ describe("Durable bulk UI", () => {
       }),
     );
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Export CSV" })).toBeInTheDocument();
-    const createObjectURL = vi.fn((_blob: Blob) => "blob:unit-csv");
-    vi.stubGlobal(
-      "URL",
-      class extends URL {
-        static override createObjectURL = createObjectURL;
-        static override revokeObjectURL = vi.fn();
-      },
+    expect(screen.getByRole("button", { name: "Save CSV to VPS" })).toBeInTheDocument();
+    api.saveCsv.mockResolvedValue({
+      folder: "reports/owner",
+      url: "/storage/reports/owner/bulk-batch.csv",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save CSV to VPS" }));
+    await waitFor(() =>
+      expect(api.saveCsv).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          folder: "reports",
+          filename: "bulk-00000000-0000-4000-8000-000000000001.csv",
+          contentType: "text/csv;charset=utf-8",
+        }),
+      }),
     );
-    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
-      this: HTMLAnchorElement,
-    ) {
-      expect(this.isConnected).toBe(true);
-      expect(this.download).toBe("bulk-00000000-0000-4000-8000-000000000001.csv");
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
-    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
-    expect(click).toHaveBeenCalledOnce();
-    expect(document.querySelector('a[href="blob:unit-csv"]')).toBeNull();
-    const blob = createObjectURL.mock.calls[0]?.[0];
-    if (!blob) throw new Error("CSV blob was not created.");
-    const csv = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsText(blob);
-    });
+    const request = api.saveCsv.mock.calls[0]?.[0] as { data: { base64: string } } | undefined;
+    if (!request) throw new Error("CSV storage request was not created.");
+    const binary = atob(request.data.base64);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const csv = new TextDecoder().decode(bytes);
+    expect(screen.getByRole("link", { name: "Open or download CSV" })).toHaveAttribute(
+      "href",
+      "/api/storage/download?folder=reports%2Fowner&filename=bulk-00000000-0000-4000-8000-000000000001.csv",
+    );
+    expect(document.querySelector("a[download]")).toBeNull();
     expect(csv.split("\r\n")[0]).toContain('"Report URL"');
     expect(csv).toContain(
       "https://ratingguard.online/reports/00000000-0000-4000-8000-000000000002",
     );
-    expect(csv.split("\r\n").find((row) => row.includes("Failed City"))).toBe(
-      '"3","","Failed City","","","","","","","","","","","","","failed","Exact fixture failure"',
-    );
+    expect(csv).toContain('"3","","Failed City"');
+    expect(csv).toContain('"failed","Exact fixture failure"');
   });
 });

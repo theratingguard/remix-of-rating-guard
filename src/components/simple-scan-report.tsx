@@ -6,6 +6,7 @@ import { scanQuery, type AnalyzedReview } from "@/lib/data";
 import { supabase } from "@/integrations/supabase/client";
 import { saveReportPdf } from "@/lib/report-pdf.functions";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
+import { isGoogleReviewUrl, sameGoogleReviewUrl } from "@/lib/google-url";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 import { Button } from "@/components/ui/button";
 import { RemovalSubmissionForm } from "@/components/removal-workflow";
@@ -47,11 +48,26 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
     return <p role="alert">A completed saved scan report was not found.</p>;
 
   const { scan, reviews } = data;
+  const singleReviewMode = isGoogleReviewUrl(scan.source_url);
+  const targetReview = singleReviewMode
+    ? reviews.find(
+        (review) => review.review_uri && sameGoogleReviewUrl(scan.source_url, review.review_uri),
+      )
+    : undefined;
+  const visibleReviews = singleReviewMode && targetReview ? [targetReview] : reviews;
+  const counts = visibleReviews.reduce(
+    (total, review) => {
+      const risk = review.analysis?.risk ?? "requires_review";
+      total[risk] += 1;
+      return total;
+    },
+    { high: 0, medium: 0, normal: 0, requires_review: 0 },
+  );
 
   async function prepareReport(reviewId: string) {
     setBusyReviewId(reviewId);
     try {
-      await generateReport({ data: { scanId } });
+      await generateReport({ data: { scanId, reviewId } });
       await queryClient.invalidateQueries({ queryKey: ["scan", scanId] });
       await queryClient.invalidateQueries({ queryKey: ["simple-scan-report-outcomes", scanId] });
       toast.success("Report ready. Nothing was submitted to Google.");
@@ -84,17 +100,47 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
           {scan.rating == null ? "—" : Number(scan.rating).toFixed(1)} ⭐ ({reviews.length} of{" "}
           {scan.total_reviews?.toLocaleString() ?? "—"} fetched)
         </p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Analysis is advisory: no detected signal does not prove a review is genuine, and Google
+          decides whether content violates its policy. Drafts are not submitted automatically.
+        </p>
       </header>
 
       {access.data === "super_admin" && <ExtensionLauncher scanId={scanId} />}
 
       <section className="surface space-y-3 p-5">
-        <h2 className="font-bold">REVIEWS</h2>
+        <h2 className="font-bold">{singleReviewMode ? "SINGLE REVIEW" : "REVIEWS"}</h2>
+        {singleReviewMode && (
+          <div
+            className={`rounded border p-3 text-sm ${targetReview ? "border-risk-normal/40" : "border-risk-medium/40"}`}
+            role={targetReview ? "status" : "alert"}
+          >
+            {targetReview
+              ? "Exact review URL matched. The draft below is ready to review and submit manually."
+              : "Google Places did not return an exact match for this review URL in its available review sample (up to five reviews). Open the business page and use a matching review URL; no review-specific report can be generated from unmatched content."}
+          </div>
+        )}
+        <div className="grid gap-2 text-sm sm:grid-cols-4" aria-label="Analysis summary">
+          <p>High signals: {counts.high}</p>
+          <p>Medium signals: {counts.medium}</p>
+          <p>Manual review: {counts.requires_review}</p>
+          {!singleReviewMode && <p>No signal identified: {counts.normal}</p>}
+        </div>
+        {singleReviewMode && targetReview && (
+          <SingleReviewDraft scanName={scan.business_name ?? "Business"} review={targetReview} />
+        )}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b">
-                {["#", "Business", "Review", "Category", "Score", "Action"].map((label) => (
+                {[
+                  "#",
+                  "Review",
+                  "Assessment",
+                  "Evidence & checks",
+                  ...(!singleReviewMode ? ["Removal estimate"] : []),
+                  "Action",
+                ].map((label) => (
                   <th className="p-3" key={label}>
                     {label}
                   </th>
@@ -102,38 +148,114 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
               </tr>
             </thead>
             <tbody>
-              {reviews.map((review: AnalyzedReview, index) => {
+              {visibleReviews.map((review: AnalyzedReview, index) => {
                 const legal = review.legal;
                 const outcome = outcomesQuery.data?.find((row) => row.review_id === review.id);
-                const score = legal?.violates_policy ? legal.removal_likelihood : null;
-                const color =
+                const score =
+                  legal?.violates_policy && legal.prediction ? legal.prediction.probability : null;
+                const analysis = review.analysis;
+                const needsReview = !analysis || analysis.risk === "requires_review";
+                const unverifiedSignal =
+                  needsReview && Boolean(analysis?.category) && (analysis?.confidence ?? 0) >= 40;
+                const lowSignal =
+                  needsReview && Boolean(analysis?.category) && (analysis?.confidence ?? 0) < 40;
+                const assessment =
+                  analysis?.risk === "high"
+                    ? { label: "High policy signal", style: "bg-risk-high-soft text-risk-high" }
+                    : analysis?.risk === "medium" || unverifiedSignal
+                      ? {
+                          label: "Medium policy signal",
+                          style: "bg-risk-medium-soft text-risk-medium",
+                        }
+                      : lowSignal
+                        ? {
+                            label: "Low signal — verify",
+                            style: "bg-yellow-100 text-yellow-800",
+                          }
+                        : needsReview
+                          ? {
+                              label: "Manual review required",
+                              style: "bg-muted text-muted-foreground",
+                            }
+                          : {
+                              label: "No supported signal found",
+                              style: "bg-muted text-muted-foreground",
+                            };
+                const scoreColor =
                   score == null
                     ? "text-muted-foreground"
-                    : score >= 80
-                      ? "text-red-600"
-                      : score >= 60
-                        ? "text-orange-600"
-                        : score >= 40
-                          ? "text-yellow-700"
-                          : "text-muted-foreground";
+                    : score >= 70
+                      ? "text-risk-high"
+                      : score >= 40
+                        ? "text-risk-medium"
+                        : "text-yellow-700";
+                const ruleScore = analysis?.microRuleScore;
+                const canPrepareReport = analysis?.risk === "high" || analysis?.risk === "medium";
                 return (
                   <tr className="border-b last:border-0" key={review.id}>
                     <td className="p-3">{index + 1}</td>
-                    <td className="p-3">{scan.business_name ?? "—"}</td>
                     <td className="max-w-[24rem] truncate p-3" title={review.text ?? ""}>
                       {review.text || "No review text"}
                     </td>
                     <td className="p-3">
-                      {legal?.violates_policy
-                        ? legal.policy_type
-                        : (review.analysis?.category ?? "—")}
+                      <span
+                        className={`rounded px-2 py-1 text-xs font-semibold ${assessment.style}`}
+                      >
+                        {assessment.label}
+                      </span>
+                      <p className="mt-1">
+                        Policy:{" "}
+                        {legal?.violates_policy ? legal.policy_type : (analysis?.category ?? "—")}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {analysis
+                          ? singleReviewMode
+                            ? "Preliminary policy screening"
+                            : `${analysis.confidence}% analysis confidence`
+                          : "Analysis unavailable"}
+                        {analysis?.model ? ` · ${analysis.model}` : ""}
+                      </p>
                     </td>
-                    <td
-                      className={`whitespace-nowrap p-3 font-semibold ${color}`}
-                      title="Advisory score; not a verified removal probability"
-                    >
-                      {score == null ? "—" : `${score}%`}
+                    <td className="max-w-[22rem] p-3">
+                      <p>
+                        {analysis?.evidence ||
+                          analysis?.signals?.join("; ") ||
+                          "No quoted evidence returned."}
+                      </p>
+                      {analysis?.reason && (
+                        <p className="mt-1 text-xs text-muted-foreground">{analysis.reason}</p>
+                      )}
+                      {ruleScore ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Rules: {ruleScore.checksAssessed}/{ruleScore.checksRun} assessed ·{" "}
+                          {ruleScore.checksFlagged} signal(s)
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Rules diagnostics unavailable.
+                        </p>
+                      )}
                     </td>
+                    {!singleReviewMode && (
+                      <td className={`whitespace-nowrap p-3 font-semibold ${scoreColor}`}>
+                        {score == null ? (
+                          <span
+                            title={
+                              legal?.violates_policy
+                                ? "At least 30 comparable, recorded outcomes are required before showing a cohort percentage."
+                                : "No supported policy concern or comparable outcome estimate is available."
+                            }
+                          >
+                            {legal?.violates_policy ? "Not estimable" : "Not estimated"}
+                            {legal?.prediction ? ` · n=${legal.prediction.sample_size}` : ""}
+                          </span>
+                        ) : (
+                          <span title="Historical cohort rate from manually recorded outcomes; not an individually calibrated or guaranteed probability.">
+                            {score}% cohort estimate · n={legal.prediction?.sample_size}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="p-3">
                       {legal?.removal_request_text ? (
                         <div className="flex flex-wrap gap-2">
@@ -156,6 +278,12 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
                         </div>
                       ) : legal ? (
                         <span className="text-muted-foreground">No supported report</span>
+                      ) : !canPrepareReport ? (
+                        <span className="text-muted-foreground">
+                          {needsReview
+                            ? "Verify evidence before preparing a report"
+                            : "No report recommended"}
+                        </span>
                       ) : (
                         <Button
                           size="sm"
@@ -163,7 +291,7 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
                           disabled={busyReviewId !== null || !features.data?.legal_expert_enabled}
                           onClick={() => void prepareReport(review.id)}
                         >
-                          {busyReviewId === review.id ? "Preparing…" : "Send"}
+                          {busyReviewId === review.id ? "Preparing…" : "Prepare report"}
                         </Button>
                       )}
                       {legal?.removal_request_text &&
@@ -263,5 +391,58 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
         )}
       </section>
     </main>
+  );
+}
+
+function SingleReviewDraft({ scanName, review }: { scanName: string; review: AnalyzedReview }) {
+  const supportedEvidence = review.analysis?.evidence?.trim();
+  const policySignal = review.analysis?.category?.trim();
+  const draft = [
+    "Please review this Google Maps review under the applicable content policies.",
+    "",
+    `Business: ${scanName}`,
+    `Reviewer: ${review.author}`,
+    `Rating: ${review.rating}/5`,
+    `Review URL: ${review.review_uri}`,
+    `Review text: "${review.text ?? ""}"`,
+    "",
+    policySignal
+      ? `Potentially relevant policy signal from automated screening: ${policySignal}. This is a preliminary signal, not a finding that a policy was violated.`
+      : "No specific policy violation was established by automated screening. Please assess the review independently under Google's current policies.",
+    supportedEvidence ? `Quoted evidence to verify: "${supportedEvidence}"` : "",
+    "",
+    "Please assess the complete review in context and take action only if it meets Google's current removal criteria. Add any accurate, verifiable supporting information before submitting. This request does not guarantee removal.",
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+  return (
+    <section className="rounded border p-4">
+      <h3 className="font-semibold">Copy-ready request for Google</h3>
+      <p className="my-2 text-sm">
+        Review the wording and evidence before submitting. Google decides the outcome; this app does
+        not submit on your behalf.
+      </p>
+      <textarea
+        aria-label="Copy-ready single review request"
+        readOnly
+        value={draft}
+        rows={12}
+        className="w-full rounded border bg-transparent p-3 text-sm"
+      />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => void copyReport(draft)}>
+          Copy request
+        </Button>
+        <Button variant="outline" asChild>
+          <a
+            href="https://support.google.com/business/troubleshooter/2690762"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open Google report form
+          </a>
+        </Button>
+      </div>
+    </section>
   );
 }

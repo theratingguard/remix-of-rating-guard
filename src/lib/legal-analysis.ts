@@ -7,7 +7,7 @@ import { predictionSchema } from "./removal-prediction";
 export const LEGAL_VERSION = "legal-v1";
 export const LEGAL_POLICY_URL = "https://support.google.com/contributionpolicy/answer/7400114";
 export const LEGAL_DISCLAIMER =
-  "AI-assisted policy assessment, not legal advice or a lawyer's opinion. Google decides removal. Likelihood scores are uncalibrated AI estimates, not verified probabilities. Defamation, false light, consumer protection and platform liability depend on jurisdiction and verified facts; consult qualified counsel.";
+  "AI-assisted policy assessment, not legal advice or a lawyer's opinion. Google decides removal. AI model confidence does not represent the probability that Google will remove a review. Defamation, false light, consumer protection and platform liability depend on jurisdiction and verified facts; consult qualified counsel.";
 export const LEGAL_POLICIES = {
   fake_content: {
     type: "Fake Content",

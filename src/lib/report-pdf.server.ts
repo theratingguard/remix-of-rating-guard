@@ -71,7 +71,7 @@ ${[...analysis.reviews]
 <p class="text">${escapeHtml(item.policy_url)}</p>
 <p class="text">Evidence quote: ${escapeHtml(item.evidence_quote || "No supported policy evidence")}</p>
 <p class="text">Legal grounds: ${escapeHtml(item.legal_grounds)}</p>
-<p>Removal likelihood: ${item.violates_policy ? `${item.removal_likelihood}% (uncalibrated AI estimate, not a verified probability)` : "Not estimable (0 score; insufficient evidence)"}</p>
+<p class="note">Removal estimate is based on the historical cohort below when enough comparable recorded outcomes exist; the uncalibrated AI score is not shown as a probability.</p>
 <p class="text">Reasoning: ${escapeHtml(item.reasoning)}</p>
 ${item.quality ? reviewQualityHtml(item.quality) : ""}
 ${predictionHtml(item.prediction)}
@@ -139,21 +139,33 @@ td { padding:7px; border-bottom:1px solid #e1e5eb; } .note { font-size:10px; col
 &middot; Normal: ${reviews.filter((review) => review.analysis?.risk === "normal").length} &middot; Requires review: ${unresolved}</p>
 <p class="note">Source: Google Places API (New). The official API provides up to 5 reviews per business, not all reviews.</p>
 <p>${reviews.length} of ${escapeHtml(scan.total_reviews)} reviews fetched. Fetched star breakdown: ${stars.map((count, index) => `${index + 1}-star: ${count}`).join(" / ")}. A complete star breakdown is not available through this Places API integration.</p>
-<h2>Removal Possibility Summary</h2><p>High (red): ${removal.high} / Medium (orange): ${removal.medium} / Low (yellow): ${removal.low}</p><p class="note">Uncalibrated advisory scores, not verified chances. High 70-100, medium 40-69, low 0-39. Unsupported cases are not estimable.</p>
+<h2>Removal Possibility Summary</h2><p>High (red): ${removal.high} / Medium (orange): ${removal.medium} / Low (yellow): ${removal.low} / Not estimable: ${removal.notEstimable}</p><p class="note">Bands use historical outcome-cohort rates only when at least 30 comparable recorded decisions exist. Outcomes are manually recorded, not independently verified Google decisions; cohort rates are not individually calibrated or guaranteed.</p>
 <h2>Review details and AI assessments</h2>
 ${reviews
-  .map(
-    (review) => `<section class="review">
-<b>${escapeHtml(review.author)}</b> &middot; ${review.rating}/5 &middot; ${escapeHtml(review.analysis?.risk ?? "requires_review")}
-<p style="padding:5px;background:${{ high: "#fee2e2", medium: "#ffedd5", low: "#fef9c3" }[removalBand(legal?.reviews.find((item) => item.review_id === review.id))]}">Removal band: ${removalBand(legal?.reviews.find((item) => item.review_id === review.id))} (advisory only)</p>
+  .map((review) => {
+    const legalReview = legal?.reviews.find((item) => item.review_id === review.id);
+    const band = removalBand(legalReview);
+    const color = {
+      high: "#fee2e2",
+      medium: "#ffedd5",
+      low: "#fef9c3",
+      not_estimable: "#f1f5f9",
+    }[band];
+    const classification =
+      review.analysis?.risk === "normal"
+        ? "No supported signal identified"
+        : (review.analysis?.risk ?? "requires_review");
+    return `<section class="review">
+<b>${escapeHtml(review.author)}</b> &middot; ${review.rating}/5 &middot; ${escapeHtml(classification)}
+<p style="padding:5px;background:${color}">Removal band: ${band === "not_estimable" ? "Not estimable" : band} ${legalReview?.prediction?.probability == null ? "" : `(${legalReview.prediction.probability}% historical cohort estimate; n=${legalReview.prediction.sample_size})`}</p>
 <p>${escapeHtml(review.published_at || review.relative_time)}</p>
 <p class="text">${escapeHtml(review.text)}</p>
 <p>Policy category: ${escapeHtml(review.analysis?.category)} &middot; Confidence: ${escapeHtml(review.analysis?.confidence)}%</p>
 <p>Rules micro-check score: ${escapeHtml(review.analysis?.microRuleScore?.score)} / 100 (${escapeHtml(review.analysis?.microRuleScore?.band ?? "not recorded")}; ${escapeHtml(review.analysis?.microRuleScore?.checksAssessed ?? 0)} / ${escapeHtml(review.analysis?.microRuleScore?.checksRun ?? 0)} checks assessed). Advisory indicator only; not proof or probability.</p>
 <p class="text">Reason: ${escapeHtml(review.analysis?.reason)}</p>
 <p class="text">Evidence: ${escapeHtml(review.analysis?.evidence)}</p>
-<p class="text">Review link: ${escapeHtml(review.review_uri)}</p></section>`,
-  )
+<p class="text">Review link: ${escapeHtml(review.review_uri)}</p></section>`;
+  })
   .join("")}
 <h2>Recommended action</h2><p class="text">${escapeHtml(recommended)}</p>
 <h2>Google reporting instructions</h2>
@@ -207,6 +219,7 @@ export async function generateOwnedReportPdf(
   userId: string,
   scanId: string,
   completingScan = false,
+  reviewId?: string,
 ) {
   reportIdSchema.parse(scanId);
   const [scan, report] = await Promise.all([
@@ -249,12 +262,24 @@ export async function generateOwnedReportPdf(
         : null,
     };
   });
+  const requestedReview = reviewId ? reviews.find((review) => review.id === reviewId) : null;
+  if (reviewId && !requestedReview)
+    throw new Error("The selected review does not belong to this scan.");
+  if (
+    requestedReview &&
+    requestedReview.analysis?.risk !== "high" &&
+    requestedReview.analysis?.risk !== "medium"
+  )
+    throw new Error("Only a review with a supported high or medium policy signal can be reported.");
+  const legalReviews = requestedReview ? [requestedReview] : reviews;
   const outcomeContext = await loadOutcomeStrategyNotes(supabase);
   const controls = await getSettings();
+  if (requestedReview && !controls.legal_expert_enabled)
+    throw new Error("Legal report preparation is disabled in Settings.");
   const baseLegal: LegalAnalysis = controls.legal_expert_enabled
     ? await generateLegalAnalysis(
         scan.data.business_name || "Business",
-        reviews,
+        legalReviews,
         outcomeContext,
         scan.data.region ?? "OTHER",
       )
@@ -276,12 +301,23 @@ export async function generateOwnedReportPdf(
   const legal = controls.legal_expert_enabled
     ? await enrichPredictions(supabase, baseLegal, business?.data?.category ?? null)
     : baseLegal;
+  const existingLegal = savedLegalAnalysis(report.data.report_data);
+  const mergedLegal: LegalAnalysis =
+    requestedReview && existingLegal
+      ? {
+          ...legal,
+          reviews: [
+            ...existingLegal.reviews.filter((item) => item.review_id !== requestedReview.id),
+            ...legal.reviews,
+          ],
+        }
+      : legal;
   const backgroundAnalysis = {
     version: "report-analysis-v1",
     generated_at: new Date().toISOString(),
     reviews: reviews.map((review) => {
       const ruleResult = review.text?.trim() ? rulesEngine({ text: review.text }) : null;
-      const legalReview = legal.reviews.find((item) => item.review_id === review.id) ?? null;
+      const legalReview = mergedLegal.reviews.find((item) => item.review_id === review.id) ?? null;
       return {
         review_id: review.id,
         rules_score: ruleResult?.micro_score?.score ?? null,
@@ -301,14 +337,14 @@ export async function generateOwnedReportPdf(
   const metadata = report.data.report_data;
   const newMetadata = {
     ...(metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {}),
-    legal_analysis: legal,
+    legal_analysis: mergedLegal,
     removal_analysis: backgroundAnalysis,
   };
   const reportWithLegal = { ...report.data, report_data: newMetadata };
   const fullHtml = reportPdfHtml(scan.data, reportWithLegal, reviews);
   const pdfBuffer = await renderReportPdf(fullHtml);
   const url = await saveReportToVPS(scanId, pdfBuffer, userId);
-  const legalHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font:12px Arial;line-height:1.6;color:#13243b}.review{border:1px solid #ccd4df;padding:12px;margin:14px 0}.text{white-space:pre-wrap;overflow-wrap:anywhere}.note{font-size:10px}</style></head><body><h1>Legal Removal Request Assessment</h1><h2>${escapeHtml(scan.data.business_name)}</h2><p>${escapeHtml(report.data.report_number)} / ${escapeHtml(scan.data.created_at)}</p>${legalAnalysisHtml(legal, reviews)}<p>Nothing has been submitted to Google. Unsupported assessments are not removal requests.</p></body></html>`;
+  const legalHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font:12px Arial;line-height:1.6;color:#13243b}.review{border:1px solid #ccd4df;padding:12px;margin:14px 0}.text{white-space:pre-wrap;overflow-wrap:anywhere}.note{font-size:10px}</style></head><body><h1>Legal Removal Request Assessment</h1><h2>${escapeHtml(scan.data.business_name)}</h2><p>${escapeHtml(report.data.report_number)} / ${escapeHtml(scan.data.created_at)}</p>${legalAnalysisHtml(mergedLegal, reviews)}<p>Nothing has been submitted to Google. Unsupported assessments are not removal requests.</p></body></html>`;
   const legalPdf = controls.legal_expert_enabled ? await renderReportPdf(legalHtml) : null;
   const legalUrl = legalPdf ? await saveReportToVPS(scanId, legalPdf, userId, "legal") : null;
   if (scan.data.business_id) {

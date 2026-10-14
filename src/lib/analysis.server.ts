@@ -142,6 +142,18 @@ export async function generateLegalAnalysis(
 }
 
 const riskSchema = z.enum(["high", "medium", "normal", "requires_review"]);
+export function classifyLayerRisk(result: {
+  source: "rules" | "ollama" | "gpt";
+  violates: boolean;
+  confidence: number;
+}): RiskLevel {
+  if (!result.violates) return result.confidence >= 60 ? "normal" : "requires_review";
+
+  const flagThreshold = result.source === "rules" ? 70 : result.source === "ollama" ? 60 : 40;
+  if (result.confidence < flagThreshold) return "requires_review";
+  return result.confidence >= 70 ? "high" : "medium";
+}
+
 const verificationOutputSchema = z.object({
   results: z.array(
     z.object({
@@ -213,7 +225,7 @@ export async function analyzeReviews(
   return analyzeWithThreeModels(apiKey, businessName, category, reviews, enabled);
 }
 
-export const PROMPT_VERSION = "risk-consensus-v2-retry";
+export const PROMPT_VERSION = "risk-consensus-v3-layer-thresholds";
 export const VERIFY_MODEL = "gpt-4o-mini";
 
 /** Explainable guard: a flag must be backed by a quote or signal; a low star rating alone is never a violation. */
@@ -226,7 +238,11 @@ export function enforceEvidence(a: ReviewAnalysis, reviewText?: string): ReviewA
       reason: `${a.reason} (Downgraded: quoted evidence was not present in the source review.)`,
     };
   }
-  if ((a.risk === "high" || a.risk === "medium") && !a.evidence && a.signals.length === 0) {
+  if (
+    (a.risk === "high" || a.risk === "medium") &&
+    !a.evidence &&
+    !a.signals.some((signal) => signal.trim().length > 0)
+  ) {
     return {
       ...a,
       risk: "requires_review",

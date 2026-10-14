@@ -46,7 +46,29 @@ describe("Google Maps extension helper", () => {
       "https://www.google.com/maps/reviews/data=review-id",
       "<main>Example Cafe unrelated text</main>",
     );
+    expect(dom.window.document.querySelector('[role="status"]')?.textContent).toContain(
+      "Waiting for the exact review to load",
+    );
     expect(dom.window.document.querySelector('[aria-label="Verified request draft"]')).toBeNull();
+  });
+
+  it("reveals the draft when Google Maps renders the exact review after the script runs", async () => {
+    const { dom } = await runFor(
+      "https://www.google.com/maps/reviews/data=review-id",
+      "<main>Example Cafe review loading</main>",
+    );
+    expect(dom.window.document.querySelector('[aria-label="Verified request draft"]')).toBeNull();
+
+    dom.window.document.querySelector("main")!.textContent =
+      `Example Cafe ${prepared.evidence}`;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(dom.window.document.querySelector('[aria-label="Verified request draft"]')?.value).toBe(
+      prepared.request,
+    );
+    expect(
+      dom.window.document.querySelector('[aria-label="Rating Guard verified report draft"]'),
+    ).not.toBeNull();
   });
 
   it("does not run on a non-Google page", async () => {

@@ -15,7 +15,7 @@ import { BusinessHeader, RatingAnalysis, RiskAnalysis } from "@/components/scan-
 import { Button } from "@/components/ui/button";
 import { BulkScan } from "@/components/bulk-scan";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
-import { isGoogleMapsUrl } from "@/lib/google-url";
+import { isGoogleMapsUrl, isGoogleReviewUrl } from "@/lib/google-url";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 import { isRegion, REGION_OPTIONS, type Region } from "@/lib/regional-routing";
 import { TopBar } from "@/components/top-bar";
@@ -23,6 +23,7 @@ import { ScanStatsCards } from "@/components/scan-stats-cards";
 import { ScanProgress } from "@/components/scan-progress";
 import { ScannedUrlsTable } from "@/components/scanned-urls-table";
 import { RightPanel } from "@/components/right-panel";
+import { SimpleScanReport } from "@/components/simple-scan-report";
 
 export const Route = createFileRoute("/_authenticated/scan")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -96,7 +97,11 @@ function ScanPage() {
       localStorage.removeItem("rg-active-worker-scan");
       if (current.status === "complete") {
         setPhase("done");
-        toast.success("Background scan complete. Private report ready.");
+        toast.success(
+          isGoogleReviewUrl(current.source_url)
+            ? "Review link scan complete. Check whether the exact review was returned below."
+            : "Background scan complete. Private report ready.",
+        );
       } else {
         setPhase("error");
         setError({
@@ -171,6 +176,7 @@ function ScanPage() {
   }
 
   const urlValid = looksLikeGoogleUrl(url);
+  const singleReviewUrl = urlValid && isGoogleReviewUrl(url);
   const running = background || phase === "fetch" || phase === "analyze" || phase === "legal";
   const keyMissing = sys && !sys.googleConfigured;
 
@@ -213,9 +219,11 @@ function ScanPage() {
       }
       setPhase("done");
       toast.success(
-        features.data?.auto_pdf_enabled
-          ? "Report ready. PDF automatically saved on the VPS."
-          : "Report ready. Auto-PDF disabled in Settings.",
+        singleReviewUrl
+          ? "Review link scan complete. Check whether the exact review was returned below."
+          : features.data?.auto_pdf_enabled
+            ? "Report ready. PDF automatically saved on the VPS."
+            : "Report ready. Auto-PDF disabled in Settings.",
       );
     } catch (error) {
       setFailedAt(requestStage);
@@ -428,7 +436,7 @@ function ScanPage() {
                         disabled={running}
                         aria-invalid={touched && !!url && !urlValid}
                         aria-describedby="url-help"
-                        placeholder="Paste Google Maps / Business URL"
+                        placeholder="Paste Google Maps business or review URL"
                         className="h-14 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
                       />
                     </div>
@@ -439,19 +447,21 @@ function ScanPage() {
                       className="h-14 px-8"
                       disabled={running || !!keyMissing}
                     >
-                      {running && <Loader2 className="animate-spin" />} Scan business
+                      {running && <Loader2 className="animate-spin" />}{" "}
+                      {singleReviewUrl ? "Analyze review link" : "Scan business"}
                     </Button>
                   </form>
                   <p id="url-help" className="mt-2 min-h-5 text-left text-xs" role="status">
                     {touched && url && !urlValid ? (
                       <span className="text-star">
-                        Invalid Google URL — use a link like google.com/maps/place/… or
-                        maps.app.goo.gl/…
+                        Invalid Google URL — use a link like google.com/maps/place/…,
+                        google.com/maps/reviews/… or maps.app.goo.gl/…
                       </span>
                     ) : (
                       <span className="opacity-60">
-                        Supports google.com/maps/place, maps.app.goo.gl, g.page and ?q=place_id
-                        links.
+                        {singleReviewUrl
+                          ? "Specific review link detected. We will analyze Google’s available public review sample; exact review matching is shown only when Google returns the same review URL. No removal outcome is guaranteed."
+                          : "Supports business links from google.com/maps/place, maps.app.goo.gl, g.page and ?q=place_id."}
                       </span>
                     )}
                   </p>
@@ -594,6 +604,16 @@ function errorTitle(code: string) {
 function ScanResult({ id }: { id: string }) {
   const { data } = useQuery(scanQuery(id));
   if (!data?.scan?.business_name) return null;
+  if (isGoogleReviewUrl(data.scan.source_url)) {
+    return data.scan.status === "complete" ? (
+      <SimpleScanReport scanId={id} />
+    ) : (
+      <p className="surface mt-8 p-5" role="status">
+        Analyzing the specific review link. The copy-ready request will appear when the exact review
+        is available from Google.
+      </p>
+    );
+  }
   return (
     <div className="mt-8">
       <BusinessHeader scan={data.scan} />

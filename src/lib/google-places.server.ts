@@ -3,7 +3,12 @@
 import { z } from "zod";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { GOOGLE_SHORT_HOSTS, isGoogleMapsUrl, isGoogleShareBridge } from "./google-url";
+import {
+  GOOGLE_SHORT_HOSTS,
+  isGoogleMapsUrl,
+  isGoogleReviewUrl,
+  isGoogleShareBridge,
+} from "./google-url";
 
 const placeSchema = z.object({
   id: z.string().min(1),
@@ -306,7 +311,9 @@ export async function resolveAndFetchPlace(
     if (!parsed.query)
       throw new ScanError(
         "INVALID_URL",
-        "Couldn't find a business in that link. Open the business on Google Maps and copy its link.",
+        isGoogleReviewUrl(url)
+          ? "This is a specific review link, but it does not identify a business that Google Places can resolve. Open the review's business page and scan its business URL instead."
+          : "Couldn't find a business in that link. Open the business on Google Maps and copy its link.",
       );
     const body: Record<string, unknown> = {
       textQuery: parsed.query,

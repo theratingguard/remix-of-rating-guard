@@ -8,8 +8,22 @@ import {
 } from "./review-metrics";
 import { unsupportedLegalReview } from "./legal-analysis";
 import type { AnalyzedReview } from "./data";
+import type { RemovalPrediction } from "./removal-prediction";
 const review = { id: "00000000-0000-4000-8000-000000000001" } as AnalyzedReview;
-describe("Fetched star metrics and advisory removal bands", () => {
+const prediction = (probability: number): RemovalPrediction => ({
+  version: "history-cohort-v1",
+  status: "estimated",
+  probability,
+  interval: [probability, probability],
+  sample_size: 30,
+  approved: Math.round((probability * 30) / 100),
+  median_days: 4,
+  basis: [],
+  unavailable: [],
+  generated_at: new Date().toISOString(),
+});
+
+describe("Fetched star metrics and outcome-cohort removal bands", () => {
   it("counts only fetched stars including absent buckets", () =>
     expect(
       starBreakdown([{ rating: 1 }, { rating: 1 }, { rating: 1 }, { rating: 4 }, { rating: 2 }]),
@@ -27,20 +41,21 @@ describe("Fetched star metrics and advisory removal bands", () => {
         ...unsupportedLegalReview(review),
         violates_policy: true,
         removal_likelihood: Number(score),
+        prediction: prediction(Number(score)),
       }),
     ).toBe(band),
   );
-  it("never upgrades unsupported reviews even with a high advisory score", () =>
+  it("does not present an uncalibrated model score as a removal estimate", () =>
     expect(removalBand({ ...unsupportedLegalReview(review), removal_likelihood: 100 })).toBe(
-      "low",
+      "not_estimable",
     ));
-  it("includes unassessed reviews as low/not estimable", () =>
+  it("includes reviews without cohort data as not estimable", () =>
     expect(
       removalSummary(
         [{ ...unsupportedLegalReview(review), violates_policy: true, removal_likelihood: 80 }],
         5,
       ),
-    ).toEqual({ high: 1, medium: 0, low: 4 }));
+    ).toEqual({ high: 0, medium: 0, low: 0, notEstimable: 5 }));
   it("supports 100+ name/URL lines without stripping commas in business addresses", () => {
     const text = Array.from({ length: 150 }, (_, index) => `Business ${index}, City`).join("\n");
     expect(parseBulkInput(text).valid).toHaveLength(150);

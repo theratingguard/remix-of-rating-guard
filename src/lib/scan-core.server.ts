@@ -7,6 +7,7 @@ import {
   enforceEvidence,
   verifyFlags,
   reviewHash,
+  classifyLayerRisk,
   ANALYSIS_MODEL,
   AI_PROVIDER,
   PROMPT_VERSION,
@@ -35,6 +36,10 @@ type QualityScan = Pick<
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 export function cacheKey(url: string) {
   return normalizeGoogleUrl(url);
+}
+function businessCountryForRegion(region: Region | null): string | undefined {
+  if (!region || region === "EU" || region === "AF" || region === "OTHER") return undefined;
+  return region;
 }
 /** 24h cache of Google place results keyed by the normalized link, so repeated links cost no Google requests. */
 async function cachedPlace(url: string, load: () => Promise<PlaceResult>): Promise<PlaceResult> {
@@ -557,6 +562,7 @@ export async function scanAnalyzeCore(
       : { data: [] };
     const cache = new Map((cachedRows ?? []).map((c) => [c.content_hash, c]));
     const todo = reviews.filter((r) => !cache.has(r.content_hash));
+    const businessCountry = businessCountryForRegion(scan.region);
     const layered = await Promise.all(
       todo.map(async (review) => {
         const text = review.text ?? "";
@@ -588,7 +594,10 @@ export async function scanAnalyzeCore(
             history: comparisonHistory,
             ...(sameDayOneStarCount !== undefined ? { context: { sameDayOneStarCount } } : {}),
             reviewer: { name: review.author },
-            business: { name: scan.business_name ?? undefined },
+            business: {
+              name: scan.business_name ?? undefined,
+              ...(businessCountry ? { country: businessCountry } : {}),
+            },
           },
           { usageContext: { scanId: scan.id, reviewId: review.id } },
         );
@@ -598,15 +607,14 @@ export async function scanAnalyzeCore(
             : null;
         const analysis: ReviewAnalysis = {
           ...(result.consensus ? { consensus: result.consensus } : {}),
-          risk: result.violates
-            ? result.confidence >= 85
-              ? "high"
-              : "medium"
-            : result.confidence < 60
-              ? "requires_review"
-              : "normal",
+          risk: classifyLayerRisk(result),
           category: result.violates ? result.policy : null,
-          signals: result.violates ? [result.evidence] : [],
+          signals:
+            result.violates &&
+            (result.source === "rules" || supportedQuote !== null) &&
+            result.evidence.trim()
+              ? [result.evidence]
+              : [],
           reason:
             result.source === "rules"
               ? `Rules engine detected a ${result.policy} signal. This is an automated indicator, not proof of a policy violation.`
@@ -706,7 +714,7 @@ export async function scanAnalyzeCore(
             : layerById.get(f.review.id) === "rules"
               ? "rating-guard-rules-v1"
               : layerById.get(f.review.id) === "ollama"
-                ? (process.env["OLLAMA_MODEL"] ?? "llama3.1:8b")
+                ? (process.env["OLLAMA_MODEL"] ?? "llama3.2:3b")
                 : "gpt-4o",
         analysis_provider:
           f.verification &&
@@ -812,7 +820,7 @@ export async function scanAnalyzeCore(
         ? `Review the ${high + medium} flagged review(s) and verify the evidence. Rating Guard uses Google Places API for review data and cannot submit reports; open the business in Google Maps to check for any available manual reporting option.`
         : n("requires_review") > 0
           ? `${n("requires_review")} review(s) require manual assessment. No clean-result conclusion or reporting recommendation is available until they are reviewed.`
-          : "No potentially risky reviews detected among the available reviews. No reporting action recommended.";
+          : "No supported policy signal detected in the available sample. This does not verify review authenticity; no reporting action is recommended.";
     const rep = await supabase.from("reports").upsert(
       {
         scan_id: scan.id,

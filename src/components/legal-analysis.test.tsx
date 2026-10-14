@@ -81,7 +81,7 @@ describe("Legal analysis report UI", () => {
       expect.stringContaining("Advertising & solicitation"),
     );
   });
-  it("labels supported scores as uncalibrated and not a verified probability", () => {
+  it("does not present uncalibrated model scores as removal probabilities", () => {
     const metadata = report.report_data;
     if (!metadata || typeof metadata !== "object" || Array.isArray(metadata))
       throw new Error("Missing fixture");
@@ -111,7 +111,9 @@ describe("Legal analysis report UI", () => {
         }}
       />,
     );
-    expect(screen.getByText(/60%.*uncalibrated AI estimate/)).toBeInTheDocument();
+    expect(screen.getByText(/Not estimable/)).toBeInTheDocument();
+    expect(screen.getByText(/Insufficient comparable outcome data/)).toBeInTheDocument();
+    expect(screen.queryByText(/60%/)).toBeNull();
     expect(screen.getByRole("button", { name: "Copy Legal Removal Request" })).toBeInTheDocument();
   });
 });

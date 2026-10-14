@@ -64,12 +64,19 @@ export const saveReportPdf = createServerFn({ method: "POST" })
     z
       .object({
         scanId: z.string().uuid(),
+        reviewId: z.string().uuid().optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     try {
-      return await generateOwnedReportPdf(context.supabase, context.userId, data.scanId);
+      return await generateOwnedReportPdf(
+        context.supabase,
+        context.userId,
+        data.scanId,
+        false,
+        data.reviewId,
+      );
     } catch (error) {
       console.error("[report-pdf] VPS export failed", error);
       throw error;

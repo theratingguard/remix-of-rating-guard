@@ -53,7 +53,106 @@ describe("ai orchestrator", () => {
     expect(gpt.analyze).not.toHaveBeenCalled();
   });
 
-  it("falls back to GPT when Ollama is unavailable or below threshold", async () => {
+  it("uses OLLAMA_URL for the local model service", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      if (String(input).endsWith("/api/tags")) return Response.json({ models: [] });
+      return Response.json({
+        response: JSON.stringify({
+          violates: false,
+          policy: "none",
+          confidence: 80,
+          evidence: "",
+        }),
+      });
+    });
+    vi.stubEnv("OLLAMA_URL", "http://ollama-test:11434/");
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const result = await analyzeReview(
+        { text: "A detailed account of a normal visit." },
+        {
+          rules: () => ({
+            violates: false,
+            policy: "none",
+            confidence: 0,
+            evidence: "No rule match",
+          }),
+          track: vi.fn(async () => undefined),
+        },
+      );
+
+      expect(result.source).toBe("ollama");
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        1,
+        "http://ollama-test:11434/api/tags",
+        expect.any(Object),
+      );
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        2,
+        "http://ollama-test:11434/api/generate",
+        expect.objectContaining({
+          body: expect.stringContaining(
+            '"model":"llama3.2:3b","stream":false,"format":"json","keep_alive":"24h","options":{"num_ctx":2048,"num_predict":128,"temperature":0}',
+          ),
+        }),
+      );
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("tries the configured fallback model when the primary model fails", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input).endsWith("/api/tags")) return Response.json({ models: [] });
+      const request = JSON.parse(String(init?.body)) as { model: string };
+      if (request.model === "llama3.2:3b") return new Response(null, { status: 500 });
+      return Response.json({
+        response: JSON.stringify({
+          violates: false,
+          policy: "none",
+          confidence: 80,
+          evidence: "",
+        }),
+      });
+    });
+    vi.stubEnv("OLLAMA_URL", "http://ollama-test:11434");
+    vi.stubEnv("OLLAMA_TIMEOUT_MS", "60000");
+    vi.stubEnv("OLLAMA_MODEL", "llama3.2:3b");
+    vi.stubEnv("OLLAMA_FALLBACK_MODEL", "llama3.1:8b");
+    vi.stubGlobal("fetch", fetchMock);
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
+
+    try {
+      const result = await analyzeReview(
+        { text: "A detailed account of a normal visit." },
+        {
+          rules: () => ({
+            violates: false,
+            policy: "none",
+            confidence: 0,
+            evidence: "No rule match",
+          }),
+          track: vi.fn(async () => undefined),
+        },
+      );
+
+      expect(result.source).toBe("ollama");
+      expect(
+        fetchMock.mock.calls
+          .filter(([, init]) => !!init?.body)
+          .map(([, init]) => JSON.parse(String(init?.body)).model),
+      ).toEqual(["llama3.2:3b", "llama3.1:8b"]);
+      expect(timeoutSpy).toHaveBeenCalledWith(60_000);
+    } finally {
+      timeoutSpy.mockRestore();
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("uses GPT fallback instead of accepting a low-confidence Ollama result", async () => {
     const rules = vi.fn(() => ({
       violates: false,
       policy: "none",
@@ -62,25 +161,32 @@ describe("ai orchestrator", () => {
       source: "rules" as const,
     }));
     const ollama = {
-      isAvailable: vi.fn(() => false),
-      analyze: vi.fn(),
+      isAvailable: vi.fn(() => true),
+      analyze: vi.fn(async () => ({
+        violates: true,
+        policy: "spam",
+        confidence: 42,
+        evidence: "Promotion",
+        source: "ollama" as const,
+      })),
     };
     const gpt = {
       analyze: vi.fn(async () => ({
-        violates: true,
-        policy: "prohibited_content",
-        confidence: 74,
-        evidence: "Threatening language",
+        violates: false,
+        policy: "none",
+        confidence: 75,
+        evidence: "",
         source: "gpt" as const,
       })),
     };
 
     const result = await analyzeReview(
-      { text: "I will hurt you if you do not fix this." },
+      { text: "A review with uncertain promotional language." },
       { rules, ollama, gpt },
     );
     expect(result.source).toBe("gpt");
-    expect(gpt.analyze).toHaveBeenCalledTimes(1);
+    expect(result.confidence).toBe(75);
+    expect(gpt.analyze).toHaveBeenCalledOnce();
   });
 
   it("accepts a confidence threshold only when it is high enough", async () => {
@@ -135,6 +241,36 @@ describe("ai orchestrator", () => {
     expect(result.source).toBe("rules");
     expect(ollama.isAvailable).not.toHaveBeenCalled();
     expect(gpt.analyze).not.toHaveBeenCalled();
+  });
+
+  it("does not treat a high-confidence non-violation from rules as a complete analysis", async () => {
+    const ollama = {
+      isAvailable: vi.fn(() => true),
+      analyze: vi.fn(async () => ({
+        violates: false,
+        policy: "none",
+        confidence: 80,
+        evidence: "",
+        source: "ollama" as const,
+      })),
+    };
+    const result = await analyzeReview(
+      { text: "A detailed account of a normal visit." },
+      {
+        rules: () => ({
+          violates: false,
+          policy: "none",
+          confidence: 90,
+          evidence: "No rule match",
+        }),
+        ollama,
+        gpt: { analyze: vi.fn() },
+        track: vi.fn(async () => undefined),
+      },
+    );
+
+    expect(ollama.analyze).toHaveBeenCalledOnce();
+    expect(result.source).toBe("ollama");
   });
 
   it("falls through to GPT when Ollama throws", async () => {

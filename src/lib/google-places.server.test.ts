@@ -61,6 +61,17 @@ describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
     });
     expect(fetch).not.toHaveBeenCalled();
   });
+  it("explains when a specific review link cannot identify a resolvable business", async () => {
+    await expect(
+      resolveAndFetchPlace(
+        "test-key",
+        "https://www.google.com/maps/reviews/data=!4m8!14m7!1m6!1sreview-id",
+      ),
+    ).rejects.toMatchObject({
+      code: "INVALID_URL",
+      message: expect.stringContaining("does not identify a business"),
+    });
+  });
   it.each([
     "https://127.0.0.1/maps",
     "http://www.google.com/maps",

@@ -4,13 +4,15 @@ export function starBreakdown(reviews: Pick<AnalyzedReview, "rating">[]) {
   return [1, 2, 3, 4, 5].map((star) => reviews.filter((review) => review.rating === star).length);
 }
 export function removalBand(item?: LegalReview) {
-  const score = item?.violates_policy ? item.removal_likelihood : 0;
+  const score = item?.violates_policy ? item.prediction?.probability : null;
+  if (score === null || score === undefined) return "not_estimable";
   return score >= 70 ? "high" : score >= 40 ? "medium" : "low";
 }
 export function removalSummary(items: LegalReview[], total: number) {
   const high = items.filter((item) => removalBand(item) === "high").length;
   const medium = items.filter((item) => removalBand(item) === "medium").length;
-  return { high, medium, low: Math.max(0, total - high - medium) };
+  const low = items.filter((item) => removalBand(item) === "low").length;
+  return { high, medium, low, notEstimable: Math.max(0, total - high - medium - low) };
 }
 export function parseBulkInput(text: string) {
   const seen = new Set<string>();

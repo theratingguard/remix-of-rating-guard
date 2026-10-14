@@ -310,10 +310,24 @@ function SettingsPage() {
                   <Row
                     key={layer}
                     k={label}
-                    v={`Actual ${actual?.handled_percent.toFixed(1) ?? "0.0"}% (${actual?.cases ?? 0}) · $${(actual?.cost_usd ?? 0).toFixed(4)} · ${actual?.avg_duration_ms ?? 0}ms avg · target ${target.handledPercent}%`}
+                    v={`${actual?.handled_percent.toFixed(1) ?? "0.0"}% · ${actual?.cases ?? 0} cases · ${
+                      layer === "gpt" ? `$${(actual?.cost_usd ?? 0).toFixed(4)}` : "₹0"
+                    } · ${actual?.avg_duration_ms ?? 0}ms avg · target ${target.handledPercent}%`}
                   />
                 );
               })}
+              <Row
+                k="Average cost per scan (month)"
+                v={`$${(aiUsageQ.data?.month_avg_cost_per_scan_usd ?? 0).toFixed(4)} · ${
+                  aiUsageQ.data?.month_scan_count ?? 0
+                } scans`}
+              />
+              <Row
+                k="Latest scan cost"
+                v={`$${(aiUsageQ.data?.latest_scan_cost_usd ?? 0).toFixed(4)} · ${
+                  aiUsageQ.data?.latest_scan_cases ?? 0
+                } reviews`}
+              />
               <Row
                 k="Today"
                 v={`$${(aiUsageQ.data?.today_cost_usd ?? 0).toFixed(4)} · ${aiUsageQ.data?.today_cases ?? 0} cases`}

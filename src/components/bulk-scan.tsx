@@ -13,8 +13,18 @@ import { parseBulkInput, csvCell } from "@/lib/review-metrics";
 import { Button } from "@/components/ui/button";
 import { isGoogleMapsUrl } from "@/lib/google-url";
 import { MAX_BULK_INPUTS } from "@/lib/bulk-import";
+import { uploadStorageFile } from "@/lib/storage.functions";
 export const isGoogleUrl = isGoogleMapsUrl;
 type BatchJobs = Awaited<ReturnType<typeof getBatchJobs>>;
+
+function encodeBase64(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const chunks: string[] = [];
+  for (let offset = 0; offset < bytes.length; offset += 0x8000)
+    chunks.push(String.fromCharCode(...bytes.subarray(offset, offset + 0x8000)));
+  return { size: bytes.length, base64: btoa(chunks.join("")) };
+}
+
 function hasFetchedReviews(job: BatchJobs["jobs"][number]) {
   return job.scan && (job.status === "completed" || job.scan.reviews_retrieved > 0);
 }
@@ -24,12 +34,14 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
   const control = useServerFn(controlBatch);
   const retry = useServerFn(retryJob);
   const latest = useServerFn(latestBatch);
+  const saveCsv = useServerFn(uploadStorageFile);
   const qc = useQueryClient();
   const [mode, setMode] = useState<"paste" | "pdf" | "spreadsheet">("paste");
   const [text, setText] = useState("");
   const [batch, setBatch] = useState<{ id: string; batch_number: number } | null>(null);
   const [state, setState] = useState<BatchJobs | null>(null);
   const [busy, setBusy] = useState(false);
+  const [csvUrl, setCsvUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const checked = parseBulkInput(text);
   useEffect(() => {
@@ -120,7 +132,11 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       setBusy(false);
     }
   }
-  function exportCsv() {
+  async function exportCsv() {
+    if (!batch) {
+      setError("Start or load a batch before saving its CSV.");
+      return;
+    }
     const header = [
       "#",
       "Business",
@@ -133,9 +149,10 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       "3-star",
       "4-star",
       "5-star",
-      "High advisory",
-      "Medium advisory",
-      "Low advisory",
+      "High outcome cohort",
+      "Medium outcome cohort",
+      "Low outcome cohort",
+      "Not estimable",
       "Report URL",
       "Status",
       "Error",
@@ -151,22 +168,35 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       job.reportUrl ? job.removal.high : "",
       job.reportUrl ? job.removal.medium : "",
       job.reportUrl ? job.removal.low : "",
+      job.reportUrl ? job.removal.notEstimable : "",
       job.reportUrl,
       job.status,
       job.error,
     ]);
-    const url = URL.createObjectURL(
-      new Blob([[header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n")], {
-        type: "text/csv;charset=utf-8",
-      }),
-    );
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `bulk-${batch?.id}.csv`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setBusy(true);
+    setError(null);
+    setCsvUrl(null);
+    try {
+      const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
+      const encoded = encodeBase64(csv);
+      if (encoded.size > 24 * 1024 * 1024)
+        throw new Error("CSV exceeds the 24 MB VPS storage limit.");
+      const filename = `bulk-${batch.id}.csv`;
+      const saved = await saveCsv({
+        data: {
+          folder: "reports",
+          filename,
+          contentType: "text/csv;charset=utf-8",
+          base64: encoded.base64,
+        },
+      });
+      const query = new URLSearchParams({ folder: saved.folder, filename });
+      setCsvUrl(`/api/storage/download?${query.toString()}`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not save CSV to VPS storage.");
+    } finally {
+      setBusy(false);
+    }
   }
   const finished = jobs.filter((job) =>
     ["completed", "partial", "failed", "cancelled"].includes(job.status),
@@ -310,10 +340,22 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
             >
               Cancel
             </Button>
-            <Button variant="outline" disabled={!jobs.length} onClick={exportCsv}>
-              Export CSV
+            <Button
+              variant="outline"
+              disabled={!jobs.length || busy}
+              onClick={() => void exportCsv()}
+            >
+              Save CSV to VPS
             </Button>
           </div>
+          {csvUrl && (
+            <p role="status" className="mb-3 text-sm">
+              CSV saved privately on VPS storage.{" "}
+              <a className="text-brand underline" href={csvUrl}>
+                Open or download CSV
+              </a>
+            </p>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -328,7 +370,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
                     "3★",
                     "4★",
                     "5★",
-                    "Removal Possible (advisory)",
+                    "Outcome cohort estimate",
                     "Status",
                     "Action",
                   ].map((label) => (
@@ -358,7 +400,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
                     ))}
                     <td className="p-2">
                       {job.reportUrl
-                        ? `🔴 ${job.removal.high} / 🟠 ${job.removal.medium} / 🟡 ${job.removal.low}`
+                        ? `🔴 ${job.removal.high} / 🟠 ${job.removal.medium} / 🟡 ${job.removal.low} / N/E ${job.removal.notEstimable}`
                         : "—"}
                     </td>
                     <td className="p-2">

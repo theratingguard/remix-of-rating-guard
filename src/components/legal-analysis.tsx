@@ -142,12 +142,6 @@ export function LegalAnalysisPanel({
                 Evidence quote: {item.evidence_quote || "No supported policy evidence"}
               </p>
               <p className="my-2 text-sm">Legal grounds: {item.legal_grounds}</p>
-              <p className="font-semibold">
-                Removal likelihood:{" "}
-                {item.violates_policy
-                  ? `${item.removal_likelihood}% — uncalibrated AI estimate, not verified probability`
-                  : "Not estimable (0 score; insufficient evidence)"}
-              </p>
               <p className="my-2">{item.reasoning}</p>
               {item.quality && <ReviewQualityPanel quality={item.quality} />}
               <RemovalPredictionPanel prediction={item.prediction} />

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isGoogleMapsUrl, normalizeGoogleUrl } from "./google-url";
+import {
+  isGoogleMapsUrl,
+  isGoogleReviewUrl,
+  normalizeGoogleUrl,
+  sameGoogleReviewUrl,
+} from "./google-url";
 import { isPublicAddress } from "./google-places.server";
 
 describe("Google URL and network admission", () => {
@@ -25,6 +30,26 @@ describe("Google URL and network admission", () => {
     "https://share.google/nN5vuOSivyLDtXdAu",
     "https://www.google.com/share.google?q=nN5vuOSivyLDtXdAu",
   ])("accepts supported provider URL %s", (url) => expect(isGoogleMapsUrl(url)).toBe(true));
+  it.each([
+    "https://www.google.com/maps/reviews/data=!4m8!14m7!1m6!1sreview-id",
+    "https://www.google.com/maps/contrib/123/reviews",
+    "https://www.google.com/maps/place/Test?reviewId=review-id",
+  ])("recognizes a specific review URL %s", (url) => expect(isGoogleReviewUrl(url)).toBe(true));
+  it.each([
+    "https://www.google.com/maps/place/Test",
+    "https://maps.app.goo.gl/ABC",
+    "https://attacker.example/maps/reviews/data=review-id",
+  ])("does not classify business/unsupported URLs as review URLs: %s", (url) =>
+    expect(isGoogleReviewUrl(url)).toBe(false),
+  );
+  it("matches equivalent review links while ignoring query order and fragments", () => {
+    expect(
+      sameGoogleReviewUrl(
+        "https://www.google.com/maps/reviews/data=review-id?hl=en&entry=ttu#review",
+        "https://www.google.com/maps/reviews/data=review-id?entry=ttu&hl=en",
+      ),
+    ).toBe(true);
+  });
   it("preserves case-sensitive short links and query values", () => {
     expect(normalizeGoogleUrl("https://maps.app.goo.gl/AbC#fragment")).toBe(
       "https://maps.app.goo.gl/AbC",

@@ -121,7 +121,7 @@ function database(options: { owner?: boolean; status?: string; updateFailure?: b
 }
 
 describe("VPS PDF persistence", () => {
-  it("escapes legal evidence, displays advisory scores and includes supported draft text", () => {
+  it("escapes legal evidence, hides uncalibrated scores and includes supported draft text", () => {
     const review: AnalyzedReview = {
       id: scanId,
       author: "<script>author</script>",
@@ -151,7 +151,9 @@ describe("VPS PDF persistence", () => {
       [review],
     );
     expect(html).toContain("Legal Expert Analysis");
-    expect(html).toContain("60% (uncalibrated AI estimate");
+    expect(html).toContain("Historical prediction not assessed in this report.");
+    expect(html).toContain("uncalibrated AI score is not shown as a probability");
+    expect(html).not.toContain("60%");
     expect(html).toContain("Unit formal draft");
     expect(html).toContain("&lt;script&gt;evidence&lt;/script&gt;");
     expect(html).not.toContain("<script>");
@@ -168,22 +170,20 @@ describe("VPS PDF persistence", () => {
   });
   it("rejects traversal and malformed PDF bytes without writing files", async () => {
     await expect(saveReportToVPS("../escape", pdf, userId)).rejects.toThrow();
-    await expect(saveReportToVPS(scanId, Buffer.from("%PDF-fake\n%%EOF"), userId)).rejects.toThrow();
+    await expect(
+      saveReportToVPS(scanId, Buffer.from("%PDF-fake\n%%EOF"), userId),
+    ).rejects.toThrow();
     expect(await readdir(directory)).toEqual([]);
   });
   it("rejects oversized files before parsing or writing", async () => {
-    await expect(saveReportToVPS(scanId, Buffer.alloc(MAX_REPORT_PDF_BYTES + 1), scanId)).rejects.toThrow(
-      "24 MB",
-    );
+    await expect(
+      saveReportToVPS(scanId, Buffer.alloc(MAX_REPORT_PDF_BYTES + 1), scanId),
+    ).rejects.toThrow("24 MB");
     expect(await readdir(directory)).toEqual([]);
   });
   it("preserves report metadata and persists its PDF URL only for the owner", async () => {
     const db = database();
-    const result = await generateOwnedReportPdf(
-      db.client,
-      userId,
-      scanId,
-    );
+    const result = await generateOwnedReportPdf(db.client, userId, scanId);
     expect(db.writes).toHaveLength(1);
     expect(db.writes[0]).toMatchObject({
       report_data: {
@@ -222,6 +222,20 @@ describe("VPS PDF persistence", () => {
       `${scanId}.pdf`,
       `${scanId}_legal.pdf`,
     ]);
+  });
+  it("refuses to prepare a per-review report for an unflagged review", async () => {
+    const db = database();
+    await expect(
+      generateOwnedReportPdf(
+        db.client,
+        userId,
+        scanId,
+        false,
+        "b8c10010-0e10-487f-a50f-61c8cb1276d4",
+      ),
+    ).rejects.toThrow("Only a review with a supported high or medium policy signal");
+    expect(db.writes).toHaveLength(0);
+    expect(await readdir(directory)).toEqual([]);
   });
   it.each([{ owner: false }, { status: "failed" }, { status: "running" }])(
     "does not publish unauthorized or incomplete reports: %j",

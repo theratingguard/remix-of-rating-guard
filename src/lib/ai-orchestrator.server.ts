@@ -42,7 +42,19 @@ const ollamaOutputSchema = z.object({
 });
 
 const ollamaBaseUrl = () =>
-  (process.env["OLLAMA_BASE_URL"] ?? "http://127.0.0.1:11434").replace(/\/+$/, "");
+  (process.env["OLLAMA_URL"] ?? process.env["OLLAMA_BASE_URL"] ?? "http://127.0.0.1:11434").replace(
+    /\/+$/,
+    "",
+  );
+
+const ollamaTimeoutMs = () => {
+  const timeoutMs = Number(process.env["OLLAMA_TIMEOUT_MS"] ?? 60_000);
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1_000) {
+    console.warn("[ai-orchestrator] Invalid OLLAMA_TIMEOUT_MS; using 60000ms.");
+    return 60_000;
+  }
+  return timeoutMs;
+};
 
 let ollamaAvailability: { checkedAt: number; available: boolean } | undefined;
 
@@ -65,16 +77,26 @@ async function isOllamaAvailable() {
   }
 }
 
-async function analyzeWithOllama(review: RulesReview): Promise<LayerResult> {
+async function analyzeWithOllamaModel(
+  review: RulesReview,
+  model: string,
+  timeoutMs: number,
+): Promise<LayerResult> {
   const text = review.text ?? review.reviewText ?? "";
   const response = await fetch(`${ollamaBaseUrl()}/api/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(timeoutMs),
     body: JSON.stringify({
-      model: process.env["OLLAMA_MODEL"] ?? "llama3.1:8b",
+      model,
       stream: false,
       format: "json",
+      keep_alive: "24h",
+      options: {
+        num_ctx: 2048,
+        num_predict: 128,
+        temperature: 0,
+      },
       prompt: [
         "Assess only the supplied Google review for an explicit Google review-policy concern.",
         "A negative opinion, short text, or missing reviewer metadata alone is not proof.",
@@ -90,6 +112,28 @@ async function analyzeWithOllama(review: RulesReview): Promise<LayerResult> {
   if (result.evidence && !text.includes(result.evidence))
     throw new Error("Ollama returned evidence that is not present in the source review.");
   return { ...result, source: "ollama" };
+}
+
+async function analyzeWithOllama(review: RulesReview): Promise<LayerResult> {
+  const model = process.env["OLLAMA_MODEL"] ?? "llama3.2:3b";
+  const fallbackModel = process.env["OLLAMA_FALLBACK_MODEL"] ?? "llama3.1:8b";
+  const timeoutMs = ollamaTimeoutMs();
+  let result: LayerResult;
+
+  try {
+    result = await analyzeWithOllamaModel(review, model, timeoutMs);
+  } catch (error) {
+    if (fallbackModel === model) throw error;
+    console.warn(
+      "[ai-orchestrator] Primary Ollama model failed; trying the fallback model.",
+      error instanceof Error ? error.message : "Unknown Ollama error",
+    );
+    return analyzeWithOllamaModel(review, fallbackModel, timeoutMs);
+  }
+
+  if (result.confidence < 60)
+    console.warn("[ai-orchestrator] Low-confidence Ollama result will use the GPT fallback.");
+  return result;
 }
 
 async function analyzeWithGpt(review: RulesReview): Promise<LayerResult> {
@@ -138,7 +182,7 @@ export async function analyzeReview(
   const ruleResult = rules(review);
   let result: OrchestratorResult;
 
-  if (ruleResult.confidence >= 70) {
+  if (ruleResult.violates && ruleResult.confidence >= 70) {
     result = { ...ruleResult, source: "rules" };
   } else {
     const ollama = deps.ollama ?? { isAvailable: isOllamaAvailable, analyze: analyzeWithOllama };
@@ -155,6 +199,10 @@ export async function analyzeReview(
     if (ollamaResult && ollamaResult.confidence >= 60) {
       result = { ...ollamaResult, source: "ollama" };
     } else {
+      if (ollamaResult)
+        console.warn(
+          "[ai-orchestrator] Ollama confidence was below 60; requesting the configured GPT fallback.",
+        );
       const gpt = deps.gpt ?? { analyze: analyzeWithGpt };
       const gptResult = await gpt.analyze(review);
       result = { ...gptResult, source: "gpt" };

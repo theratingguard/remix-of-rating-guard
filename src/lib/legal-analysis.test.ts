@@ -151,7 +151,7 @@ describe("Legal Expert evidence boundaries", () => {
   });
   it("rejects untrusted or expired legal download URLs", () => {
     const metadata = {
-      legal_pdf_url: `https://ratingguard.online/reports/${review.id}_legal.pdf`,
+      legal_pdf_url: `https://ratingguard.online/api/storage/download?folder=reports%2F00000000-0000-4000-8000-000000000003&filename=${review.id}_legal.pdf`,
       legal_pdf_saved_at: new Date().toISOString(),
     };
     expect(savedLegalPdfUrl(metadata)).toBe(metadata.legal_pdf_url);

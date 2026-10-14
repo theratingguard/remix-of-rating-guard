@@ -30,5 +30,69 @@ export type AiLayerUsageSummary = {
   month_cases: number;
   today_cost_usd: number;
   month_cost_usd: number;
+  month_scan_count: number;
+  month_avg_cost_per_scan_usd: number;
+  latest_scan_cost_usd: number;
+  latest_scan_cases: number;
   layers: AiLayerUsage[];
 };
+
+export type AiLayerUsageRecord = {
+  scan_id: string | null;
+  layer: AiLayer;
+  duration_ms: number;
+  cost_usd: number;
+  created_at: string;
+};
+
+export function summarizeAiLayerUsage(
+  rows: readonly AiLayerUsageRecord[],
+  dayStart: string,
+): AiLayerUsageSummary {
+  const today = rows.filter((row) => row.created_at >= dayStart);
+  const todayCost = today.reduce((sum, row) => sum + row.cost_usd, 0);
+  const monthCost = rows.reduce((sum, row) => sum + row.cost_usd, 0);
+  const scanTotals = new Map<string, { cost: number; cases: number; lastSeen: string }>();
+
+  for (const row of rows) {
+    if (!row.scan_id) continue;
+    const total = scanTotals.get(row.scan_id) ?? {
+      cost: 0,
+      cases: 0,
+      lastSeen: row.created_at,
+    };
+    total.cost += row.cost_usd;
+    total.cases += 1;
+    if (row.created_at > total.lastSeen) total.lastSeen = row.created_at;
+    scanTotals.set(row.scan_id, total);
+  }
+
+  const latestScan = [...scanTotals.values()].reduce<
+    { cost: number; cases: number; lastSeen: string } | undefined
+  >((latest, scan) => (!latest || scan.lastSeen > latest.lastSeen ? scan : latest), undefined);
+  const trackedScanCost = [...scanTotals.values()].reduce((sum, scan) => sum + scan.cost, 0);
+
+  return {
+    today_cases: today.length,
+    month_cases: rows.length,
+    today_cost_usd: Number(todayCost.toFixed(6)),
+    month_cost_usd: Number(monthCost.toFixed(6)),
+    month_scan_count: scanTotals.size,
+    month_avg_cost_per_scan_usd: Number((trackedScanCost / (scanTotals.size || 1)).toFixed(6)),
+    latest_scan_cost_usd: Number((latestScan?.cost ?? 0).toFixed(6)),
+    latest_scan_cases: latestScan?.cases ?? 0,
+    layers: AI_LAYER_NAMES.map((layer) => {
+      const matching = rows.filter((row) => row.layer === layer);
+      const cost = matching.reduce((sum, row) => sum + row.cost_usd, 0);
+      const duration =
+        matching.reduce((sum, row) => sum + row.duration_ms, 0) / (matching.length || 1);
+      return {
+        layer,
+        cases: matching.length,
+        handled_percent: rows.length ? (matching.length / rows.length) * 100 : 0,
+        cost_usd: Number(cost.toFixed(6)),
+        avg_duration_ms: Math.round(duration),
+      };
+    }),
+  };
+}
