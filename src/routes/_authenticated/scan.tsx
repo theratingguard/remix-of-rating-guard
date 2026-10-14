@@ -5,8 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2, Search, KeyRound, AlertTriangle, X } from "lucide-react";
 import { scanFetch, scanAnalyze, getSystemStatus, findBusinesses } from "@/lib/scan.functions";
-import { scanQuery, scansQuery, scanRisk, type ScanRow } from "@/lib/data";
-import { exportScansCsv } from "@/lib/scan-csv";
+import { scanQuery, dashboardScansQuery, scanRisk, type DashboardScanRow } from "@/lib/data";
 import { toast } from "sonner";
 import { ReviewSelection } from "@/components/review-selection";
 import { LegalAnalysisPanel } from "@/components/legal-analysis";
@@ -45,7 +44,7 @@ const STEPS = [
   "Analyzing review signals",
   "Legal assessment and saving PDFs",
 ];
-const EMPTY_SCAN_ROWS: ScanRow[] = [];
+const EMPTY_SCAN_ROWS: DashboardScanRow[] = [];
 // Steps 1-3 belong to the server "fetch" stage, 4-5 to the "analyze" stage.
 type Phase = "idle" | "queued" | "fetch" | "analyze" | "legal" | "done" | "error";
 
@@ -134,7 +133,7 @@ function ScanPage() {
     "all" | "high" | "medium" | "normal" | "requires_review"
   >("all");
   const scansQueryResult = useQuery({
-    ...scansQuery(),
+    ...dashboardScansQuery(),
     refetchInterval: (query) =>
       query.state.data?.some((scan) => scan.status === "running" || scan.status === "pending")
         ? 2000
@@ -565,16 +564,12 @@ function ScanPage() {
             location={location}
             risk={riskFilter}
             onRiskFilterChange={setRiskFilter}
-            onRefresh={() => void qc.invalidateQueries({ queryKey: ["scans"] })}
+            onRefresh={() => void qc.invalidateQueries({ queryKey: ["dashboard-scans"] })}
             isRefreshing={scansQueryResult.isFetching}
           />
           {scanId && phase !== "fetch" && <ScanResult id={scanId} />}
         </main>
-        <RightPanel
-          scans={locationScans}
-          onExportCsv={() => exportScansCsv(locationScans)}
-          onRiskSelect={setRiskFilter}
-        />
+        <RightPanel scans={locationScans} onRiskSelect={setRiskFilter} />
       </div>
     </div>
   );

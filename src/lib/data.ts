@@ -58,12 +58,10 @@ export function savedPdfUrl(metadata: import("@/integrations/supabase/types").Js
 export function isPrivateStoragePdfUrl(url: string, filenamePattern: RegExp) {
   try {
     const parsed = new URL(url);
-    return (
-      parsed.origin === "https://ratingguard.online" &&
+    return parsed.origin === "https://ratingguard.online" &&
       parsed.pathname === "/api/storage/download" &&
       /^reports\/[0-9a-f-]{36}$/.test(parsed.searchParams.get("folder") ?? "") &&
       filenamePattern.test(parsed.searchParams.get("filename") ?? "")
-    )
       ? url
       : null;
   } catch {
@@ -99,6 +97,49 @@ export const scansQuery = () =>
 export type ScanRow = Awaited<
   ReturnType<NonNullable<ReturnType<typeof scansQuery>["queryFn"]>>
 >[number];
+
+export type DashboardScanRow = Pick<
+  Scan,
+  | "id"
+  | "is_seed"
+  | "business_name"
+  | "source_url"
+  | "address"
+  | "status"
+  | "rating"
+  | "reviews_retrieved"
+  | "high_count"
+  | "medium_count"
+  | "normal_count"
+  | "requires_review_count"
+  | "created_at"
+  | "error"
+> & { reports: Pick<Report, "report_number"> | null };
+
+export const dashboardScansQuery = () =>
+  queryOptions({
+    queryKey: ["dashboard-scans"],
+    queryFn: async () => {
+      const scans: DashboardScanRow[] = [];
+      for (let offset = 0; ; offset += 100) {
+        const { data, error } = await supabase
+          .from("scans")
+          .select(
+            "id,is_seed,business_name,source_url,address,status,rating,reviews_retrieved,high_count,medium_count,normal_count,requires_review_count,created_at,error,reports!reports_scan_id_fkey(report_number)",
+          )
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(offset, offset + 99);
+        if (error) throw error;
+        scans.push(...data);
+        if (data.length < 100) return scans;
+        if (scans.length >= 50000)
+          throw new Error(
+            "History exceeds 50,000 scans; narrow server-side history before loading.",
+          );
+      }
+    },
+  });
 
 export const scanQuery = (id: string) =>
   queryOptions({

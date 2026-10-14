@@ -1,7 +1,7 @@
 import { Activity, AlertTriangle, CheckCircle2, Clock3, XCircle } from "lucide-react";
-import type { ScanRow } from "@/lib/data";
+import type { DashboardScanRow } from "@/lib/data";
 
-export function ScanProgress({ scans }: { scans: ScanRow[] }) {
+export function ScanProgress({ scans }: { scans: DashboardScanRow[] }) {
   const complete = scans.filter((scan) => scan.status === "complete").length;
   const active = scans.filter((scan) => scan.status === "running" || scan.status === "pending");
   const failed = scans.filter((scan) => scan.status === "failed").length;

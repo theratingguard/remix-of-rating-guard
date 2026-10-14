@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Download, ExternalLink, FileText, MapPin } from "lucide-react";
-import type { ScanRow } from "@/lib/data";
+import { ExternalLink, FileText, MapPin } from "lucide-react";
+import type { DashboardScanRow } from "@/lib/data";
 import { scanRisk } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { PrivatePdfButton } from "@/components/private-pdf-button";
+import { ScansCsvExportButton } from "@/components/scans-csv-export-button";
 
 const segments = [
   { key: "high_count", label: "High risk", color: "#ef4444" },
@@ -14,11 +15,9 @@ const segments = [
 
 export function RightPanel({
   scans,
-  onExportCsv,
   onRiskSelect,
 }: {
-  scans: ScanRow[];
-  onExportCsv: () => void;
+  scans: DashboardScanRow[];
   onRiskSelect: (risk: "high" | "medium" | "normal" | "requires_review") => void;
 }) {
   const latest = scans[0];
@@ -169,14 +168,11 @@ export function RightPanel({
             </button>
           ))}
         </div>
-        <Button
-          variant="outline"
-          className="mt-3 w-full"
-          onClick={onExportCsv}
-          disabled={!scans.length}
-        >
-          <Download className="mr-2 h-4 w-4" /> Export scan CSV
-        </Button>
+        <ScansCsvExportButton
+          scans={scans}
+          label="Save scan CSV to VPS"
+          className="mt-3 [&>button]:w-full"
+        />
         {latest.status === "complete" && (
           <div className="[&>button]:mt-2 [&>button]:w-full">
             <PrivatePdfButton scanId={latest.id} variant="full">

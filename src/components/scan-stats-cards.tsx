@@ -1,7 +1,7 @@
 import { Activity, AlertTriangle, CheckCircle2, Globe2, ShieldCheck } from "lucide-react";
-import type { ScanRow } from "@/lib/data";
+import type { DashboardScanRow } from "@/lib/data";
 
-export function ScanStatsCards({ scans }: { scans: ScanRow[] }) {
+export function ScanStatsCards({ scans }: { scans: DashboardScanRow[] }) {
   const completed = scans.filter((scan) => scan.status === "complete");
   const total = (key: "high_count" | "medium_count" | "normal_count") =>
     completed.reduce((sum, scan) => sum + scan[key], 0);

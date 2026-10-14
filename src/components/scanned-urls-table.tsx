@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Download, ExternalLink, RefreshCw, Search } from "lucide-react";
-import type { ScanRow } from "@/lib/data";
+import { ExternalLink, RefreshCw, Search } from "lucide-react";
+import type { DashboardScanRow } from "@/lib/data";
 import { scanRisk } from "@/lib/data";
-import { exportScansCsv } from "@/lib/scan-csv";
+import { ScansCsvExportButton } from "@/components/scans-csv-export-button";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/app-shell";
 
@@ -19,7 +19,7 @@ export function ScannedUrlsTable({
   onRefresh,
   isRefreshing,
 }: {
-  scans: ScanRow[];
+  scans: DashboardScanRow[];
   search: string;
   location: string;
   risk: RiskFilter;
@@ -111,15 +111,7 @@ export function ScannedUrlsTable({
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => exportScansCsv(rows)}
-            disabled={!rows.length}
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </Button>
+          <ScansCsvExportButton scans={rows} label="Save CSV to VPS" />
         </div>
       </div>
       <div className="overflow-x-auto">

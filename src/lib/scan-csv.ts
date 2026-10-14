@@ -1,4 +1,4 @@
-import type { ScanRow } from "@/lib/data";
+import type { DashboardScanRow } from "@/lib/data";
 
 function csvCell(value: string | number) {
   const text = String(value);
@@ -6,7 +6,7 @@ function csvCell(value: string | number) {
   return `"${safe.replaceAll('"', '""')}"`;
 }
 
-export function exportScansCsv(scans: ScanRow[]) {
+export function createScansCsv(scans: DashboardScanRow[]) {
   const rows = [
     [
       "Business Name",
@@ -33,11 +33,5 @@ export function exportScansCsv(scans: ScanRow[]) {
       scan.created_at,
     ]),
   ];
-  const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `rating-guard-scans-${new Date().toISOString().slice(0, 10)}.csv`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  return `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
 }
