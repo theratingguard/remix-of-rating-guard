@@ -7,6 +7,7 @@ const api = vi.hoisted(() => ({
   retry: vi.fn(),
   latest: vi.fn(async () => null),
   saveCsv: vi.fn(),
+  getSession: vi.fn(),
 }));
 vi.mock("@/lib/queue.functions", () => ({
   enqueueBatch: api.enqueue,
@@ -16,6 +17,9 @@ vi.mock("@/lib/queue.functions", () => ({
   latestBatch: api.latest,
 }));
 vi.mock("@/lib/storage.functions", () => ({ uploadStorageFile: api.saveCsv }));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { auth: { getSession: api.getSession } },
+}));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
@@ -129,7 +133,8 @@ describe("Durable bulk UI", () => {
     const binary = atob(request.data.base64);
     const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
     const csv = new TextDecoder().decode(bytes);
-    expect(screen.getByRole("link", { name: "Open or download CSV" })).toHaveAttribute(
+    const csvLink = screen.getByRole("link", { name: "Open or download CSV" });
+    expect(csvLink).toHaveAttribute(
       "href",
       "/api/storage/download?folder=reports%2Fowner&filename=bulk-00000000-0000-4000-8000-000000000001.csv",
     );
@@ -140,6 +145,22 @@ describe("Durable bulk UI", () => {
     );
     expect(csv).toContain('"3","","Failed City"');
     expect(csv).toContain('"failed","Exact fixture failure"');
+
+    api.getSession.mockResolvedValue({
+      data: { session: { access_token: "valid-session-token" } },
+      error: null,
+    });
+    const fetchStub = vi.fn().mockResolvedValue(new Response("csv-data", { status: 200 }));
+    vi.stubGlobal("fetch", fetchStub);
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:private-csv");
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    fireEvent.click(csvLink);
+    await waitFor(() =>
+      expect(fetchStub).toHaveBeenCalledWith(
+        "/api/storage/download?folder=reports%2Fowner&filename=bulk-00000000-0000-4000-8000-000000000001.csv",
+        { headers: { Authorization: "Bearer valid-session-token" } },
+      ),
+    );
   });
 
   it("shows a completed batch after every job reaches a terminal state", async () => {

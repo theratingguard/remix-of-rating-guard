@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { isGoogleMapsUrl } from "@/lib/google-url";
 import { MAX_BULK_INPUTS } from "@/lib/bulk-import";
 import { uploadStorageFile } from "@/lib/storage.functions";
+import { supabase } from "@/integrations/supabase/client";
 export const isGoogleUrl = isGoogleMapsUrl;
 type BatchJobs = Awaited<ReturnType<typeof getBatchJobs>>;
 
@@ -204,6 +205,28 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       setBusy(false);
     }
   }
+  async function downloadCsv(event: React.MouseEvent<HTMLAnchorElement>, url: string) {
+    event.preventDefault();
+    setError(null);
+    try {
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = data.session?.access_token;
+      if (!token) throw new Error("Sign in again to download this private CSV.");
+      const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error(`CSV download failed [${response.status}].`);
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const anchor = document.createElement("a");
+      anchor.href = blobUrl;
+      anchor.download = `bulk-${batch?.id ?? "scan"}.csv`;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not download the saved CSV.");
+    }
+  }
   return (
     <section className="mt-6 rounded-2xl bg-card p-4 text-left">
       <h2 className="font-bold">Bulk Scan</h2>
@@ -354,7 +377,11 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
           {csvUrl && (
             <p role="status" className="mb-3 text-sm">
               CSV saved privately on VPS storage.{" "}
-              <a className="text-brand underline" href={csvUrl}>
+              <a
+                className="text-brand underline"
+                href={csvUrl}
+                onClick={(event) => void downloadCsv(event, csvUrl)}
+              >
                 Open or download CSV
               </a>
             </p>
