@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  countryCodeFromAddress,
   getRegionalStrategy,
   isRegion,
   regionForCountryCode,
@@ -40,6 +41,14 @@ describe("regional routing", () => {
     expect(regionFromPlace(null, "IN")).toBe("IN");
     expect(regionFromPlace("GB", null)).toBe("UK");
     expect(regionFromPlace(null, null)).toBe("OTHER");
+  });
+
+  it("detects filterable country codes from supported formatted-address suffixes", () => {
+    expect(countryCodeFromAddress("London, United Kingdom")).toBe("GB");
+    expect(countryCodeFromAddress("Karachi, Pakistan")).toBe("PK");
+    expect(countryCodeFromAddress("Albany, NY, USA")).toBe("US");
+    expect(countryCodeFromAddress("Delhi, India")).toBe("IN");
+    expect(countryCodeFromAddress("Paris, France")).toBeNull();
   });
 
   it("records whether Google, its formatted address, or manual fallback supplied the country", () => {

@@ -262,6 +262,22 @@ export function regionForAddress(address: string | null | undefined): Region {
   return aliases[lastSegment] ?? "OTHER";
 }
 
+export function countryCodeFromAddress(address: string | null | undefined): string | null {
+  const country = address?.split(",").at(-1)?.trim().toLowerCase();
+  if (!country) return null;
+  const codes: Record<string, string> = {
+    "united states": "US",
+    "united states of america": "US",
+    usa: "US",
+    "united kingdom": "GB",
+    uk: "GB",
+    britain: "GB",
+    india: "IN",
+    pakistan: "PK",
+  };
+  return codes[country] ?? null;
+}
+
 export function getRegionalStrategy(region: Region): RegionalStrategy {
   return {
     region,

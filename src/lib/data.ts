@@ -105,6 +105,7 @@ export type DashboardScanRow = Pick<
   | "business_name"
   | "source_url"
   | "address"
+  | "region"
   | "status"
   | "rating"
   | "reviews_retrieved"
@@ -125,7 +126,7 @@ export const dashboardScansQuery = () =>
         const { data, error } = await supabase
           .from("scans")
           .select(
-            "id,is_seed,business_name,source_url,address,status,rating,reviews_retrieved,high_count,medium_count,normal_count,requires_review_count,created_at,error,reports!reports_scan_id_fkey(report_number)",
+            "id,is_seed,business_name,source_url,address,region,status,rating,reviews_retrieved,high_count,medium_count,normal_count,requires_review_count,created_at,error,reports!reports_scan_id_fkey(report_number)",
           )
           .order("created_at", { ascending: false })
           .order("id")

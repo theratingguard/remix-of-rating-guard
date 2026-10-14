@@ -22,9 +22,17 @@ vi.mock("@/components/app-shell", () => ({
   StatusPill: ({ status }: { status: string }) => <span>{status}</span>,
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
-function scan(id: string, name: string, risk: "high" | "medium" | "normal"): ScanRow {
+function scan(
+  id: string,
+  name: string,
+  risk: "high" | "medium" | "normal",
+  overrides: Partial<ScanRow> = {},
+): ScanRow {
   return {
     id,
     business_name: name,
@@ -39,6 +47,8 @@ function scan(id: string, name: string, risk: "high" | "medium" | "normal"): Sca
     requires_review_count: 0,
     created_at: "2026-10-12T10:00:00.000Z",
     reports: null,
+    region: "OTHER",
+    ...overrides,
   } as ScanRow;
 }
 
@@ -52,7 +62,7 @@ describe("scanned URL table", () => {
       ),
     ];
     const onRiskFilterChange = vi.fn();
-    render(
+    const view = render(
       <ScannedUrlsTable
         scans={scans}
         search=""
@@ -89,5 +99,134 @@ describe("scanned URL table", () => {
     );
     expect(screen.getByText("No scans match these filters.")).toBeInTheDocument();
     expect(screen.getByText("Showing 0 to 0 of 0 results")).toBeInTheDocument();
+  });
+
+  it("filters country, rating, risk, and business name, and sorts alphabetically", () => {
+    const scans = [
+      scan("1", "Zulu Pakistan Cafe", "medium", {
+        region: "OTHER",
+        rating: 3.1,
+        address: "Lahore, Pakistan",
+      }),
+      scan("2", "Alpha India Hotel", "high", {
+        region: "IN",
+        rating: 4.8,
+        address: "Delhi, India",
+      }),
+      scan("3", "Mike USA Shop", "normal", {
+        region: "US",
+        rating: 2.2,
+        address: "Albany, USA",
+      }),
+    ];
+    const onRiskFilterChange = vi.fn();
+    const view = render(
+      <ScannedUrlsTable
+        scans={scans}
+        search=""
+        location=""
+        risk="all"
+        onRiskFilterChange={onRiskFilterChange}
+        onRefresh={vi.fn()}
+        isRefreshing={false}
+      />,
+    );
+
+    expect(screen.getAllByRole("row")[1]).toHaveTextContent("Alpha India Hotel");
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by country" }), {
+      target: { value: "PK" },
+    });
+    expect(screen.getByText("Zulu Pakistan Cafe")).toBeInTheDocument();
+    expect(screen.queryByText("Alpha India Hotel")).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by rating" }), {
+      target: { value: "3" },
+    });
+    expect(screen.getByText("Showing 1 to 1 of 1 results")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "All risk levels" }), {
+      target: { value: "medium" },
+    });
+    expect(onRiskFilterChange).toHaveBeenCalledWith("medium");
+    view.rerender(
+      <ScannedUrlsTable
+        scans={scans}
+        search=""
+        location=""
+        risk="medium"
+        onRiskFilterChange={onRiskFilterChange}
+        onRefresh={vi.fn()}
+        isRefreshing={false}
+      />,
+    );
+    expect(screen.getByText("Showing 1 to 1 of 1 results")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "Search business name" }), {
+      target: { value: "not found" },
+    });
+    expect(screen.getByText("No scans match these filters.")).toBeInTheDocument();
+  });
+
+  it("supports reverse alphabetical sorting and compact table sizing", () => {
+    const scans = [scan("1", "Alpha Cafe", "normal"), scan("2", "Zulu Hotel", "normal")];
+    render(
+      <ScannedUrlsTable
+        scans={scans}
+        search=""
+        location=""
+        risk="all"
+        onRiskFilterChange={vi.fn()}
+        onRefresh={vi.fn()}
+        isRefreshing={false}
+      />,
+    );
+    expect(screen.getAllByRole("row")[1]).toHaveTextContent("Alpha Cafe");
+    expect(screen.getAllByRole("row")[1]).toHaveClass("h-10");
+    expect(screen.getByRole("columnheader", { name: "Business name" })).toHaveClass("font-bold");
+    fireEvent.change(screen.getByRole("combobox", { name: "Sort businesses" }), {
+      target: { value: "desc" },
+    });
+    expect(screen.getAllByRole("row")[1]).toHaveTextContent("Zulu Hotel");
+  });
+
+  it("filters calendar ranges using local scan dates", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-14T12:00:00"));
+    const scans = [
+      scan("today", "Today Business", "normal", { created_at: "2026-10-14T08:00:00.000Z" }),
+      scan("week", "This Week Business", "normal", { created_at: "2026-10-13T08:00:00.000Z" }),
+      scan("month", "Earlier Business", "normal", { created_at: "2026-10-08T08:00:00.000Z" }),
+    ];
+    render(
+      <ScannedUrlsTable
+        scans={scans}
+        search=""
+        location=""
+        risk="all"
+        onRiskFilterChange={vi.fn()}
+        onRefresh={vi.fn()}
+        isRefreshing={false}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by date" }), {
+      target: { value: "week" },
+    });
+    expect(screen.getByText("Showing 1 to 2 of 2 results")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by date" }), {
+      target: { value: "today" },
+    });
+    expect(screen.getByText("Showing 1 to 1 of 1 results")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by date" }), {
+      target: { value: "month" },
+    });
+    expect(screen.getByText("Showing 1 to 3 of 3 results")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by date" }), {
+      target: { value: "custom" },
+    });
+    fireEvent.change(screen.getByLabelText("Start date"), {
+      target: { value: "2026-10-13" },
+    });
+    fireEvent.change(screen.getByLabelText("End date"), {
+      target: { value: "2026-10-14" },
+    });
+    expect(screen.getByText("Showing 1 to 2 of 2 results")).toBeInTheDocument();
   });
 });
