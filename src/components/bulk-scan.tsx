@@ -60,6 +60,12 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
   }, [latest]);
   const jobs = state?.jobs ?? [];
   const running = jobs.some((job) => job.status === "pending" || job.status === "processing");
+  const finished = jobs.filter((job) =>
+    ["completed", "partial", "failed", "cancelled"].includes(job.status),
+  ).length;
+  const completed =
+    jobs.length > 0 && finished === jobs.length && state?.controlStatus !== "cancelled";
+  const displayStatus = completed ? "completed" : state?.controlStatus;
   const refresh = useCallback(
     async (id: string) => {
       const result = await load({ data: { batchId: id } });
@@ -198,9 +204,6 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       setBusy(false);
     }
   }
-  const finished = jobs.filter((job) =>
-    ["completed", "partial", "failed", "cancelled"].includes(job.status),
-  ).length;
   return (
     <section className="mt-6 rounded-2xl bg-card p-4 text-left">
       <h2 className="font-bold">Bulk Scan</h2>
@@ -306,7 +309,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
       {batch && state && (
         <div className="mt-5">
           <h3 className="font-bold">
-            {finished}/{jobs.length} scanned · Batch {batch.batch_number} · {state.controlStatus}
+            {finished}/{jobs.length} scanned · Batch {batch.batch_number} · {displayStatus}
           </h3>
           <progress
             aria-label="Bulk scan progress"
@@ -328,7 +331,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
           <div className="my-3 flex gap-2">
             <Button
               variant="outline"
-              disabled={busy || state.controlStatus === "cancelled"}
+              disabled={busy || !running || state.controlStatus === "cancelled"}
               onClick={() => change(state.controlStatus === "paused" ? "resume" : "pause")}
             >
               {state.controlStatus === "paused" ? "Resume" : "Pause"}

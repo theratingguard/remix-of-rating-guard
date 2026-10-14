@@ -141,4 +141,47 @@ describe("Durable bulk UI", () => {
     expect(csv).toContain('"3","","Failed City"');
     expect(csv).toContain('"failed","Exact fixture failure"');
   });
+
+  it("shows a completed batch after every job reaches a terminal state", async () => {
+    api.enqueue.mockResolvedValue({
+      ok: true,
+      batch: { id: "00000000-0000-4000-8000-000000000001", batch_number: 2 },
+    });
+    api.load.mockResolvedValue({
+      controlStatus: "running",
+      paused: false,
+      jobs: [
+        {
+          id: "complete",
+          url: "The Hudson Albany",
+          status: "completed",
+          reportUrl: null,
+          stars: [0, 0, 0, 0, 0],
+          removal: { high: 0, medium: 0, low: 0, notEstimable: 0 },
+          scan: null,
+        },
+        {
+          id: "failed",
+          url: "Failed City",
+          status: "failed",
+          error: "Provider failure",
+          reportUrl: null,
+          stars: [0, 0, 0, 0, 0],
+          removal: { high: 0, medium: 0, low: 0, notEstimable: 0 },
+          scan: null,
+        },
+      ],
+    });
+    render(<BulkScan disabled={false} />);
+    fireEvent.change(screen.getByLabelText("URLs or business names (one per line)"), {
+      target: { value: "The Hudson Albany" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Start Bulk Scan" }));
+
+    expect(
+      await screen.findByRole("heading", { name: /2\/2 scanned · Batch 2 · completed/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  });
 });
