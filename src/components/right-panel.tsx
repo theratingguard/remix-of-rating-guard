@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ExternalLink, FileText, MapPin } from "lucide-react";
+import { Download, ExternalLink, FileText, MapPin } from "lucide-react";
 import type { DashboardScanRow } from "@/lib/data";
 import { scanRisk } from "@/lib/data";
 import { Button } from "@/components/ui/button";
