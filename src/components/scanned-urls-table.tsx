@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ExternalLink, RefreshCw, Search } from "lucide-react";
 import type { DashboardScanRow } from "@/lib/data";
 import { scanRisk } from "@/lib/data";
-import { countryCodeFromAddress } from "@/lib/regional-routing";
+import { countryCodeFromAddress, COUNTRY_NAME_BY_CODE } from "@/lib/regional-routing";
 import { ScansCsvExportButton } from "@/components/scans-csv-export-button";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/app-shell";
@@ -18,17 +18,17 @@ function localDateKey(date: Date) {
 }
 
 function countryCode(scan: DashboardScanRow) {
-  if (scan.region === "IN" || scan.region === "US") return scan.region;
-  if (scan.region === "UK") return "GB";
+  if (scan.region && scan.region !== "OTHER") return scan.region === "UK" ? "GB" : scan.region;
   return countryCodeFromAddress(scan.address);
 }
 
-function countryLabel(code: string | null) {
+function countryLabel(code: string | null, address: string | null) {
   if (code === "IN") return "India";
   if (code === "PK") return "Pakistan";
   if (code === "US") return "USA";
   if (code === "GB") return "UK";
-  return code ?? "Unknown";
+  if (code && COUNTRY_NAME_BY_CODE[code]) return COUNTRY_NAME_BY_CODE[code];
+  return address?.split(",").at(-1)?.trim() || code || "Unknown";
 }
 
 export function ScannedUrlsTable({
@@ -371,7 +371,7 @@ export function ScannedUrlsTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-2 py-2">{countryLabel(countryCode(scan))}</td>
+                  <td className="px-2 py-2">{countryLabel(countryCode(scan), scan.address)}</td>
                   <td className="max-w-48 px-2 py-2">
                     <a
                       className="block truncate text-brand hover:underline"

@@ -165,7 +165,11 @@ describe("scanned URL table", () => {
   });
 
   it("supports reverse alphabetical sorting and compact table sizing", () => {
-    const scans = [scan("1", "Alpha Cafe", "normal"), scan("2", "Zulu Hotel", "normal")];
+    const scans = [
+      scan("1", "Alpha Cafe", "normal"),
+      scan("2", "Zulu Hotel", "normal"),
+      scan("3", "Beta France Hotel", "normal", { region: "FR", address: "Paris, France" }),
+    ];
     render(
       <ScannedUrlsTable
         scans={scans}
@@ -178,6 +182,7 @@ describe("scanned URL table", () => {
       />,
     );
     expect(screen.getAllByRole("row")[1]).toHaveTextContent("Alpha Cafe");
+    expect(screen.getByText("France")).toBeInTheDocument();
     expect(screen.getAllByRole("row")[1]).toHaveClass("h-10");
     expect(screen.getByRole("columnheader", { name: "Business name" })).toHaveClass("font-bold");
     fireEvent.change(screen.getByRole("combobox", { name: "Sort businesses" }), {
