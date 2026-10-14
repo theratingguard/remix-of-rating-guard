@@ -166,7 +166,7 @@ export function ReviewSelection({
         <div className="mt-5 border-t pt-4">
           <h3 className="font-bold">Saved selected report: {requests.length} reviews</h3>
           <PrivatePdfButton scanId={scan.id} variant="selected">
-            Save Selected PDF
+            Preview Selected PDF
           </PrivatePdfButton>
           <Button
             variant="outline"

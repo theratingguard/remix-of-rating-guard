@@ -1,18 +1,16 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { jsPDF } from "jspdf";
 import { toSvg } from "html-to-image";
-import { downloadReportPdf } from "./report-pdf";
+import { renderReportPdfPreview } from "./report-pdf";
 
 vi.mock("html-to-image", () => ({ toSvg: vi.fn() }));
-const { save, draw } = vi.hoisted(() => ({ save: vi.fn(), draw: vi.fn() }));
+const { draw } = vi.hoisted(() => ({ draw: vi.fn() }));
 vi.mock("jspdf", async (importOriginal) => {
   const original = await importOriginal<typeof import("jspdf")>();
   return {
     jsPDF: class extends original.jsPDF {
       constructor(options: ConstructorParameters<typeof original.jsPDF>[0]) {
         super(options);
-        this.save = save;
       }
     },
   };
@@ -21,9 +19,8 @@ vi.mock("jspdf", async (importOriginal) => {
 const png =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4XmP4DwQACfsD/YcUtbcAAAAASUVORK5CYII=";
 
-describe("report PDF download", () => {
+describe("report PDF preview", () => {
   beforeEach(() => {
-    save.mockReset();
     draw.mockReset();
     vi.mocked(toSvg).mockResolvedValue("data:image/svg+xml,fixture");
     vi.stubGlobal(
@@ -59,15 +56,11 @@ describe("report PDF download", () => {
     return element;
   }
 
-  it("exports every captured row to a genuine multipage PDF with the requested filename", async () => {
-    save.mockImplementation(function (this: jsPDF, filename: string) {
-      expect(filename).toBe("RPT-HUDSON.pdf");
-      expect(this.output()).toMatch(/^%PDF-/);
-      expect(this.getNumberOfPages()).toBe(3);
-      return Promise.resolve();
-    });
-    await downloadReportPdf(reportElement(), "RPT-HUDSON.pdf");
-    expect(save).toHaveBeenCalledOnce();
+  it("renders every captured row into a genuine multipage PDF preview", async () => {
+    const result = await renderReportPdfPreview(reportElement());
+    expect(result).toBeInstanceOf(Blob);
+    expect(result.type).toBe("application/pdf");
+    expect(result.size).toBeGreaterThan(0);
     expect(draw).toHaveBeenNthCalledWith(
       2,
       expect.any(HTMLCanvasElement),
@@ -106,14 +99,13 @@ describe("report PDF download", () => {
     );
   });
 
-  it("rejects empty captures rather than saving an empty report", async () => {
-    await expect(downloadReportPdf(reportElement(0), "report.pdf")).rejects.toThrow("empty");
-    expect(save).not.toHaveBeenCalled();
+  it("rejects empty captures rather than rendering an empty report", async () => {
+    await expect(renderReportPdfPreview(reportElement(0))).rejects.toThrow("empty");
   });
 
-  it("propagates capture failures without a success-shaped print fallback", async () => {
+  it("propagates capture failures without a success-shaped preview fallback", async () => {
     vi.mocked(toSvg).mockRejectedValue(new Error("Capture unavailable"));
-    await expect(downloadReportPdf(reportElement(), "report.pdf")).rejects.toThrow(
+    await expect(renderReportPdfPreview(reportElement())).rejects.toThrow(
       "Capture unavailable",
     );
   });

@@ -81,7 +81,7 @@ export function LegalAnalysisPanel({
         )}
         {url && (
           <PrivatePdfButton scanId={scan.id} variant="legal">
-            Download Legal Removal Request
+            Preview Legal Removal Request
           </PrivatePdfButton>
         )}
         <Button variant="outline" asChild>

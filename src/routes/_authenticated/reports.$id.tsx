@@ -10,7 +10,6 @@ import { logAudit } from "@/lib/scan.functions";
 import { Stars, RiskBadge, SeedBadge } from "@/components/review-ui";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { downloadReportPdf } from "@/lib/report-pdf";
 import { saveReportPdf, emailReport, reportEmailStatus } from "@/lib/report-pdf.functions";
 import { Input } from "@/components/ui/input";
 import { ReviewSelection } from "@/components/review-selection";
@@ -19,7 +18,8 @@ import { RemovalSummary } from "@/components/removal-summary";
 import { RatingAnalysis } from "@/components/scan-result";
 import { PrivatePdfButton } from "@/components/private-pdf-button";
 import { downloadPrivateReport } from "@/lib/private-report.functions";
-import { savePrivatePdf } from "@/lib/private-report";
+import { openPdfPreview, openPrivatePdf } from "@/lib/private-report";
+import { renderReportPdfPreview } from "@/lib/report-pdf";
 import { reportAccessQuery, RestrictedReportSummary } from "@/components/restricted-report-summary";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
 import { RULE_GROUP_LABELS } from "@/lib/rules/scoring";
@@ -70,10 +70,15 @@ function ReportDetail() {
       exporting
     )
       return;
+    const preview = window.open("about:blank", "_blank");
+    if (!preview) {
+      toast.error("Allow pop-ups to preview this PDF. No file was downloaded.");
+      return;
+    }
     setExporting(true);
     try {
       if (data.scan.is_seed) {
-        await downloadReportPdf(articleRef.current, `${reportNumber(data.scan, data.report)}.pdf`);
+        openPdfPreview(await renderReportPdfPreview(articleRef.current), preview);
         return;
       }
       const existing = savedPdfUrl(data.report.report_data);
@@ -82,15 +87,16 @@ function ReportDetail() {
           data: { scanId: id },
         });
       await queryClient.invalidateQueries({ queryKey: ["scan", id] });
-      savePrivatePdf(await privateDownload({ data: { scanId: id, variant: "full" } }));
+      openPrivatePdf(await privateDownload({ data: { scanId: id, variant: "full" } }), preview);
       if (!data.scan.is_seed)
-        await audit({ data: { action: "report.downloaded", detail: { scan_id: id } } }).catch(
+        await audit({ data: { action: "report.previewed", detail: { scan_id: id } } }).catch(
           (error: unknown) => {
             console.error("[report] Could not record PDF export action", error);
             toast.error("PDF generated, but its audit entry could not be saved.");
           },
         );
     } catch (error) {
+      preview.close();
       console.error("[report] PDF export failed", error);
       toast.error(error instanceof Error ? error.message : "Could not generate the report PDF.");
     } finally {
@@ -178,15 +184,15 @@ function ReportDetail() {
         <div className="flex gap-2">
           {pdfUrl ? (
             <PrivatePdfButton scanId={id}>
-              <Download /> Save PDF
+              <Download /> Preview PDF
             </PrivatePdfButton>
           ) : (
             <Button variant="outline" onClick={download} disabled={exporting}>
-              <Download /> {exporting ? "Preparing PDF..." : "Save PDF"}
+              <Download /> {exporting ? "Preparing PDF..." : "Preview PDF"}
             </Button>
           )}
           <Button variant="outline" onClick={printReport}>
-            Print / Save PDF
+            Print report
           </Button>
           {pdfUrl && (
             <>
@@ -242,7 +248,7 @@ function ReportDetail() {
       </div>
       {!scan.is_seed && (
         <section className="no-print surface mb-6 p-4">
-          <p>PDF Status: {pdfUrl ? "Ready" : "Not available or expired; Save PDF to regenerate"}</p>
+          <p>PDF Status: {pdfUrl ? "Ready" : "Not available or expired; preview to regenerate"}</p>
           <p className="text-xs text-muted-foreground">
             Emailing an attachment shares a confidential copy outside this access control; that copy
             cannot be revoked.

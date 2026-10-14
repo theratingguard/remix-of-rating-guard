@@ -52,7 +52,23 @@ export function savedPdfUrl(metadata: import("@/integrations/supabase/types").Js
     Date.now() - Date.parse(date) >= 90 * 86400000
   )
     return null;
-  return /^https:\/\/ratingguard\.online\/reports\/[0-9a-f-]{36}\.pdf$/.test(url) ? url : null;
+  return isPrivateStoragePdfUrl(url, /^[0-9a-f-]{36}\.pdf$/);
+}
+
+export function isPrivateStoragePdfUrl(url: string, filenamePattern: RegExp) {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.origin === "https://ratingguard.online" &&
+      parsed.pathname === "/api/storage/download" &&
+      /^reports\/[0-9a-f-]{36}$/.test(parsed.searchParams.get("folder") ?? "") &&
+      filenamePattern.test(parsed.searchParams.get("filename") ?? "")
+    )
+      ? url
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export const scansQuery = () =>

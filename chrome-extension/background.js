@@ -20,11 +20,13 @@ function scanReportPage(sender, scanId) {
 }
 
 async function authenticatedFetch(path, token, init = {}) {
-  const response = await fetch(`${API}/${path}`, {
+  const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
+  const endpoint = path.startsWith("/") ? `https://ratingguard.online${path}` : `${API}/${path}`;
+  const response = await fetch(endpoint, {
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...(init.body && !isFormData ? { "Content-Type": "application/json" } : {}),
       ...init.headers,
     },
     cache: "no-store",
@@ -101,6 +103,28 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       );
       await chrome.storage.session.set({ activeReportId: report.scanId });
       return report;
+    }
+
+    if (message.type === "uploadPdf") {
+      if (!extensionPage(sender)) throw new Error("Upload PDFs from the extension popup only.");
+      if (
+        typeof message.filename !== "string" ||
+        !/^[A-Za-z0-9][A-Za-z0-9._-]{0,190}\.pdf$/i.test(message.filename) ||
+        typeof message.base64 !== "string" ||
+        message.base64.length > 33_554_432
+      )
+        throw new Error("Choose a PDF file smaller than 24 MB.");
+      const binary = atob(message.base64);
+      if (!binary.startsWith("%PDF-")) throw new Error("The selected file is not a valid PDF.");
+      const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+      const form = new FormData();
+      form.append("folder", "reports");
+      form.append("file", new File([bytes], message.filename, { type: "application/pdf" }));
+      const token = await sessionToken();
+      return await authenticatedFetch("/api/storage/upload", token, {
+        method: "POST",
+        body: form,
+      });
     }
 
     if (message.type === "prepare") {

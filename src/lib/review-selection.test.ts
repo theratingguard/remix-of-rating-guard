@@ -31,7 +31,7 @@ const request = {
 describe("Manual selection evidence safety", () => {
   it("only exposes valid unexpired saved selected PDF URLs", () => {
     const metadata = {
-      selected_pdf_url: `https://ratingguard.online/reports/${id}_selected.pdf`,
+      selected_pdf_url: `https://ratingguard.online/api/storage/download?folder=reports%2F00000000-0000-4000-8000-000000000003&filename=${id}_selected.pdf`,
       selected_saved_at: new Date().toISOString(),
     };
     expect(selectedPdfUrl(metadata)).toBe(metadata.selected_pdf_url);

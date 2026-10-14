@@ -13,13 +13,14 @@ vi.mock("./report-pdf.server", () => ({
   renderReportPdf: vi.fn(async () => Buffer.from("%PDF-fixture")),
   saveReportToVPS: vi.fn(
     async () =>
-      "https://ratingguard.online/reports/6736a5be-e460-4e01-bfed-839fcd714877_selected.pdf",
+      "https://ratingguard.online/api/storage/download?folder=reports%2F00000000-0000-4000-8000-000000000003&filename=6736a5be-e460-4e01-bfed-839fcd714877_selected.pdf",
   ),
   escapeHtml: (value: unknown) => String(value),
   reportPdfHtml: (_scan: unknown, _report: unknown, reviews: { id: string }[]) =>
     `<body>${reviews.map((r) => r.id).join(",")}</body>`,
 }));
 const ids = ["b8c10010-0e10-487f-a50f-61c8cb1276d4", "0b9bfc89-9e0d-407e-b481-7561e8319198"];
+const userId = "00000000-0000-4000-8000-000000000003";
 function database(owner = true) {
   const writes: { table: string | undefined; value: unknown }[] = [];
   const client = createClient<Database>("https://unit-fixture.invalid", "sb_publishable_fixture", {
@@ -33,7 +34,7 @@ function database(owner = true) {
           return Response.json(true);
         }
         if (table === "scans") {
-          expect(url.searchParams.get("user_id")).toBe("eq.owner");
+          expect(url.searchParams.get("user_id")).toBe(`eq.${userId}`);
           return Response.json(
             owner
               ? [
@@ -94,7 +95,7 @@ describe("Selected report generation", () => {
     const db = database();
     const result = await createSelectedReport(
       db.client,
-      "owner",
+      userId,
       "6736a5be-e460-4e01-bfed-839fcd714877",
       ids,
     );
@@ -104,7 +105,7 @@ describe("Selected report generation", () => {
     expect(saveReportToVPS).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(Buffer),
-      undefined,
+      userId,
       "selected",
     );
     expect(db.writes.filter((write) => write.table === "save_selected_report")).toHaveLength(1);
@@ -114,7 +115,7 @@ describe("Selected report generation", () => {
     vi.stubGlobal("fetch", vi.fn());
     const db = database(false);
     await expect(
-      createSelectedReport(db.client, "owner", "6736a5be-e460-4e01-bfed-839fcd714877", ids),
+      createSelectedReport(db.client, userId, "6736a5be-e460-4e01-bfed-839fcd714877", ids),
     ).rejects.toThrow("Only your");
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(db.writes).toEqual([]);
@@ -123,7 +124,7 @@ describe("Selected report generation", () => {
     vi.stubGlobal("fetch", vi.fn());
     const db = database();
     await expect(
-      createSelectedReport(db.client, "owner", "6736a5be-e460-4e01-bfed-839fcd714877", [ids[0]!]),
+      createSelectedReport(db.client, userId, "6736a5be-e460-4e01-bfed-839fcd714877", [ids[0]!]),
     ).rejects.toThrow("do not belong");
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(renderReportPdf).not.toHaveBeenCalled();
@@ -136,7 +137,7 @@ describe("Selected report generation", () => {
     );
     const db = database();
     await expect(
-      createSelectedReport(db.client, "owner", "6736a5be-e460-4e01-bfed-839fcd714877", ids),
+      createSelectedReport(db.client, userId, "6736a5be-e460-4e01-bfed-839fcd714877", ids),
     ).rejects.toThrow("[429]");
     expect(db.writes).toEqual([]);
     expect(saveReportToVPS).not.toHaveBeenCalled();

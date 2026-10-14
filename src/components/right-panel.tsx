@@ -180,7 +180,7 @@ export function RightPanel({
         {latest.status === "complete" && (
           <div className="[&>button]:mt-2 [&>button]:w-full">
             <PrivatePdfButton scanId={latest.id} variant="full">
-              <Download className="mr-2 h-4 w-4" /> Download PDF Report
+              <Download className="mr-2 h-4 w-4" /> Preview PDF Report
             </PrivatePdfButton>
           </div>
         )}

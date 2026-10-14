@@ -54,18 +54,18 @@ const report: Report = {
       disclaimer: LEGAL_DISCLAIMER,
       reviews: [item],
     },
-    legal_pdf_url: `https://ratingguard.online/reports/${scan.id}_legal.pdf`,
+    legal_pdf_url: `https://ratingguard.online/api/storage/download?folder=reports%2F00000000-0000-4000-8000-000000000003&filename=${scan.id}_legal.pdf`,
     legal_pdf_saved_at: new Date().toISOString(),
   },
 };
 afterEach(cleanup);
 describe("Legal analysis report UI", () => {
-  it("shows unsupported likelihood honestly, download link and four editable templates", () => {
+  it("shows unsupported likelihood honestly, preview link and four editable templates", () => {
     render(<LegalAnalysisPanel scan={scan} report={report} reviews={[review]} />);
     expect(screen.getByText(/Not estimable/)).toBeInTheDocument();
     expect(screen.getByText(/No removal request drafted/)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Download Legal Removal Request" }),
+      screen.getByRole("button", { name: "Preview Legal Removal Request" }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByText(/Policy request templates/));
     for (const name of [

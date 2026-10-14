@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { downloadPrivateReport } from "@/lib/private-report.functions";
 import { Button } from "./ui/button";
-import { savePrivatePdf } from "@/lib/private-report";
+import { openPrivatePdf } from "@/lib/private-report";
 
 export function PrivatePdfButton({
   scanId,
@@ -21,12 +21,18 @@ export function PrivatePdfButton({
       variant="outline"
       disabled={busy}
       onClick={async () => {
+        const preview = window.open("about:blank", "_blank");
+        if (!preview) {
+          toast.error("Allow pop-ups to preview this PDF. No file was downloaded.");
+          return;
+        }
         setBusy(true);
         try {
           const result = await download({ data: { scanId, variant } });
-          savePrivatePdf(result);
+          openPrivatePdf(result, preview);
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Private PDF download failed.");
+          preview.close();
+          toast.error(error instanceof Error ? error.message : "Private PDF preview failed.");
         } finally {
           setBusy(false);
         }

@@ -44,11 +44,12 @@ vi.mock("puppeteer", () => ({
 }));
 
 const scanId = "9c401517-d96f-498b-82d2-65b6d9b30e96";
+const userId = "00000000-0000-4000-8000-000000000003";
 let directory: string;
 let pdf: Buffer;
 beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), "ratingguard-pdf-test-"));
-  vi.stubEnv("REPORT_PDF_DIRECTORY", directory);
+  vi.stubEnv("STORAGE_ROOT", directory);
   const document = await PDFDocument.create();
   document.addPage();
   pdf = Buffer.from(await document.save());
@@ -79,7 +80,7 @@ function database(options: { owner?: boolean; status?: string; updateFailure?: b
         },
       ]);
     }
-    expect(url.searchParams.get("user_id")).toBe("eq.owner");
+    expect(url.searchParams.get("user_id")).toBe(`eq.${userId}`);
     if (init?.method === "PATCH") {
       writes.push(JSON.parse(String(init.body)));
       return options.updateFailure
@@ -156,28 +157,33 @@ describe("VPS PDF persistence", () => {
     expect(html).not.toContain("<script>");
   });
   it("stores valid bytes atomically, with a UUID filename and private filesystem permissions", async () => {
-    expect(await saveReportToVPS(scanId, pdf)).toBe(
-      `https://ratingguard.online/reports/${scanId}.pdf`,
+    expect(await saveReportToVPS(scanId, pdf, userId)).toBe(
+      `https://ratingguard.online/api/storage/download?folder=reports%2F${userId}&filename=${scanId}.pdf`,
     );
-    expect(await readFile(join(directory, `${scanId}.pdf`))).toEqual(pdf);
-    expect(await readdir(directory)).toEqual([`${scanId}.pdf`]);
+    const reportDirectory = join(directory, "reports", userId);
+    expect(await readFile(join(reportDirectory, `${scanId}.pdf`))).toEqual(pdf);
+    expect(await readdir(reportDirectory)).toEqual([`${scanId}.pdf`]);
     if (process.platform !== "win32")
-      expect((await stat(join(directory, `${scanId}.pdf`))).mode & 0o777).toBe(0o600);
+      expect((await stat(join(reportDirectory, `${scanId}.pdf`))).mode & 0o777).toBe(0o600);
   });
   it("rejects traversal and malformed PDF bytes without writing files", async () => {
-    await expect(saveReportToVPS("../escape", pdf)).rejects.toThrow();
-    await expect(saveReportToVPS(scanId, Buffer.from("%PDF-fake\n%%EOF"))).rejects.toThrow();
+    await expect(saveReportToVPS("../escape", pdf, userId)).rejects.toThrow();
+    await expect(saveReportToVPS(scanId, Buffer.from("%PDF-fake\n%%EOF"), userId)).rejects.toThrow();
     expect(await readdir(directory)).toEqual([]);
   });
   it("rejects oversized files before parsing or writing", async () => {
-    await expect(saveReportToVPS(scanId, Buffer.alloc(MAX_REPORT_PDF_BYTES + 1))).rejects.toThrow(
+    await expect(saveReportToVPS(scanId, Buffer.alloc(MAX_REPORT_PDF_BYTES + 1), scanId)).rejects.toThrow(
       "24 MB",
     );
     expect(await readdir(directory)).toEqual([]);
   });
   it("preserves report metadata and persists its PDF URL only for the owner", async () => {
     const db = database();
-    const result = await generateOwnedReportPdf(db.client, "owner", scanId);
+    const result = await generateOwnedReportPdf(
+      db.client,
+      userId,
+      scanId,
+    );
     expect(db.writes).toHaveLength(1);
     expect(db.writes[0]).toMatchObject({
       report_data: {
@@ -212,7 +218,7 @@ describe("VPS PDF persistence", () => {
     expect(html).toContain("Legal Expert Analysis");
     expect(html).toContain("Not estimable");
     expect(html).toContain("Rules micro-check score");
-    expect(await readdir(join(directory, "shared"))).toEqual([
+    expect(await readdir(join(directory, "reports", userId))).toEqual([
       `${scanId}.pdf`,
       `${scanId}_legal.pdf`,
     ]);
@@ -221,7 +227,7 @@ describe("VPS PDF persistence", () => {
     "does not publish unauthorized or incomplete reports: %j",
     async (options) => {
       const db = database(options);
-      await expect(generateOwnedReportPdf(db.client, "owner", scanId)).rejects.toThrow("completed");
+      await expect(generateOwnedReportPdf(db.client, userId, scanId)).rejects.toThrow("completed");
       expect(db.writes).toEqual([]);
       expect(await readdir(directory)).toEqual([]);
       expect(puppeteer.launch).not.toHaveBeenCalled();
@@ -229,7 +235,7 @@ describe("VPS PDF persistence", () => {
   );
   it("surfaces metadata persistence failure instead of reporting export success", async () => {
     const db = database({ updateFailure: true });
-    await expect(generateOwnedReportPdf(db.client, "owner", scanId)).rejects.toThrow(
+    await expect(generateOwnedReportPdf(db.client, userId, scanId)).rejects.toThrow(
       "URL could not be saved",
     );
   });

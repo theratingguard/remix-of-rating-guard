@@ -10,7 +10,7 @@ vi.mock("@/lib/report-pdf.functions", () => ({
 vi.mock("@/lib/use-feature-settings", () => ({
   useFeatureSettings: () => ({ data: { whatsapp_share_enabled: true } }),
 }));
-vi.mock("./private-pdf-button", () => ({ PrivatePdfButton: () => <button>Download PDF</button> }));
+vi.mock("./private-pdf-button", () => ({ PrivatePdfButton: () => <button>Preview PDF</button> }));
 import { ReportListActions } from "./report-list-actions";
 afterEach(() => {
   cleanup();
@@ -39,6 +39,6 @@ describe("Private report share controls", () => {
     await waitFor(() =>
       expect(api.copy).toHaveBeenCalledWith("https://ratingguard.online/reports/scan-1"),
     );
-    expect(screen.getByRole("button", { name: "Download PDF" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Preview PDF" })).toBeInTheDocument();
   });
 });

@@ -119,9 +119,7 @@ export async function createSelectedReport(
     .replace("Reviews retrieved:", "Selected reviews:")
     .replace("</body>", `${section}</body>`);
   const pdf = await renderReportPdf(selectedHtml);
-  const url = await saveReportToVPS(pdfId, pdf, undefined, "selected");
-  if (scan.data.business_id) await saveReportToVPS(pdfId, pdf, scan.data.business_id, "selected");
-  await saveReportToVPS(pdfId, pdf, "shared", "selected");
+  const url = await saveReportToVPS(pdfId, pdf, userId, "selected");
   const saved = await db.rpc("save_selected_report", {
     _scan_id: scanId,
     _review_ids: reviewIds,

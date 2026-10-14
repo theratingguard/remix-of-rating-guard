@@ -28,6 +28,16 @@ async function send(message) {
   return result;
 }
 
+async function toBase64(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
 function action(id, callback) {
   document.getElementById(id).addEventListener("click", async () => {
     try {
@@ -111,4 +121,20 @@ action("record", async () => {
     confirmed: true,
   });
   status.textContent = `Actual submission recorded as ${result.outcome}. It now appears under Submissions; Google status is not automatically verified.`;
+});
+
+action("uploadPdf", async () => {
+  const file = document.getElementById("pdf").files?.[0];
+  if (!file) throw new Error("Choose a PDF report to upload.");
+  if (file.size === 0 || file.size > 24 * 1024 * 1024)
+    throw new Error("The selected PDF must be between 1 byte and 24 MB.");
+  if (!/\.pdf$/i.test(file.name)) throw new Error("Choose a file with a .pdf extension.");
+  const header = new TextDecoder().decode(await file.slice(0, 5).arrayBuffer());
+  if (header !== "%PDF-") throw new Error("The selected file is not a valid PDF.");
+  const result = await send({
+    type: "uploadPdf",
+    filename: file.name,
+    base64: await toBase64(file),
+  });
+  status.textContent = `Uploaded to private VPS storage: ${result.path} · ${result.size} bytes · ${result.url}`;
 });

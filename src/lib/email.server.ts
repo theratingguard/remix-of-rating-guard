@@ -1,7 +1,6 @@
 import nodemailer from "nodemailer";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { z } from "zod";
+import { storage } from "./storage.server";
 
 export function smtpConfigured() {
   return ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"].every((name) =>
@@ -41,28 +40,39 @@ function createSmtpTransport() {
   });
 }
 
-export async function sendReportEmail(clientEmail: string, pdfUrl: string, businessName: string) {
+export async function sendReportEmail(
+  clientEmail: string,
+  pdfUrl: string,
+  businessName: string,
+  userId: string,
+) {
   z.string().email().parse(clientEmail);
   if (!smtpConfigured())
     throw new Error(
       "Email sharing is unavailable: configure verified server-side SMTP credentials.",
     );
-  const id = /^https:\/\/ratingguard\.online\/reports\/([0-9a-f-]{36})\.pdf$/.exec(pdfUrl)?.[1];
-  if (!id) throw new Error("Invalid saved report PDF URL.");
-  z.string().uuid().parse(id);
-  const content = await readFile(
-    join(process.env["REPORT_PDF_DIRECTORY"] || "/opt/rating-guard-private/reports", `${id}.pdf`),
-  );
+  const url = new URL(z.string().url().parse(pdfUrl));
+  const id = url.searchParams.get("filename")?.replace(/\.pdf$/, "");
+  const folder = `reports/${userId}`;
+  if (
+    url.origin !== "https://ratingguard.online" ||
+    url.pathname !== "/api/storage/download" ||
+    url.searchParams.get("folder") !== folder ||
+    !/^[0-9a-f-]{36}$/.test(id ?? "")
+  )
+    throw new Error("Invalid saved report PDF URL.");
+  const reportId = z.string().uuid().parse(id);
+  const content = await storage.read(folder, `${reportId}.pdf`);
   const transport = createSmtpTransport();
   try {
     const result = await transport.sendMail({
       from: process.env["SMTP_FROM"],
       to: clientEmail,
       subject: `Rating Guard report: ${businessName.replace(/[\r\n]/g, " ").slice(0, 120)}`,
-      text: `Your Rating Guard report for ${businessName} is attached. This attachment is confidential; the sender is sharing a copy that cannot be revoked.\n\nhttps://ratingguard.online/reports/${id} (authorized login required)\n\nAI assessments are advisory, not guarantees of review removal.`,
+      text: `Your Rating Guard report for ${businessName} is attached. This attachment is confidential; the sender is sharing a copy that cannot be revoked.\n\nhttps://ratingguard.online/reports/${reportId} (authorized login required)\n\nAI assessments are advisory, not guarantees of review removal.`,
       attachments: [
         {
-          filename: `RPT-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}.pdf`,
+          filename: `RPT-${reportId.replace(/-/g, "").slice(0, 8).toUpperCase()}.pdf`,
           content,
           contentType: "application/pdf",
         },

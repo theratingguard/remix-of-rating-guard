@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AnalyzedReview } from "./data";
+import { isPrivateStoragePdfUrl, type AnalyzedReview } from "./data";
 import type { Json } from "@/integrations/supabase/types";
 import { reviewQualitySchema } from "./review-quality";
 import { predictionSchema } from "./removal-prediction";
@@ -191,9 +191,5 @@ export function savedLegalPdfUrl(metadata: Json | undefined) {
     Date.now() - Date.parse(saved) >= 90 * 86400000
   )
     return null;
-  return /^https:\/\/ratingguard\.online\/reports\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_legal\.pdf$/.test(
-    url,
-  )
-    ? url
-    : null;
+  return isPrivateStoragePdfUrl(url, /^[0-9a-f-]{36}_legal\.pdf$/);
 }

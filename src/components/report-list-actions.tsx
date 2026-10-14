@@ -62,7 +62,7 @@ export function ReportListActions({ scanId }: { scanId: string }) {
       >
         Email
       </Button>
-      <PrivatePdfButton scanId={scanId}>Download PDF</PrivatePdfButton>
+      <PrivatePdfButton scanId={scanId}>Preview PDF</PrivatePdfButton>
       {(features.error || emailStatus.error) && (
         <p role="alert">
           Share configuration failed: {features.error?.message ?? emailStatus.error?.message}

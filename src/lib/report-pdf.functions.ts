@@ -43,7 +43,12 @@ export const emailReport = createServerFn({ method: "POST" })
           : null;
       if (typeof pdfUrl !== "string")
         throw new Error("Generate the report PDF before emailing it.");
-      return await sendReportEmail(data.email, pdfUrl, scan.data.business_name || "Business");
+      return await sendReportEmail(
+        data.email,
+        pdfUrl,
+        scan.data.business_name || "Business",
+        context.userId,
+      );
     } catch (error) {
       console.error(
         "[report-email] Could not email report",

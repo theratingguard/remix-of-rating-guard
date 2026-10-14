@@ -10,7 +10,7 @@ export const downloadPrivateReport = createServerFn({ method: "POST" })
     setResponseHeader("Cache-Control", "private, no-store");
     setResponseHeader("X-Content-Type-Options", "nosniff");
     try {
-      return await readPrivateReportPdf(context.supabase, data);
+      return await readPrivateReportPdf(context.supabase, data, context.userId);
     } catch (error) {
       console.error("[private-report] Download denied or failed", error);
       throw error;

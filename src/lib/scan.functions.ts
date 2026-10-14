@@ -172,7 +172,7 @@ export const logAudit = createServerFn({ method: "POST" })
     z
       .object({
         action: z.enum([
-          "report.downloaded",
+          "report.previewed",
           "settings.password_changed",
           "settings.profile_updated",
           "auth.logout_all",

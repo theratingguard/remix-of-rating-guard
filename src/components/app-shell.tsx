@@ -17,6 +17,7 @@ import {
   Building2,
   Users,
   ListChecks,
+  HardDrive,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -31,6 +32,7 @@ const nav = [
   { to: "/removal-center", label: "Risk Analysis", Icon: Globe2 },
   { to: "/history", label: "Scan History", Icon: History },
   { to: "/reports", label: "Reports", Icon: FileText },
+  { to: "/storage", label: "Storage Manager", Icon: HardDrive },
   { to: null, label: "Business Profiles", Icon: Building2 },
   { to: null, label: "Team & Users", Icon: Users },
   { to: "/settings", label: "Settings", Icon: Settings },

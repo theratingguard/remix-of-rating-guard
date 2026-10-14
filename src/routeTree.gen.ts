@@ -24,6 +24,7 @@ import { Route as AuthenticatedRemovalCenterRouteImport } from './routes/_authen
 import { Route as AuthenticatedRepliesRouteImport } from './routes/_authenticated/replies'
 import { Route as AuthenticatedScanRouteImport } from './routes/_authenticated/scan'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedStorageRouteImport } from './routes/_authenticated/storage'
 import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
@@ -32,6 +33,11 @@ import { Route as AuthenticatedScanReportIdRouteImport } from './routes/_authent
 import { Route as ApiExtensionReportRouteImport } from './routes/api/extension/report'
 import { Route as ApiExtensionStatusRouteImport } from './routes/api/extension/status'
 import { Route as ApiExtensionSubmissionRouteImport } from './routes/api/extension/submission'
+import { Route as ApiStorageDeleteRouteImport } from './routes/api/storage/delete'
+import { Route as ApiStorageDownloadRouteImport } from './routes/api/storage/download'
+import { Route as ApiStorageListRouteImport } from './routes/api/storage/list'
+import { Route as ApiStorageStatsRouteImport } from './routes/api/storage/stats'
+import { Route as ApiStorageUploadRouteImport } from './routes/api/storage/upload'
 import { Route as ApiWorkersStatusRouteImport } from './routes/api/workers/status'
 import { Route as ApiExtensionReportIdRouteImport } from './routes/api/extension/report.$id'
 import { Route as ApiPublicHooksScanWorkerRouteImport } from './routes/api/public/hooks/scan-worker'
@@ -112,6 +118,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStorageRoute = AuthenticatedStorageRouteImport.update({
+  id: '/storage',
+  path: '/storage',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSubmissionsRoute =
   AuthenticatedSubmissionsRouteImport.update({
     id: '/submissions',
@@ -155,6 +166,31 @@ const ApiExtensionSubmissionRoute = ApiExtensionSubmissionRouteImport.update({
   path: '/api/extension/submission',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStorageDeleteRoute = ApiStorageDeleteRouteImport.update({
+  id: '/api/storage/delete',
+  path: '/api/storage/delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStorageDownloadRoute = ApiStorageDownloadRouteImport.update({
+  id: '/api/storage/download',
+  path: '/api/storage/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStorageListRoute = ApiStorageListRouteImport.update({
+  id: '/api/storage/list',
+  path: '/api/storage/list',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStorageStatsRoute = ApiStorageStatsRouteImport.update({
+  id: '/api/storage/stats',
+  path: '/api/storage/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStorageUploadRoute = ApiStorageUploadRouteImport.update({
+  id: '/api/storage/upload',
+  path: '/api/storage/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWorkersStatusRoute = ApiWorkersStatusRouteImport.update({
   id: '/api/workers/status',
   path: '/api/workers/status',
@@ -187,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/replies': typeof AuthenticatedRepliesRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/storage': typeof AuthenticatedStorageRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
@@ -194,6 +231,11 @@ export interface FileRoutesByFullPath {
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
+  '/api/storage/delete': typeof ApiStorageDeleteRoute
+  '/api/storage/download': typeof ApiStorageDownloadRoute
+  '/api/storage/list': typeof ApiStorageListRoute
+  '/api/storage/stats': typeof ApiStorageStatsRoute
+  '/api/storage/upload': typeof ApiStorageUploadRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
   '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
@@ -214,6 +256,7 @@ export interface FileRoutesByTo {
   '/replies': typeof AuthenticatedRepliesRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/storage': typeof AuthenticatedStorageRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
@@ -221,6 +264,11 @@ export interface FileRoutesByTo {
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
+  '/api/storage/delete': typeof ApiStorageDeleteRoute
+  '/api/storage/download': typeof ApiStorageDownloadRoute
+  '/api/storage/list': typeof ApiStorageListRoute
+  '/api/storage/stats': typeof ApiStorageStatsRoute
+  '/api/storage/upload': typeof ApiStorageUploadRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
   '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
@@ -243,6 +291,7 @@ export interface FileRoutesById {
   '/_authenticated/replies': typeof AuthenticatedRepliesRoute
   '/_authenticated/scan': typeof AuthenticatedScanRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/storage': typeof AuthenticatedStorageRoute
   '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/_authenticated/reports/$id': typeof AuthenticatedReportsIdRoute
@@ -250,6 +299,11 @@ export interface FileRoutesById {
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
+  '/api/storage/delete': typeof ApiStorageDeleteRoute
+  '/api/storage/download': typeof ApiStorageDownloadRoute
+  '/api/storage/list': typeof ApiStorageListRoute
+  '/api/storage/stats': typeof ApiStorageStatsRoute
+  '/api/storage/upload': typeof ApiStorageUploadRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
   '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
@@ -272,6 +326,7 @@ export interface FileRouteTypes {
     | '/replies'
     | '/scan'
     | '/settings'
+    | '/storage'
     | '/submissions'
     | '/api/health'
     | '/reports/$id'
@@ -279,6 +334,11 @@ export interface FileRouteTypes {
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
+    | '/api/storage/delete'
+    | '/api/storage/download'
+    | '/api/storage/list'
+    | '/api/storage/stats'
+    | '/api/storage/upload'
     | '/api/workers/status'
     | '/reports/'
     | '/api/extension/report/$id'
@@ -299,6 +359,7 @@ export interface FileRouteTypes {
     | '/replies'
     | '/scan'
     | '/settings'
+    | '/storage'
     | '/submissions'
     | '/api/health'
     | '/reports/$id'
@@ -306,6 +367,11 @@ export interface FileRouteTypes {
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
+    | '/api/storage/delete'
+    | '/api/storage/download'
+    | '/api/storage/list'
+    | '/api/storage/stats'
+    | '/api/storage/upload'
     | '/api/workers/status'
     | '/reports'
     | '/api/extension/report/$id'
@@ -327,6 +393,7 @@ export interface FileRouteTypes {
     | '/_authenticated/replies'
     | '/_authenticated/scan'
     | '/_authenticated/settings'
+    | '/_authenticated/storage'
     | '/_authenticated/submissions'
     | '/api/health'
     | '/_authenticated/reports/$id'
@@ -334,6 +401,11 @@ export interface FileRouteTypes {
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
+    | '/api/storage/delete'
+    | '/api/storage/download'
+    | '/api/storage/list'
+    | '/api/storage/stats'
+    | '/api/storage/upload'
     | '/api/workers/status'
     | '/_authenticated/reports/'
     | '/api/extension/report/$id'
@@ -352,6 +424,11 @@ export interface RootRouteChildren {
   ApiExtensionReportRoute: typeof ApiExtensionReportRouteWithChildren
   ApiExtensionStatusRoute: typeof ApiExtensionStatusRoute
   ApiExtensionSubmissionRoute: typeof ApiExtensionSubmissionRoute
+  ApiStorageDeleteRoute: typeof ApiStorageDeleteRoute
+  ApiStorageDownloadRoute: typeof ApiStorageDownloadRoute
+  ApiStorageListRoute: typeof ApiStorageListRoute
+  ApiStorageStatsRoute: typeof ApiStorageStatsRoute
+  ApiStorageUploadRoute: typeof ApiStorageUploadRoute
   ApiWorkersStatusRoute: typeof ApiWorkersStatusRoute
   ApiPublicHooksScanWorkerRoute: typeof ApiPublicHooksScanWorkerRoute
 }
@@ -463,6 +540,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/storage': {
+      id: '/_authenticated/storage'
+      path: '/storage'
+      fullPath: '/storage'
+      preLoaderRoute: typeof AuthenticatedStorageRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/submissions': {
       id: '/_authenticated/submissions'
       path: '/submissions'
@@ -519,6 +603,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExtensionSubmissionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/storage/delete': {
+      id: '/api/storage/delete'
+      path: '/api/storage/delete'
+      fullPath: '/api/storage/delete'
+      preLoaderRoute: typeof ApiStorageDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/storage/download': {
+      id: '/api/storage/download'
+      path: '/api/storage/download'
+      fullPath: '/api/storage/download'
+      preLoaderRoute: typeof ApiStorageDownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/storage/list': {
+      id: '/api/storage/list'
+      path: '/api/storage/list'
+      fullPath: '/api/storage/list'
+      preLoaderRoute: typeof ApiStorageListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/storage/stats': {
+      id: '/api/storage/stats'
+      path: '/api/storage/stats'
+      fullPath: '/api/storage/stats'
+      preLoaderRoute: typeof ApiStorageStatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/storage/upload': {
+      id: '/api/storage/upload'
+      path: '/api/storage/upload'
+      fullPath: '/api/storage/upload'
+      preLoaderRoute: typeof ApiStorageUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/workers/status': {
       id: '/api/workers/status'
       path: '/api/workers/status'
@@ -552,6 +671,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRepliesRoute: typeof AuthenticatedRepliesRoute
   AuthenticatedScanRoute: typeof AuthenticatedScanRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStorageRoute: typeof AuthenticatedStorageRoute
   AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
   AuthenticatedReportsIdRoute: typeof AuthenticatedReportsIdRoute
   AuthenticatedScanReportIdRoute: typeof AuthenticatedScanReportIdRoute
@@ -567,6 +687,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRepliesRoute: AuthenticatedRepliesRoute,
   AuthenticatedScanRoute: AuthenticatedScanRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStorageRoute: AuthenticatedStorageRoute,
   AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,
   AuthenticatedReportsIdRoute: AuthenticatedReportsIdRoute,
   AuthenticatedScanReportIdRoute: AuthenticatedScanReportIdRoute,
@@ -599,6 +720,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExtensionReportRoute: ApiExtensionReportRouteWithChildren,
   ApiExtensionStatusRoute: ApiExtensionStatusRoute,
   ApiExtensionSubmissionRoute: ApiExtensionSubmissionRoute,
+  ApiStorageDeleteRoute: ApiStorageDeleteRoute,
+  ApiStorageDownloadRoute: ApiStorageDownloadRoute,
+  ApiStorageListRoute: ApiStorageListRoute,
+  ApiStorageStatsRoute: ApiStorageStatsRoute,
+  ApiStorageUploadRoute: ApiStorageUploadRoute,
   ApiWorkersStatusRoute: ApiWorkersStatusRoute,
   ApiPublicHooksScanWorkerRoute: ApiPublicHooksScanWorkerRoute,
 }

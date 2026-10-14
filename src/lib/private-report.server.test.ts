@@ -14,11 +14,12 @@ vi.mock("./settings.server", async () => {
 
 const scanId = "00000000-0000-4000-8000-000000000001";
 const otherId = "00000000-0000-4000-8000-000000000002";
+const userId = "00000000-0000-4000-8000-000000000003";
 let directory: string;
 let pdf: Buffer;
 beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), "private-pdf-unit-"));
-  vi.stubEnv("REPORT_PDF_DIRECTORY", directory);
+  vi.stubEnv("STORAGE_ROOT", directory);
   const document = await PDFDocument.create();
   document.addPage();
   pdf = Buffer.from(await document.save());
@@ -42,9 +43,9 @@ function client(options: { denied?: boolean; urlId?: string; selected?: boolean 
                 {
                   report_number: "RPT-UNIT",
                   report_data: {
-                    pdf_url: `https://ratingguard.online/reports/${options.urlId ?? scanId}.pdf`,
+                    pdf_url: `https://ratingguard.online/api/storage/download?folder=reports%2F${userId}&filename=${options.urlId ?? scanId}.pdf`,
                     pdf_saved_at: new Date().toISOString(),
-                    selected_pdf_url: `https://ratingguard.online/reports/${otherId}_selected.pdf`,
+                    selected_pdf_url: `https://ratingguard.online/api/storage/download?folder=reports%2F${userId}&filename=${otherId}_selected.pdf`,
                     selected_saved_at: new Date().toISOString(),
                   },
                 },
@@ -56,37 +57,37 @@ function client(options: { denied?: boolean; urlId?: string; selected?: boolean 
 }
 describe("Private report PDF authorization", () => {
   it("returns bytes only after an RLS-visible report is loaded", async () => {
-    await saveReportToVPS(scanId, pdf);
-    const result = await readPrivateReportPdf(client(), { scanId, variant: "full" });
+    await saveReportToVPS(scanId, pdf, userId);
+    const result = await readPrivateReportPdf(client(), { scanId, variant: "full" }, userId);
     expect(Buffer.from(result.base64, "base64")).toEqual(
-      await readFile(join(directory, `${scanId}.pdf`)),
+      await readFile(join(directory, "reports", userId, `${scanId}.pdf`)),
     );
   });
   it("denies another owner or a restricted principal before reading files", async () => {
     await expect(
-      readPrivateReportPdf(client({ denied: true }), { scanId, variant: "full" }),
+      readPrivateReportPdf(client({ denied: true }), { scanId, variant: "full" }, userId),
     ).rejects.toThrow("Access Denied");
   });
   it("does not trust owner-editable metadata pointing to another report", async () => {
-    await saveReportToVPS(otherId, pdf);
+    await saveReportToVPS(otherId, pdf, userId);
     await expect(
-      readPrivateReportPdf(client({ urlId: otherId }), { scanId, variant: "full" }),
+      readPrivateReportPdf(client({ urlId: otherId }), { scanId, variant: "full" }, userId),
     ).rejects.toThrow("does not belong");
   });
   it("requires a server-registered ownership binding for selected snapshots", async () => {
-    await saveReportToVPS(otherId, pdf, undefined, "selected");
-    await expect(readPrivateReportPdf(client(), { scanId, variant: "selected" })).rejects.toThrow(
+    await saveReportToVPS(otherId, pdf, userId, "selected");
+    await expect(readPrivateReportPdf(client(), { scanId, variant: "selected" }, userId)).rejects.toThrow(
       "Access Denied",
     );
     const result = await readPrivateReportPdf(client({ selected: true }), {
       scanId,
       variant: "selected",
-    });
+    }, userId);
     expect(Buffer.from(result.base64, "base64")).toEqual(pdf);
   });
   it("rejects path traversal and unsupported variants", async () => {
     await expect(
-      readPrivateReportPdf(client(), { scanId: "../escape", variant: "full" }),
+      readPrivateReportPdf(client(), { scanId: "../escape", variant: "full" }, userId),
     ).rejects.toThrow();
   });
 });

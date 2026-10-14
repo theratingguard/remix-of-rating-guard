@@ -1,6 +1,3 @@
-import { chmod, mkdir, rename, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { randomUUID } from "node:crypto";
 import { PDFDocument } from "pdf-lib";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -18,6 +15,7 @@ import { enrichPredictions } from "./removal-prediction.server";
 import { predictionBand, type RemovalPrediction } from "./removal-prediction";
 import { rulesEngine } from "./rules-engine.server";
 import { readPersistedRuleScore } from "./rules/micro-rules";
+import { storage } from "./storage.server";
 
 export const MAX_REPORT_PDF_BYTES = 24 * 1024 * 1024;
 const reportIdSchema = z.string().uuid();
@@ -25,11 +23,11 @@ const reportIdSchema = z.string().uuid();
 export async function saveReportToVPS(
   reportId: string,
   pdfBuffer: Buffer,
-  subdirectory?: string,
+  userId: string,
   evidence: boolean | "selected" | "legal" = false,
 ) {
   reportIdSchema.parse(reportId);
-  if (subdirectory && subdirectory !== "shared") reportIdSchema.parse(subdirectory);
+  reportIdSchema.parse(userId);
   if (
     pdfBuffer.length === 0 ||
     pdfBuffer.length > MAX_REPORT_PDF_BYTES ||
@@ -41,25 +39,12 @@ export async function saveReportToVPS(
   if (document.getPageCount() < 1 || document.getPageCount() > 100)
     throw new Error("A report PDF must contain between 1 and 100 pages.");
 
-  const root = process.env["REPORT_PDF_DIRECTORY"] || "/opt/rating-guard-private/reports";
-  const directory = subdirectory ? join(root, subdirectory) : root;
-  await mkdir(directory, { recursive: true, mode: 0o700 });
-  await chmod(directory, 0o700);
-  const temporary = join(directory, `.${reportId}-${randomUUID()}.tmp`);
-  try {
-    await writeFile(temporary, pdfBuffer, { flag: "wx", mode: 0o600 });
-    await chmod(temporary, 0o600);
-    await rename(
-      temporary,
-      join(
-        directory,
-        `${reportId}${typeof evidence === "string" ? `_${evidence}` : evidence ? "_evidence" : ""}.pdf`,
-      ),
-    );
-  } finally {
-    await rm(temporary, { force: true });
-  }
-  return `https://ratingguard.online/reports/${subdirectory ? subdirectory + "/" : ""}${reportId}${typeof evidence === "string" ? `_${evidence}` : evidence ? "_evidence" : ""}.pdf`;
+  const suffix = typeof evidence === "string" ? `_${evidence}` : evidence ? "_evidence" : "";
+  const filename = `${reportId}${suffix}.pdf`;
+  const folder = `reports/${userId}`;
+  await storage.upload(folder, filename, pdfBuffer);
+  const params = new URLSearchParams({ folder, filename });
+  return `https://ratingguard.online/api/storage/download?${params.toString()}`;
 }
 
 export function reviewQualityHtml(quality: ReviewQuality) {
@@ -322,22 +307,18 @@ export async function generateOwnedReportPdf(
   const reportWithLegal = { ...report.data, report_data: newMetadata };
   const fullHtml = reportPdfHtml(scan.data, reportWithLegal, reviews);
   const pdfBuffer = await renderReportPdf(fullHtml);
-  const url = await saveReportToVPS(scanId, pdfBuffer);
+  const url = await saveReportToVPS(scanId, pdfBuffer, userId);
   const legalHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font:12px Arial;line-height:1.6;color:#13243b}.review{border:1px solid #ccd4df;padding:12px;margin:14px 0}.text{white-space:pre-wrap;overflow-wrap:anywhere}.note{font-size:10px}</style></head><body><h1>Legal Removal Request Assessment</h1><h2>${escapeHtml(scan.data.business_name)}</h2><p>${escapeHtml(report.data.report_number)} / ${escapeHtml(scan.data.created_at)}</p>${legalAnalysisHtml(legal, reviews)}<p>Nothing has been submitted to Google. Unsupported assessments are not removal requests.</p></body></html>`;
   const legalPdf = controls.legal_expert_enabled ? await renderReportPdf(legalHtml) : null;
-  const legalUrl = legalPdf ? await saveReportToVPS(scanId, legalPdf, undefined, "legal") : null;
+  const legalUrl = legalPdf ? await saveReportToVPS(scanId, legalPdf, userId, "legal") : null;
   if (scan.data.business_id) {
-    await saveReportToVPS(scanId, pdfBuffer, scan.data.business_id);
-    if (legalPdf) await saveReportToVPS(scanId, legalPdf, scan.data.business_id, "legal");
     const evidenceHtml = fullHtml.replace(
       "Google Review Risk Report</h1>",
       "Review Evidence Appendix</h1>",
     );
     const evidencePdf = await renderReportPdf(evidenceHtml);
-    await saveReportToVPS(scanId, evidencePdf, scan.data.business_id, true);
+    await saveReportToVPS(scanId, evidencePdf, userId, true);
   }
-  await saveReportToVPS(scanId, pdfBuffer, "shared");
-  if (legalPdf) await saveReportToVPS(scanId, legalPdf, "shared", "legal");
   const updated = await supabase
     .from("reports")
     .update({

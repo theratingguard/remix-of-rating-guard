@@ -58,7 +58,7 @@ export async function generateReportPdf(element: HTMLElement) {
   return pdf;
 }
 
-export async function downloadReportPdf(element: HTMLElement, filename: string) {
+export async function renderReportPdfPreview(element: HTMLElement) {
   const pdf = await generateReportPdf(element);
-  await pdf.save(filename, { returnPromise: true });
+  return pdf.output("blob");
 }
