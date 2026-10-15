@@ -215,6 +215,35 @@ export const sendStaffAdminMessage = createServerFn({ method: "POST" })
     return message;
   });
 
+export const getAdminStaffMessages = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input) => z.object({ staffId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: accessLevel, error: accessError } =
+      await context.supabase.rpc("report_access_level");
+    if (accessError) throw new Error("Could not verify administrator access.");
+    if (accessLevel !== "super_admin")
+      throw new Error("Superadmin access is required to view staff messages.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: staff, error: staffError } = await supabaseAdmin
+      .from("staff")
+      .select("id")
+      .eq("id", data.staffId)
+      .maybeSingle();
+    if (staffError) throw new Error(`Could not verify staff recipient: ${staffError.message}`);
+    if (!staff) throw new Error("Staff profile not found.");
+
+    const { data: messages, error } = await supabaseAdmin
+      .from("staff_admin_messages")
+      .select("*")
+      .eq("staff_id", staff.id)
+      .order("created_at", { ascending: true })
+      .limit(200);
+    if (error) throw new Error(`Could not load Admin Chat: ${error.message}`);
+    return messages ?? [];
+  });
+
 export const sendAdminStaffMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input) =>

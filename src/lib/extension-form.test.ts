@@ -35,9 +35,11 @@ describe("Google Maps extension helper", () => {
       `<main>Example Cafe Buy my product at spam.example</main><button id="submit">Submit</button>`,
     );
     expect(sendMessage).toHaveBeenCalledWith({ type: "prepared" });
-    expect(dom.window.document.querySelector('[aria-label="Verified request draft"]')?.value).toBe(
-      prepared.request,
-    );
+    expect(
+      dom.window.document.querySelector<HTMLTextAreaElement>(
+        '[aria-label="Verified request draft"]',
+      )?.value,
+    ).toBe(prepared.request);
     expect(dom.window.document.getElementById("submit")?.textContent).toBe("Submit");
   });
 
@@ -62,9 +64,11 @@ describe("Google Maps extension helper", () => {
     dom.window.document.querySelector("main")!.textContent = `Example Cafe ${prepared.evidence}`;
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(dom.window.document.querySelector('[aria-label="Verified request draft"]')?.value).toBe(
-      prepared.request,
-    );
+    expect(
+      dom.window.document.querySelector<HTMLTextAreaElement>(
+        '[aria-label="Verified request draft"]',
+      )?.value,
+    ).toBe(prepared.request);
     expect(
       dom.window.document.querySelector('[aria-label="Rating Guard verified report draft"]'),
     ).not.toBeNull();

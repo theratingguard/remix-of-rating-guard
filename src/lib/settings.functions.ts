@@ -5,6 +5,7 @@ import { getSettings, invalidateSettings } from "./settings.server";
 import { settingsSchema } from "./settings";
 import { testModel, modelStatusSchema } from "./model-test.server";
 import { smtpConfigured } from "./email.server";
+import { whatsappShareAvailable } from "./whatsapp.server";
 
 export const getFeatureSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -19,7 +20,7 @@ export const getAiControlPanel = createServerFn({ method: "GET" })
       settings: await getSettings(),
       statuses: statuses.data.map((row) => modelStatusSchema.parse(row.result)),
       emailAvailable: smtpConfigured(),
-      whatsappAvailable: true,
+      whatsappAvailable: whatsappShareAvailable(),
     };
   });
 export const saveAiSettings = createServerFn({ method: "POST" })

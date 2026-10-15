@@ -22,6 +22,7 @@ import {
   updateMyStaffLiveStatus,
   type StaffProfileInput,
 } from "@/lib/staff-case.functions";
+import { AdminStaffChat } from "@/components/admin-staff-chat";
 
 const staffKey = ["staff-workspace"];
 const adminStaffKey = ["admin-staff-cases"];
@@ -905,6 +906,7 @@ export function AdminStaffDetailPage({ id }: { id: string }) {
           </article>
         ))}
       </section>
+      <AdminStaffChat staffId={person.id} staffName={person.name} />
     </main>
   );
 }

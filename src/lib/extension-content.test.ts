@@ -36,17 +36,16 @@ function install(options: { session?: string; sendMessage?: ReturnType<typeof vi
 }
 
 function launchAssistant(dom: JSDOM) {
-  dom.window.dispatchEvent(
-    new dom.window.MessageEvent("message", {
-      source: dom.window,
-      origin: dom.window.location.origin,
-      data: {
-        source: "rating-guard-app",
-        type: "open-assistant",
-        scanId,
-      },
-    }),
-  );
+  const event = new dom.window.MessageEvent("message", {
+    origin: dom.window.location.origin,
+    data: {
+      source: "rating-guard-app",
+      type: "open-assistant",
+      scanId,
+    },
+  });
+  Object.defineProperty(event, "source", { value: dom.window });
+  dom.window.dispatchEvent(event);
 }
 
 async function tick() {

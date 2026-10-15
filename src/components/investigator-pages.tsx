@@ -478,19 +478,19 @@ export function AdminCasesPage() {
     } finally {
       setBusy(false);
     }
-    async function closeAssignedCase(caseId: string) {
-      if (!window.confirm("Close this internal work case? This does not confirm a Google outcome."))
-        return;
-      setClosingCaseId(caseId);
-      try {
-        await closeCase({ data: { caseId } });
-        await queryClient.invalidateQueries({ queryKey: adminDataKey });
-        toast.success("Case closed; client work log updated.");
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Case could not be closed.");
-      } finally {
-        setClosingCaseId(null);
-      }
+  }
+  async function closeAssignedCase(caseId: string) {
+    if (!window.confirm("Close this internal work case? This does not confirm a Google outcome."))
+      return;
+    setClosingCaseId(caseId);
+    try {
+      await closeCase({ data: { caseId } });
+      await queryClient.invalidateQueries({ queryKey: adminDataKey });
+      toast.success("Case closed; client work log updated.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Case could not be closed.");
+    } finally {
+      setClosingCaseId(null);
     }
   }
   if (adminData.isLoading) return <p>Loading admin case desk…</p>;

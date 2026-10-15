@@ -350,7 +350,7 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
                           </span>
                         ) : (
                           <span title="Historical cohort rate from manually recorded outcomes; not an individually calibrated or guaranteed probability.">
-                            {score}% cohort estimate · n={legal.prediction?.sample_size}
+                            {score}% cohort estimate · n={legal?.prediction?.sample_size}
                           </span>
                         )}
                       </td>

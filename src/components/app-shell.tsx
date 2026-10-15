@@ -14,7 +14,6 @@ import {
   Star,
   Globe2,
   CircleHelp,
-  Building2,
   Users,
   ListChecks,
   HardDrive,
@@ -36,8 +35,6 @@ const nav = [
   { to: "/history", label: "Scan History", Icon: History },
   { to: "/reports", label: "Reports", Icon: FileText },
   { to: "/storage", label: "Storage Manager", Icon: HardDrive },
-  { to: null, label: "Business Profiles", Icon: Building2 },
-  { to: null, label: "Team & Users", Icon: Users },
   { to: "/settings", label: "Settings", Icon: Settings },
 ] as const;
 
@@ -117,18 +114,6 @@ function SidebarBody({
               className:
                 "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
             };
-            if (!to)
-              return (
-                <span
-                  key={label}
-                  aria-disabled="true"
-                  title="This workspace feature is not configured."
-                  className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground opacity-60"
-                >
-                  <Icon className="h-4 w-4 shrink-0" /> {label}
-                  <span className="ml-auto text-[9px]">Soon</span>
-                </span>
-              );
             if ("search" in item)
               return (
                 <Link

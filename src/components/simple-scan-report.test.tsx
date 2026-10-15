@@ -35,7 +35,51 @@ vi.mock("@/lib/report-access", () => ({
 }));
 vi.mock("@/components/removal-workflow", () => ({ RemovalSubmissionForm: () => null }));
 
-const scanData = {
+type TestAnalysis = {
+  risk: string;
+  category: string | null;
+  signals: string[];
+  reason: string;
+  evidence: string | null;
+  confidence: number;
+  model: string;
+};
+
+type TestLegal = {
+  review_id: string;
+  violates_policy: boolean;
+  policy_type: string;
+  policy_section: string;
+  policy_url: string;
+  evidence_quote: string;
+  legal_grounds: string;
+  removal_request_text: string;
+  supporting_docs: string[];
+  removal_likelihood: number;
+  reasoning: string;
+};
+
+const scanData: {
+  scan: {
+    id: string;
+    status: string;
+    is_seed: boolean;
+    business_name: string;
+    rating: number;
+    total_reviews: number;
+    source_url: string;
+  };
+  report: { id: string };
+  reviews: {
+    id: string;
+    text: string;
+    author: string;
+    rating: number;
+    review_uri: string | null;
+    analysis: TestAnalysis;
+    legal: TestLegal | null;
+  }[];
+} = {
   scan: {
     id: "scan-1",
     status: "complete",

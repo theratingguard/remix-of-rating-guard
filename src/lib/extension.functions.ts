@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { savedLegalAnalysis } from "./legal-analysis";
 import { isGoogleMapsUrl } from "./google-url";
+import type { Database } from "@/integrations/supabase/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const extensionSubmissionSchema = z
   .object({
@@ -17,12 +19,10 @@ export const extensionSubmissionSchema = z
     message: "Submission date cannot be in the future.",
   });
 
-async function requireExtensionAccess(supabase: {
-  rpc: (name: "report_access_level") => {
-    throwOnError: () => Promise<{ data: string }>;
-  };
-}) {
-  if ((await supabase.rpc("report_access_level").throwOnError()).data !== "super_admin")
+async function requireExtensionAccess(supabase: SupabaseClient<Database>) {
+  const { data, error } = await supabase.rpc("report_access_level");
+  if (error) throw new Error("Could not verify extension access.");
+  if (data !== "super_admin")
     throw new Error("Access Denied: extension report access is Super Admin only.");
 }
 
@@ -104,7 +104,7 @@ export const recordExtensionSubmission = createServerFn({ method: "POST" })
     const [scan, report, review] = await Promise.all([
       context.supabase
         .from("scans")
-        .select("business_type")
+        .select("category")
         .eq("id", data.scanId)
         .single()
         .throwOnError(),
@@ -139,7 +139,7 @@ export const recordExtensionSubmission = createServerFn({ method: "POST" })
         scan_id: data.scanId,
         user_id: context.userId,
         policy_type: prepared.policy_type,
-        business_type: scan.data.business_type,
+        business_type: scan.data.category?.trim() || "unknown",
         submitted_at: data.submittedAt,
         verification_reference: data.verificationReference,
         request_text: prepared.removal_request_text,

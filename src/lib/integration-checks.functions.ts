@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { searchBusinesses } from "./google-places.server";
 import { getSettings } from "./settings.server";
 import { smtpConfigured } from "./email.server";
+import { whatsappShareAvailable } from "./whatsapp.server";
 export const getIntegrationChecks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -25,7 +26,7 @@ export const getIntegrationChecks = createServerFn({ method: "GET" })
       models: models.data,
       lastScanVerified: scans.data[0]?.completed_at ?? null,
       emailAvailable: smtpConfigured(),
-      whatsappAvailable: true,
+      whatsappAvailable: whatsappShareAvailable(),
       settings: await getSettings(),
     };
   });

@@ -93,7 +93,7 @@ export const getSystemStatus = createServerFn({ method: "GET" })
       {
         name: "Database",
         status: db.error ? "unavailable" : "healthy",
-        detail: db.error ? db.error.message : `Responded in ${dbMs} ms`,
+        detail: db.error ? "Database query failed; check server logs." : `Responded in ${dbMs} ms`,
       },
       {
         name: "Google API",

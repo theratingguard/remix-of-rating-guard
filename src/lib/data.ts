@@ -113,6 +113,8 @@ export type DashboardScanRow = Pick<
   | "medium_count"
   | "normal_count"
   | "requires_review_count"
+  | "started_at"
+  | "completed_at"
   | "created_at"
   | "error"
 > & { reports: Pick<Report, "report_number"> | null };
@@ -126,7 +128,7 @@ export const dashboardScansQuery = () =>
         const { data, error } = await supabase
           .from("scans")
           .select(
-            "id,is_seed,business_name,source_url,address,region,status,rating,reviews_retrieved,high_count,medium_count,normal_count,requires_review_count,created_at,error,reports!reports_scan_id_fkey(report_number)",
+            "id,is_seed,business_name,source_url,address,region,status,rating,reviews_retrieved,high_count,medium_count,normal_count,requires_review_count,started_at,completed_at,created_at,error,reports!reports_scan_id_fkey(report_number)",
           )
           .order("created_at", { ascending: false })
           .order("id")
@@ -205,7 +207,9 @@ function normalizeRisk(risk: string): Risk {
   return risk === "high" || risk === "medium" || risk === "normal" ? risk : "requires_review";
 }
 
-export function scanRisk(s: Scan): Risk {
+export function scanRisk(
+  s: Pick<Scan, "high_count" | "medium_count" | "requires_review_count">,
+): Risk {
   if (s.high_count > 0) return "high";
   if (s.medium_count > 0) return "medium";
   if (s.requires_review_count > 0) return "requires_review";

@@ -443,6 +443,7 @@ export const assignInvestigatorCase = createServerFn({ method: "POST" })
       throw new Error("Cases can only be assigned to active investigators.");
     const review = reviewResult.data;
     const scan = scanResult.data;
+    if (!scan.user_id) throw new Error("Source scan has no associated account.");
     const reviewUrl = review.review_uri;
     if (!reviewUrl || !isGoogleMapsUrl(reviewUrl))
       throw new Error("The selected review does not have a valid exact Google Maps review URL.");
