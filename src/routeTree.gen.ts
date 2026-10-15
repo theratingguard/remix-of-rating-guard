@@ -40,9 +40,15 @@ import { Route as AuthenticatedInvestigatorRegisterRouteImport } from './routes/
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
 import { Route as AuthenticatedReportsIdRouteImport } from './routes/_authenticated/reports.$id'
 import { Route as AuthenticatedScanReportIdRouteImport } from './routes/_authenticated/scan-report.$id'
+import { Route as AuthenticatedStaffAlertsRouteImport } from './routes/_authenticated/staff.alerts'
 import { Route as AuthenticatedStaffCasesRouteImport } from './routes/_authenticated/staff.cases'
+import { Route as AuthenticatedStaffCommunicationRouteImport } from './routes/_authenticated/staff.communication'
+import { Route as AuthenticatedStaffPerformanceRouteImport } from './routes/_authenticated/staff.performance'
 import { Route as AuthenticatedStaffProfileRouteImport } from './routes/_authenticated/staff.profile'
+import { Route as AuthenticatedStaffQualityRouteImport } from './routes/_authenticated/staff.quality'
 import { Route as AuthenticatedStaffRegisterRouteImport } from './routes/_authenticated/staff.register'
+import { Route as AuthenticatedStaffStatusBoardRouteImport } from './routes/_authenticated/staff.status-board'
+import { Route as AuthenticatedStaffTasksRouteImport } from './routes/_authenticated/staff.tasks'
 import { Route as AuthenticatedStaffTodayRouteImport } from './routes/_authenticated/staff.today'
 import { Route as AuthenticatedStaffWalletRouteImport } from './routes/_authenticated/staff.wallet'
 import { Route as ApiExtensionReportRouteImport } from './routes/api/extension/report'
@@ -225,15 +231,39 @@ const AuthenticatedScanReportIdRoute =
     path: '/scan-report/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedStaffAlertsRoute =
+  AuthenticatedStaffAlertsRouteImport.update({
+    id: '/staff/alerts',
+    path: '/staff/alerts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedStaffCasesRoute = AuthenticatedStaffCasesRouteImport.update({
   id: '/staff/cases',
   path: '/staff/cases',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStaffCommunicationRoute =
+  AuthenticatedStaffCommunicationRouteImport.update({
+    id: '/staff/communication',
+    path: '/staff/communication',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStaffPerformanceRoute =
+  AuthenticatedStaffPerformanceRouteImport.update({
+    id: '/staff/performance',
+    path: '/staff/performance',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedStaffProfileRoute =
   AuthenticatedStaffProfileRouteImport.update({
     id: '/staff/profile',
     path: '/staff/profile',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStaffQualityRoute =
+  AuthenticatedStaffQualityRouteImport.update({
+    id: '/staff/quality',
+    path: '/staff/quality',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedStaffRegisterRoute =
@@ -242,6 +272,17 @@ const AuthenticatedStaffRegisterRoute =
     path: '/staff/register',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedStaffStatusBoardRoute =
+  AuthenticatedStaffStatusBoardRouteImport.update({
+    id: '/staff/status-board',
+    path: '/staff/status-board',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStaffTasksRoute = AuthenticatedStaffTasksRouteImport.update({
+  id: '/staff/tasks',
+  path: '/staff/tasks',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedStaffTodayRoute = AuthenticatedStaffTodayRouteImport.update({
   id: '/staff/today',
   path: '/staff/today',
@@ -352,9 +393,15 @@ export interface FileRoutesByFullPath {
   '/investigator/register': typeof AuthenticatedInvestigatorRegisterRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
   '/scan-report/$id': typeof AuthenticatedScanReportIdRoute
+  '/staff/alerts': typeof AuthenticatedStaffAlertsRoute
   '/staff/cases': typeof AuthenticatedStaffCasesRoute
+  '/staff/communication': typeof AuthenticatedStaffCommunicationRoute
+  '/staff/performance': typeof AuthenticatedStaffPerformanceRoute
   '/staff/profile': typeof AuthenticatedStaffProfileRoute
+  '/staff/quality': typeof AuthenticatedStaffQualityRoute
   '/staff/register': typeof AuthenticatedStaffRegisterRoute
+  '/staff/status-board': typeof AuthenticatedStaffStatusBoardRoute
+  '/staff/tasks': typeof AuthenticatedStaffTasksRoute
   '/staff/today': typeof AuthenticatedStaffTodayRoute
   '/staff/wallet': typeof AuthenticatedStaffWalletRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
@@ -402,9 +449,15 @@ export interface FileRoutesByTo {
   '/investigator/register': typeof AuthenticatedInvestigatorRegisterRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
   '/scan-report/$id': typeof AuthenticatedScanReportIdRoute
+  '/staff/alerts': typeof AuthenticatedStaffAlertsRoute
   '/staff/cases': typeof AuthenticatedStaffCasesRoute
+  '/staff/communication': typeof AuthenticatedStaffCommunicationRoute
+  '/staff/performance': typeof AuthenticatedStaffPerformanceRoute
   '/staff/profile': typeof AuthenticatedStaffProfileRoute
+  '/staff/quality': typeof AuthenticatedStaffQualityRoute
   '/staff/register': typeof AuthenticatedStaffRegisterRoute
+  '/staff/status-board': typeof AuthenticatedStaffStatusBoardRoute
+  '/staff/tasks': typeof AuthenticatedStaffTasksRoute
   '/staff/today': typeof AuthenticatedStaffTodayRoute
   '/staff/wallet': typeof AuthenticatedStaffWalletRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
@@ -454,9 +507,15 @@ export interface FileRoutesById {
   '/_authenticated/investigator/register': typeof AuthenticatedInvestigatorRegisterRoute
   '/_authenticated/reports/$id': typeof AuthenticatedReportsIdRoute
   '/_authenticated/scan-report/$id': typeof AuthenticatedScanReportIdRoute
+  '/_authenticated/staff/alerts': typeof AuthenticatedStaffAlertsRoute
   '/_authenticated/staff/cases': typeof AuthenticatedStaffCasesRoute
+  '/_authenticated/staff/communication': typeof AuthenticatedStaffCommunicationRoute
+  '/_authenticated/staff/performance': typeof AuthenticatedStaffPerformanceRoute
   '/_authenticated/staff/profile': typeof AuthenticatedStaffProfileRoute
+  '/_authenticated/staff/quality': typeof AuthenticatedStaffQualityRoute
   '/_authenticated/staff/register': typeof AuthenticatedStaffRegisterRoute
+  '/_authenticated/staff/status-board': typeof AuthenticatedStaffStatusBoardRoute
+  '/_authenticated/staff/tasks': typeof AuthenticatedStaffTasksRoute
   '/_authenticated/staff/today': typeof AuthenticatedStaffTodayRoute
   '/_authenticated/staff/wallet': typeof AuthenticatedStaffWalletRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
@@ -506,9 +565,15 @@ export interface FileRouteTypes {
     | '/investigator/register'
     | '/reports/$id'
     | '/scan-report/$id'
+    | '/staff/alerts'
     | '/staff/cases'
+    | '/staff/communication'
+    | '/staff/performance'
     | '/staff/profile'
+    | '/staff/quality'
     | '/staff/register'
+    | '/staff/status-board'
+    | '/staff/tasks'
     | '/staff/today'
     | '/staff/wallet'
     | '/api/extension/report'
@@ -556,9 +621,15 @@ export interface FileRouteTypes {
     | '/investigator/register'
     | '/reports/$id'
     | '/scan-report/$id'
+    | '/staff/alerts'
     | '/staff/cases'
+    | '/staff/communication'
+    | '/staff/performance'
     | '/staff/profile'
+    | '/staff/quality'
     | '/staff/register'
+    | '/staff/status-board'
+    | '/staff/tasks'
     | '/staff/today'
     | '/staff/wallet'
     | '/api/extension/report'
@@ -607,9 +678,15 @@ export interface FileRouteTypes {
     | '/_authenticated/investigator/register'
     | '/_authenticated/reports/$id'
     | '/_authenticated/scan-report/$id'
+    | '/_authenticated/staff/alerts'
     | '/_authenticated/staff/cases'
+    | '/_authenticated/staff/communication'
+    | '/_authenticated/staff/performance'
     | '/_authenticated/staff/profile'
+    | '/_authenticated/staff/quality'
     | '/_authenticated/staff/register'
+    | '/_authenticated/staff/status-board'
+    | '/_authenticated/staff/tasks'
     | '/_authenticated/staff/today'
     | '/_authenticated/staff/wallet'
     | '/api/extension/report'
@@ -869,11 +946,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedScanReportIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/staff/alerts': {
+      id: '/_authenticated/staff/alerts'
+      path: '/staff/alerts'
+      fullPath: '/staff/alerts'
+      preLoaderRoute: typeof AuthenticatedStaffAlertsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/staff/cases': {
       id: '/_authenticated/staff/cases'
       path: '/staff/cases'
       fullPath: '/staff/cases'
       preLoaderRoute: typeof AuthenticatedStaffCasesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/staff/communication': {
+      id: '/_authenticated/staff/communication'
+      path: '/staff/communication'
+      fullPath: '/staff/communication'
+      preLoaderRoute: typeof AuthenticatedStaffCommunicationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/staff/performance': {
+      id: '/_authenticated/staff/performance'
+      path: '/staff/performance'
+      fullPath: '/staff/performance'
+      preLoaderRoute: typeof AuthenticatedStaffPerformanceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/staff/profile': {
@@ -883,11 +981,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStaffProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/staff/quality': {
+      id: '/_authenticated/staff/quality'
+      path: '/staff/quality'
+      fullPath: '/staff/quality'
+      preLoaderRoute: typeof AuthenticatedStaffQualityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/staff/register': {
       id: '/_authenticated/staff/register'
       path: '/staff/register'
       fullPath: '/staff/register'
       preLoaderRoute: typeof AuthenticatedStaffRegisterRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/staff/status-board': {
+      id: '/_authenticated/staff/status-board'
+      path: '/staff/status-board'
+      fullPath: '/staff/status-board'
+      preLoaderRoute: typeof AuthenticatedStaffStatusBoardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/staff/tasks': {
+      id: '/_authenticated/staff/tasks'
+      path: '/staff/tasks'
+      fullPath: '/staff/tasks'
+      preLoaderRoute: typeof AuthenticatedStaffTasksRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/staff/today': {
@@ -1049,9 +1168,15 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedInvestigatorRegisterRoute: typeof AuthenticatedInvestigatorRegisterRoute
   AuthenticatedReportsIdRoute: typeof AuthenticatedReportsIdRoute
   AuthenticatedScanReportIdRoute: typeof AuthenticatedScanReportIdRoute
+  AuthenticatedStaffAlertsRoute: typeof AuthenticatedStaffAlertsRoute
   AuthenticatedStaffCasesRoute: typeof AuthenticatedStaffCasesRoute
+  AuthenticatedStaffCommunicationRoute: typeof AuthenticatedStaffCommunicationRoute
+  AuthenticatedStaffPerformanceRoute: typeof AuthenticatedStaffPerformanceRoute
   AuthenticatedStaffProfileRoute: typeof AuthenticatedStaffProfileRoute
+  AuthenticatedStaffQualityRoute: typeof AuthenticatedStaffQualityRoute
   AuthenticatedStaffRegisterRoute: typeof AuthenticatedStaffRegisterRoute
+  AuthenticatedStaffStatusBoardRoute: typeof AuthenticatedStaffStatusBoardRoute
+  AuthenticatedStaffTasksRoute: typeof AuthenticatedStaffTasksRoute
   AuthenticatedStaffTodayRoute: typeof AuthenticatedStaffTodayRoute
   AuthenticatedStaffWalletRoute: typeof AuthenticatedStaffWalletRoute
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
@@ -1081,9 +1206,15 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedInvestigatorRegisterRoute,
   AuthenticatedReportsIdRoute: AuthenticatedReportsIdRoute,
   AuthenticatedScanReportIdRoute: AuthenticatedScanReportIdRoute,
+  AuthenticatedStaffAlertsRoute: AuthenticatedStaffAlertsRoute,
   AuthenticatedStaffCasesRoute: AuthenticatedStaffCasesRoute,
+  AuthenticatedStaffCommunicationRoute: AuthenticatedStaffCommunicationRoute,
+  AuthenticatedStaffPerformanceRoute: AuthenticatedStaffPerformanceRoute,
   AuthenticatedStaffProfileRoute: AuthenticatedStaffProfileRoute,
+  AuthenticatedStaffQualityRoute: AuthenticatedStaffQualityRoute,
   AuthenticatedStaffRegisterRoute: AuthenticatedStaffRegisterRoute,
+  AuthenticatedStaffStatusBoardRoute: AuthenticatedStaffStatusBoardRoute,
+  AuthenticatedStaffTasksRoute: AuthenticatedStaffTasksRoute,
   AuthenticatedStaffTodayRoute: AuthenticatedStaffTodayRoute,
   AuthenticatedStaffWalletRoute: AuthenticatedStaffWalletRoute,
   AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,

@@ -84,9 +84,15 @@ function SidebarBody({
         {isStaff ? (
           <>
             {[
-              { to: "/staff/today" as const, label: "Today's Tasks", Icon: ClipboardList },
+              { to: "/staff/today" as const, label: "Overview", Icon: LayoutDashboard },
+              { to: "/staff/tasks" as const, label: "My Tasks", Icon: ClipboardList },
+              { to: "/staff/status-board" as const, label: "Status Board", Icon: ListChecks },
+              { to: "/staff/performance" as const, label: "Performance", Icon: FileText },
+              { to: "/staff/quality" as const, label: "Quality / Rework", Icon: CircleHelp },
+              { to: "/staff/wallet" as const, label: "Incentive (Wallet)", Icon: CircleDollarSign },
+              { to: "/staff/communication" as const, label: "Communication", Icon: Users },
+              { to: "/staff/alerts" as const, label: "Alerts", Icon: Star },
               { to: "/staff/profile" as const, label: "Profile", Icon: UserRound },
-              { to: "/staff/wallet" as const, label: "Wallet", Icon: CircleDollarSign },
             ].map(({ to, label, Icon }) => (
               <Link
                 key={to}
@@ -101,13 +107,6 @@ function SidebarBody({
                 <Icon className="h-4 w-4 shrink-0" /> {label}
               </Link>
             ))}
-            <button
-              type="button"
-              onClick={logout}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-            >
-              <LogOut className="h-4 w-4 shrink-0" /> Logout
-            </button>
           </>
         ) : (
           nav.map((item) => {
@@ -159,7 +158,17 @@ function SidebarBody({
           })
         )}
       </nav>
-      {!isStaff && (
+      {isStaff ? (
+        <div className="mt-auto border-t pt-4">
+          <button
+            type="button"
+            onClick={logout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+          >
+            <LogOut className="h-4 w-4 shrink-0" /> Logout
+          </button>
+        </div>
+      ) : (
         <div className="mt-auto space-y-3 border-t pt-4">
           <div className="rounded-xl border border-brand/20 bg-brand-soft/60 p-3">
             <p className="text-xs font-semibold">Keep your Google reputation safe</p>

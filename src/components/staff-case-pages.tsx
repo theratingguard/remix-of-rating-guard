@@ -35,6 +35,9 @@ function StatusPill({ status }: { status: string }) {
     reply_received: "bg-sky-100 text-sky-900",
     closed: "bg-emerald-100 text-emerald-900",
     active: "bg-emerald-100 text-emerald-900",
+    approved: "bg-emerald-100 text-emerald-900",
+    rejected: "bg-red-100 text-red-900",
+    rework: "bg-violet-100 text-violet-900",
     disabled: "bg-red-100 text-red-900",
   };
   return (
@@ -523,7 +526,9 @@ export function AdminCaseAssignmentPage() {
   if (adminData.isLoading) return <p>Loading assignments…</p>;
   if (adminData.error || !adminData.data)
     return <p role="alert">{adminData.error?.message ?? "Could not load assignment data."}</p>;
-  const activeStaff = adminData.data.staff.filter((row) => row.status === "active");
+  const activeStaff = adminData.data.staff.filter((row) =>
+    ["approved", "active"].includes(row.status),
+  );
   const orderedStaff = [...activeStaff].sort((left, right) => {
     const locationScore = (person: (typeof activeStaff)[number]) =>
       eligible.reduce((total, target) => {
@@ -623,12 +628,18 @@ export function AdminStaffPage() {
   const result = useQuery({ queryKey: adminStaffKey, queryFn: useServerFn(getAdminStaffData) });
   const setStatus = useServerFn(setStaffStatus);
   const [busyId, setBusyId] = useState<string | null>(null);
-  async function updateStatus(id: string, status: "active" | "disabled") {
+  async function updateStatus(id: string, status: "approved" | "active" | "rejected" | "disabled") {
     setBusyId(id);
     try {
       await setStatus({ data: { staffId: id, status } });
       await queryClient.invalidateQueries({ queryKey: adminStaffKey });
-      toast.success(`Staff ${status}.`);
+      toast.success(
+        status === "approved"
+          ? "Staff approved."
+          : status === "rejected"
+            ? "Staff rejected."
+            : `Staff ${status}.`,
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not update staff.");
     } finally {
@@ -700,19 +711,39 @@ export function AdminStaffPage() {
                   {person.last_seen_at ? new Date(person.last_seen_at).toLocaleString() : "—"}
                 </td>
                 <td>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busyId === person.id}
-                    onClick={() =>
-                      void updateStatus(
-                        person.id,
-                        person.status === "active" ? "disabled" : "active",
-                      )
-                    }
-                  >
-                    {person.status === "active" ? "Disable" : "Activate"}
-                  </Button>
+                  <div className="flex gap-2">
+                    {["pending", "rejected", "disabled"].includes(person.status) ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busyId === person.id}
+                          onClick={() => void updateStatus(person.id, "approved")}
+                        >
+                          Approve
+                        </Button>
+                        {person.status === "pending" && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={busyId === person.id}
+                            onClick={() => void updateStatus(person.id, "rejected")}
+                          >
+                            Reject
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busyId === person.id}
+                        onClick={() => void updateStatus(person.id, "disabled")}
+                      >
+                        Disable
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

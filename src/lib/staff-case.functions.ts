@@ -35,8 +35,8 @@ async function requireActiveStaff(userId: string) {
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new Error(`Could not load staff profile: ${error.message}`);
-  if (!data || data.status !== "active")
-    throw new Error("An active staff profile is required. Ask an administrator to activate it.");
+  if (!data || !["approved", "active"].includes(data.status))
+    throw new Error("An approved staff profile is required. Ask the superadmin to approve it.");
   return data;
 }
 
@@ -498,7 +498,9 @@ export const getAdminStaffData = createServerFn({ method: "GET" })
         totalStaff: staffResult.data?.length ?? 0,
         activeToday:
           staffResult.data?.filter(
-            (row) => row.status === "active" && (row.last_seen_at ?? "") >= start.toISOString(),
+            (row) =>
+              ["approved", "active"].includes(row.status) &&
+              (row.last_seen_at ?? "") >= start.toISOString(),
           ).length ?? 0,
         casesAssigned: allCount.count ?? 0,
         casesSubmitted: submittedCount.count ?? 0,
@@ -533,7 +535,8 @@ export const assignStaffCases = createServerFn({ method: "POST" })
       .eq("id", data.staffId)
       .single();
     if (staffError) throw new Error(`Could not verify staff member: ${staffError.message}`);
-    if (staff.status !== "active") throw new Error("Cases can only be assigned to active staff.");
+    if (!["approved", "active"].includes(staff.status))
+      throw new Error("Cases can only be assigned to approved staff.");
     const scanIds = [...new Set(targets.map((item) => item.scanId))];
     const [scansResult, reviewsResult] = await Promise.all([
       supabaseAdmin
@@ -569,6 +572,8 @@ export const assignStaffCases = createServerFn({ method: "POST" })
     const assignments = targets.map((target) => {
       const scan = scans.get(target.scanId)!;
       const review = reviews.get(`${target.scanId}:${target.reviewId}`)!;
+      if (!scan.user_id)
+        throw new Error(`Review ${target.reviewId} is missing its owning client account.`);
       if (!review.review_uri || !isGoogleMapsUrl(review.review_uri))
         throw new Error(`Review ${target.reviewId} does not have an exact Google Maps URL.`);
       if (!["high", "medium"].includes(review.risk))
@@ -648,7 +653,12 @@ export const assignStaffCases = createServerFn({ method: "POST" })
 export const setStaffStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input) =>
-    z.object({ staffId: z.string().uuid(), status: z.enum(["active", "disabled"]) }).parse(input),
+    z
+      .object({
+        staffId: z.string().uuid(),
+        status: z.enum(["approved", "active", "rejected", "disabled"]),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     await requireAdmin(context.supabase);

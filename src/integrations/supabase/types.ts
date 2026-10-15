@@ -19,6 +19,9 @@ export type Database = {
           region_city: string;
           region_state: string;
           status: string;
+          role: string;
+          team_lead: string | null;
+          skills: string[];
           credits: number;
           live_status: "Available" | "Working" | "Offline";
           last_seen_at: string | null;
@@ -32,6 +35,9 @@ export type Database = {
           email: string;
           region_city: string;
           region_state: string;
+          role?: string;
+          team_lead?: string | null;
+          skills?: string[];
           credits?: number;
           live_status?: "Available" | "Working" | "Offline";
           status?: string;
@@ -45,6 +51,9 @@ export type Database = {
           email?: string;
           region_city?: string;
           region_state?: string;
+          role?: string;
+          team_lead?: string | null;
+          skills?: string[];
           credits?: number;
           live_status?: "Available" | "Working" | "Offline";
           status?: string;
@@ -91,6 +100,12 @@ export type Database = {
           evidence_notes: string;
           policy_angle: string;
           status: string;
+          priority: string;
+          deadline_at: string | null;
+          staff_decision_reason: string | null;
+          tl_remarks: string | null;
+          rework_instructions: string | null;
+          mistake_category: string | null;
           google_reply: string | null;
           ai_status: string | null;
           ai_next_step: string | null;
@@ -115,6 +130,12 @@ export type Database = {
           evidence_notes?: string;
           policy_angle?: string;
           status?: string;
+          priority?: string;
+          deadline_at?: string | null;
+          staff_decision_reason?: string | null;
+          tl_remarks?: string | null;
+          rework_instructions?: string | null;
+          mistake_category?: string | null;
           google_reply?: string | null;
           ai_status?: string | null;
           ai_next_step?: string | null;
@@ -132,6 +153,12 @@ export type Database = {
           evidence_notes?: string;
           policy_angle?: string;
           status?: string;
+          priority?: string;
+          deadline_at?: string | null;
+          staff_decision_reason?: string | null;
+          tl_remarks?: string | null;
+          rework_instructions?: string | null;
+          mistake_category?: string | null;
           google_reply?: string | null;
           ai_status?: string | null;
           ai_next_step?: string | null;
@@ -139,6 +166,60 @@ export type Database = {
           submitted_at?: string | null;
           closed_at?: string | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      staff_payout_details: {
+        Row: {
+          staff_id: string;
+          method: "upi" | "bank" | "binance";
+          upi_id: string | null;
+          bank_name: string | null;
+          bank_holder: string | null;
+          bank_account_last4: string | null;
+          binance_pay_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          staff_id: string;
+          method: "upi" | "bank" | "binance";
+          upi_id?: string | null;
+          bank_name?: string | null;
+          bank_holder?: string | null;
+          bank_account_last4?: string | null;
+          binance_pay_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          method?: "upi" | "bank" | "binance";
+          upi_id?: string | null;
+          bank_name?: string | null;
+          bank_holder?: string | null;
+          bank_account_last4?: string | null;
+          binance_pay_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      staff_admin_messages: {
+        Row: {
+          id: string;
+          staff_id: string;
+          sender_id: string;
+          sender_role: "staff" | "admin";
+          message: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          staff_id: string;
+          sender_id: string;
+          sender_role: "staff" | "admin";
+          message: string;
+          created_at?: string;
+        };
+        Update: {
+          message?: string;
         };
         Relationships: [];
       };

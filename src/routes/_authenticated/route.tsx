@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
+import { StaffApprovalScreen } from "@/components/staff-dashboard";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -9,7 +10,7 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) throw redirect({ to: "/auth" });
     const { data: staff, error: staffError } = await supabase
       .from("staff")
-      .select("id")
+      .select("id,status")
       .eq("id", data.user.id)
       .maybeSingle();
     if (staffError) throw new Error(`Could not determine staff navigation: ${staffError.message}`);
@@ -17,17 +18,39 @@ export const Route = createFileRoute("/_authenticated")({
     if (accessError)
       throw new Error(`Could not determine navigation access: ${accessError.message}`);
     const isStaff = Boolean(staff) && accessLevel !== "super_admin";
-    const staffPaths = ["/staff/today", "/staff/profile", "/staff/wallet", "/staff/cases"];
+    const staffPaths = [
+      "/staff/today",
+      "/staff/tasks",
+      "/staff/status-board",
+      "/staff/performance",
+      "/staff/quality",
+      "/staff/wallet",
+      "/staff/communication",
+      "/staff/alerts",
+      "/staff/profile",
+      "/staff/cases",
+      "/staff/register",
+    ];
     if (isStaff && !staffPaths.includes(location.pathname)) {
       throw redirect({ to: "/staff/today" });
     }
-    return { user: data.user, isStaff };
+    if (
+      !isStaff &&
+      location.pathname.startsWith("/staff/") &&
+      location.pathname !== "/staff/register"
+    ) {
+      throw redirect({ to: "/staff/register" });
+    }
+    return { user: data.user, isStaff, staffStatus: staff?.status ?? null };
   },
   component: Layout,
 });
 
 function Layout() {
-  const { user, isStaff } = Route.useRouteContext();
+  const { user, isStaff, staffStatus } = Route.useRouteContext();
+  if (isStaff && staffStatus !== "active" && staffStatus !== "approved") {
+    return <StaffApprovalScreen status={staffStatus ?? "pending"} />;
+  }
   return (
     <AppShell email={user.email ?? "admin"} isStaff={isStaff}>
       <Outlet />

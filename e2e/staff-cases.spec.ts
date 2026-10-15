@@ -131,7 +131,7 @@ test("logs in, assigns a case, reads it, records submission, and cleans up its o
   await page.getByRole("button", { name: /Assign 3 eligible cases/ }).click();
   await expect(page.getByText("3 cases assigned.")).toBeVisible();
 
-  await page.goto("/staff/today");
+  await page.goto("/staff/tasks");
   await expect(page.getByText(businessName)).toHaveCount(3);
 
   page.once("dialog", (dialog) => dialog.accept());
