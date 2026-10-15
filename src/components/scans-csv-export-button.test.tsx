@@ -34,6 +34,7 @@ describe("scans CSV VPS export", () => {
     };
     render(<ScansCsvExportButton scans={[scan as ScanRow]} label="Save CSV to VPS" />);
 
+    const expectedDate = new Date().toISOString().slice(0, 10);
     fireEvent.click(screen.getByRole("button", { name: "Save CSV to VPS" }));
 
     await waitFor(() => expect(api.saveCsv).toHaveBeenCalledOnce());
@@ -44,7 +45,7 @@ describe("scans CSV VPS export", () => {
       folder: "reports",
       contentType: "text/csv;charset=utf-8",
     });
-    expect(request?.data.filename).toMatch(/^scans-2026-10-14-.+\.csv$/);
+    expect(request?.data.filename).toMatch(new RegExp(`^scans-${expectedDate}-.+\\.csv$`));
     const csv = new TextDecoder().decode(
       Uint8Array.from(atob(request?.data.base64 ?? ""), (char) => char.charCodeAt(0)),
     );

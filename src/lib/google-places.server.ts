@@ -100,6 +100,9 @@ async function googleFetch(
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
         "X-Goog-FieldMask": init.fieldMask,
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
       },
     });
   } catch {
@@ -187,7 +190,15 @@ async function expandShortLink(url: string): Promise<string> {
     }
     let res: Response;
     try {
-      res = await fetch(cur, { redirect: "manual", signal: AbortSignal.timeout(8000) });
+      res = await fetch(cur, {
+        redirect: "manual",
+        signal: AbortSignal.timeout(8000),
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+      });
     } catch {
       throw new ScanError(
         "RESOLVE_FAILED",
@@ -260,6 +271,7 @@ export async function searchBusinesses(apiKey: string, query: string) {
             id: z.string().min(1),
             displayName: z.object({ text: z.string().min(1) }),
             formattedAddress: z.string().optional(),
+            googleMapsUri: z.string().optional(),
           }),
         )
         .max(5)
@@ -269,16 +281,22 @@ export async function searchBusinesses(apiKey: string, query: string) {
       await googleFetch(apiKey, "/places:searchText", {
         method: "POST",
         body: JSON.stringify({ textQuery: query, pageSize: 5 }),
-        fieldMask: "places.id,places.displayName,places.formattedAddress",
+        fieldMask: "places.id,places.displayName,places.formattedAddress,places.googleMapsUri",
       }),
     );
   if (!result.success)
     throw new ScanError("GOOGLE_ERROR", "Google returned invalid business search results.");
-  return (result.data.places ?? []).map((place) => ({
-    name: place.displayName.text,
-    address: place.formattedAddress ?? "Address unavailable",
-    url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.displayName.text)}&query_place_id=${encodeURIComponent(place.id)}`,
-  }));
+  return (result.data.places ?? []).map((place) => {
+    const finalUrl =
+      place.googleMapsUri && isGoogleMapsUrl(place.googleMapsUri)
+        ? place.googleMapsUri
+        : `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(place.id)}`;
+    return {
+      name: place.displayName.text,
+      address: place.formattedAddress ?? "Address unavailable",
+      url: finalUrl,
+    };
+  });
 }
 
 export async function resolveAndFetchPlace(

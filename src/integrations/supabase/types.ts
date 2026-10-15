@@ -10,6 +10,289 @@ export type Database = {
   };
   public: {
     Tables: {
+      staff: {
+        Row: {
+          id: string;
+          name: string;
+          mobile: string;
+          email: string;
+          region_city: string;
+          region_state: string;
+          status: string;
+          last_seen_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          name: string;
+          mobile: string;
+          email: string;
+          region_city: string;
+          region_state: string;
+          status?: string;
+          last_seen_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          name?: string;
+          mobile?: string;
+          email?: string;
+          region_city?: string;
+          region_state?: string;
+          status?: string;
+          last_seen_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      staff_cases: {
+        Row: {
+          id: string;
+          client_user_id: string;
+          staff_id: string;
+          scan_id: string;
+          review_id: string;
+          review_url: string;
+          business_name: string;
+          business_region: string;
+          review_text: string;
+          report_text: string;
+          evidence_notes: string;
+          policy_angle: string;
+          status: string;
+          google_reply: string | null;
+          ai_status: string | null;
+          ai_next_step: string | null;
+          suggested_angle: string | null;
+          created_at: string;
+          assigned_at: string;
+          submitted_at: string | null;
+          closed_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_user_id: string;
+          staff_id: string;
+          scan_id: string;
+          review_id: string;
+          review_url: string;
+          business_name: string;
+          business_region?: string;
+          review_text?: string;
+          report_text?: string;
+          evidence_notes?: string;
+          policy_angle?: string;
+          status?: string;
+          google_reply?: string | null;
+          ai_status?: string | null;
+          ai_next_step?: string | null;
+          suggested_angle?: string | null;
+          created_at?: string;
+          assigned_at?: string;
+          submitted_at?: string | null;
+          closed_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          staff_id?: string;
+          business_region?: string;
+          report_text?: string;
+          evidence_notes?: string;
+          policy_angle?: string;
+          status?: string;
+          google_reply?: string | null;
+          ai_status?: string | null;
+          ai_next_step?: string | null;
+          suggested_angle?: string | null;
+          submitted_at?: string | null;
+          closed_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      staff_case_events: {
+        Row: {
+          id: string;
+          case_id: string;
+          actor_user_id: string;
+          event_type:
+            | "client_reported"
+            | "case_assigned"
+            | "report_prepared"
+            | "submission_recorded"
+            | "reply_received"
+            | "reply_analyzed"
+            | "next_action_taken"
+            | "case_closed";
+          details: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          case_id: string;
+          actor_user_id: string;
+          event_type:
+            | "client_reported"
+            | "case_assigned"
+            | "report_prepared"
+            | "submission_recorded"
+            | "reply_received"
+            | "reply_analyzed"
+            | "next_action_taken"
+            | "case_closed";
+          details?: Json;
+          created_at?: string;
+        };
+        Update: {
+          details?: Json;
+        };
+        Relationships: [];
+      };
+      investigators: {
+        Row: {
+          user_id: string;
+          name: string;
+          mobile: string;
+          email: string;
+          city: string;
+          state: string;
+          pincode: string;
+          status: string;
+          last_seen_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          name: string;
+          mobile: string;
+          email: string;
+          city: string;
+          state: string;
+          pincode: string;
+          status?: string;
+          last_seen_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          name?: string;
+          mobile?: string;
+          email?: string;
+          city?: string;
+          state?: string;
+          pincode?: string;
+          status?: string;
+          last_seen_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      investigator_cases: {
+        Row: {
+          id: string;
+          client_user_id: string;
+          investigator_id: string | null;
+          scan_id: string;
+          review_id: string;
+          review_url: string;
+          business_name: string;
+          business_city: string | null;
+          business_state: string | null;
+          review_text: string;
+          report_text: string;
+          evidence_notes: string;
+          policy_angle: string;
+          status: string;
+          google_reply: string | null;
+          ai_status: string | null;
+          ai_next_step: string | null;
+          created_at: string;
+          assigned_at: string;
+          submitted_at: string | null;
+          closed_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_user_id: string;
+          investigator_id?: string | null;
+          scan_id: string;
+          review_id: string;
+          review_url: string;
+          business_name: string;
+          business_city?: string | null;
+          business_state?: string | null;
+          review_text?: string;
+          report_text?: string;
+          evidence_notes?: string;
+          policy_angle?: string;
+          status?: string;
+          google_reply?: string | null;
+          ai_status?: string | null;
+          ai_next_step?: string | null;
+          created_at?: string;
+          assigned_at?: string;
+          submitted_at?: string | null;
+          closed_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          investigator_id?: string | null;
+          business_city?: string | null;
+          business_state?: string | null;
+          report_text?: string;
+          evidence_notes?: string;
+          policy_angle?: string;
+          status?: string;
+          google_reply?: string | null;
+          ai_status?: string | null;
+          ai_next_step?: string | null;
+          submitted_at?: string | null;
+          closed_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      investigator_case_events: {
+        Row: {
+          id: string;
+          case_id: string;
+          actor_user_id: string;
+          event_type:
+            | "client_url_received"
+            | "case_assigned"
+            | "report_prepared"
+            | "submission_recorded"
+            | "reply_received"
+            | "reply_analyzed"
+            | "case_closed";
+          details: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          case_id: string;
+          actor_user_id: string;
+          event_type:
+            | "client_url_received"
+            | "case_assigned"
+            | "report_prepared"
+            | "submission_recorded"
+            | "reply_received"
+            | "reply_analyzed"
+            | "case_closed";
+          details?: Json;
+          created_at?: string;
+        };
+        Update: {
+          details?: Json;
+        };
+        Relationships: [];
+      };
       worker_tasks: {
         Row: {
           id: string;

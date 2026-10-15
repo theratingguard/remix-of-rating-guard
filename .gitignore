@@ -17,6 +17,9 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
+playwright/.auth/
+test-results/
+playwright-report/
 public/reports/
 *.local
 

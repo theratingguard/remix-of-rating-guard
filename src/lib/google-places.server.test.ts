@@ -25,6 +25,10 @@ describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
     );
     expect(fetch.mock.calls[0]?.[1].redirect).toBe("manual");
     expect(fetch.mock.calls[1]?.[1].redirect).toBe("manual");
+    expect(fetch.mock.calls[0]?.[1].headers).toMatchObject({
+      "User-Agent": expect.stringContaining("Mozilla/5.0"),
+      "Accept-Language": "en-US,en;q=0.9",
+    });
   });
   it("returns name-search candidates with exact place-ID URLs, not an arbitrary automatic match", async () => {
     const fetch = vi.fn().mockResolvedValue(
@@ -34,6 +38,7 @@ describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
             id: "unit-place",
             displayName: { text: "Unit Business" },
             formattedAddress: "Unit City",
+            googleMapsUri: "https://www.google.com/maps/place/Unit+Business/data=!1sChIJunit-place",
           },
         ],
       }),
@@ -41,12 +46,30 @@ describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
     vi.stubGlobal("fetch", fetch);
     const candidates = await searchBusinesses("unit-key", "Unit Business Unit City");
     expect(candidates).toHaveLength(1);
-    expect(candidates[0]?.url).toContain("query_place_id=unit-place");
+    expect(candidates[0]?.url).toBe(
+      "https://www.google.com/maps/place/Unit+Business/data=!1sChIJunit-place",
+    );
+    expect(candidates[0]?.url).not.toContain("/maps/search/");
     expect(candidates[0]?.address).toBe("Unit City");
+    expect(fetch.mock.calls[0]?.[1].headers).toMatchObject({
+      "User-Agent": expect.stringContaining("Mozilla/5.0"),
+      "Accept-Language": "en-US,en;q=0.9",
+    });
     expect(JSON.parse(fetch.mock.calls[0]?.[1].body)).toEqual({
       textQuery: "Unit Business Unit City",
       pageSize: 5,
     });
+  });
+  it("falls back to a canonical place-ID URL if Google omits its Maps URI", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        places: [{ id: "unit-place", displayName: { text: "Unit Business" } }],
+      }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    const [candidate] = await searchBusinesses("unit-key", "Unit Business");
+    expect(candidate?.url).toBe("https://www.google.com/maps/place/?q=place_id:unit-place");
+    expect(candidate?.url).not.toContain("/maps/search/");
   });
   afterEach(() => vi.unstubAllGlobals());
   it.each([

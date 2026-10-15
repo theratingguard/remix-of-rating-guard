@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ClientInvestigatorWorkLog } from "@/components/investigator-pages";
+import { ClientStaffWorkLog } from "@/components/staff-case-pages";
 
 export function RestrictedReportSummary({ scanId }: { scanId?: string }) {
   const result = useQuery({
@@ -36,6 +38,8 @@ export function RestrictedReportSummary({ scanId }: { scanId?: string }) {
             ))}
         </tbody>
       </table>
+      {scanId && <ClientInvestigatorWorkLog scanId={scanId} />}
+      {scanId && <ClientStaffWorkLog scanId={scanId} />}
     </section>
   );
 }

@@ -27,9 +27,22 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedStorageRouteImport } from './routes/_authenticated/storage'
 import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as StaffLoginRouteImport } from './routes/staff.login'
+import { Route as AuthenticatedAdminAssignRouteImport } from './routes/_authenticated/admin.assign'
+import { Route as AuthenticatedAdminCaseAssignmentRouteImport } from './routes/_authenticated/admin.case-assignment'
+import { Route as AuthenticatedAdminCasesRouteImport } from './routes/_authenticated/admin.cases'
+import { Route as AuthenticatedAdminInvestigatorsRouteImport } from './routes/_authenticated/admin.investigators'
+import { Route as AuthenticatedAdminStaffRouteImport } from './routes/_authenticated/admin.staff'
+import { Route as AuthenticatedInvestigatorCasesRouteImport } from './routes/_authenticated/investigator.cases'
+import { Route as AuthenticatedInvestigatorLoginRouteImport } from './routes/_authenticated/investigator.login'
+import { Route as AuthenticatedInvestigatorProfileRouteImport } from './routes/_authenticated/investigator.profile'
+import { Route as AuthenticatedInvestigatorRegisterRouteImport } from './routes/_authenticated/investigator.register'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
 import { Route as AuthenticatedReportsIdRouteImport } from './routes/_authenticated/reports.$id'
 import { Route as AuthenticatedScanReportIdRouteImport } from './routes/_authenticated/scan-report.$id'
+import { Route as AuthenticatedStaffCasesRouteImport } from './routes/_authenticated/staff.cases'
+import { Route as AuthenticatedStaffProfileRouteImport } from './routes/_authenticated/staff.profile'
+import { Route as AuthenticatedStaffRegisterRouteImport } from './routes/_authenticated/staff.register'
 import { Route as ApiExtensionReportRouteImport } from './routes/api/extension/report'
 import { Route as ApiExtensionStatusRouteImport } from './routes/api/extension/status'
 import { Route as ApiExtensionSubmissionRouteImport } from './routes/api/extension/submission'
@@ -39,6 +52,8 @@ import { Route as ApiStorageListRouteImport } from './routes/api/storage/list'
 import { Route as ApiStorageStatsRouteImport } from './routes/api/storage/stats'
 import { Route as ApiStorageUploadRouteImport } from './routes/api/storage/upload'
 import { Route as ApiWorkersStatusRouteImport } from './routes/api/workers/status'
+import { Route as AuthenticatedAdminInvestigatorsIdRouteImport } from './routes/_authenticated/admin.investigators.$id'
+import { Route as AuthenticatedAdminStaffIdRouteImport } from './routes/_authenticated/admin.staff.$id'
 import { Route as ApiExtensionReportIdRouteImport } from './routes/api/extension/report.$id'
 import { Route as ApiPublicHooksScanWorkerRouteImport } from './routes/api/public/hooks/scan-worker'
 
@@ -134,6 +149,63 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StaffLoginRoute = StaffLoginRouteImport.update({
+  id: '/staff/login',
+  path: '/staff/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminAssignRoute =
+  AuthenticatedAdminAssignRouteImport.update({
+    id: '/admin/assign',
+    path: '/admin/assign',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminCaseAssignmentRoute =
+  AuthenticatedAdminCaseAssignmentRouteImport.update({
+    id: '/admin/case-assignment',
+    path: '/admin/case-assignment',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminCasesRoute = AuthenticatedAdminCasesRouteImport.update({
+  id: '/admin/cases',
+  path: '/admin/cases',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminInvestigatorsRoute =
+  AuthenticatedAdminInvestigatorsRouteImport.update({
+    id: '/admin/investigators',
+    path: '/admin/investigators',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminStaffRoute = AuthenticatedAdminStaffRouteImport.update({
+  id: '/admin/staff',
+  path: '/admin/staff',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedInvestigatorCasesRoute =
+  AuthenticatedInvestigatorCasesRouteImport.update({
+    id: '/investigator/cases',
+    path: '/investigator/cases',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInvestigatorLoginRoute =
+  AuthenticatedInvestigatorLoginRouteImport.update({
+    id: '/investigator/login',
+    path: '/investigator/login',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInvestigatorProfileRoute =
+  AuthenticatedInvestigatorProfileRouteImport.update({
+    id: '/investigator/profile',
+    path: '/investigator/profile',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInvestigatorRegisterRoute =
+  AuthenticatedInvestigatorRegisterRouteImport.update({
+    id: '/investigator/register',
+    path: '/investigator/register',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReportsIndexRoute =
   AuthenticatedReportsIndexRouteImport.update({
     id: '/reports/',
@@ -149,6 +221,23 @@ const AuthenticatedScanReportIdRoute =
   AuthenticatedScanReportIdRouteImport.update({
     id: '/scan-report/$id',
     path: '/scan-report/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStaffCasesRoute = AuthenticatedStaffCasesRouteImport.update({
+  id: '/staff/cases',
+  path: '/staff/cases',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStaffProfileRoute =
+  AuthenticatedStaffProfileRouteImport.update({
+    id: '/staff/profile',
+    path: '/staff/profile',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStaffRegisterRoute =
+  AuthenticatedStaffRegisterRouteImport.update({
+    id: '/staff/register',
+    path: '/staff/register',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const ApiExtensionReportRoute = ApiExtensionReportRouteImport.update({
@@ -196,6 +285,18 @@ const ApiWorkersStatusRoute = ApiWorkersStatusRouteImport.update({
   path: '/api/workers/status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminInvestigatorsIdRoute =
+  AuthenticatedAdminInvestigatorsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAdminInvestigatorsRoute,
+  } as any)
+const AuthenticatedAdminStaffIdRoute =
+  AuthenticatedAdminStaffIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAdminStaffRoute,
+  } as any)
 const ApiExtensionReportIdRoute = ApiExtensionReportIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -226,8 +327,21 @@ export interface FileRoutesByFullPath {
   '/storage': typeof AuthenticatedStorageRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
+  '/staff/login': typeof StaffLoginRoute
+  '/admin/assign': typeof AuthenticatedAdminAssignRoute
+  '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
+  '/admin/cases': typeof AuthenticatedAdminCasesRoute
+  '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
+  '/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
+  '/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
+  '/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
+  '/investigator/register': typeof AuthenticatedInvestigatorRegisterRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
   '/scan-report/$id': typeof AuthenticatedScanReportIdRoute
+  '/staff/cases': typeof AuthenticatedStaffCasesRoute
+  '/staff/profile': typeof AuthenticatedStaffProfileRoute
+  '/staff/register': typeof AuthenticatedStaffRegisterRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
@@ -238,6 +352,8 @@ export interface FileRoutesByFullPath {
   '/api/storage/upload': typeof ApiStorageUploadRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
+  '/admin/investigators/$id': typeof AuthenticatedAdminInvestigatorsIdRoute
+  '/admin/staff/$id': typeof AuthenticatedAdminStaffIdRoute
   '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
 }
@@ -259,8 +375,21 @@ export interface FileRoutesByTo {
   '/storage': typeof AuthenticatedStorageRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
+  '/staff/login': typeof StaffLoginRoute
+  '/admin/assign': typeof AuthenticatedAdminAssignRoute
+  '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
+  '/admin/cases': typeof AuthenticatedAdminCasesRoute
+  '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
+  '/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
+  '/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
+  '/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
+  '/investigator/register': typeof AuthenticatedInvestigatorRegisterRoute
   '/reports/$id': typeof AuthenticatedReportsIdRoute
   '/scan-report/$id': typeof AuthenticatedScanReportIdRoute
+  '/staff/cases': typeof AuthenticatedStaffCasesRoute
+  '/staff/profile': typeof AuthenticatedStaffProfileRoute
+  '/staff/register': typeof AuthenticatedStaffRegisterRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
@@ -271,6 +400,8 @@ export interface FileRoutesByTo {
   '/api/storage/upload': typeof ApiStorageUploadRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
+  '/admin/investigators/$id': typeof AuthenticatedAdminInvestigatorsIdRoute
+  '/admin/staff/$id': typeof AuthenticatedAdminStaffIdRoute
   '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
 }
@@ -294,8 +425,21 @@ export interface FileRoutesById {
   '/_authenticated/storage': typeof AuthenticatedStorageRoute
   '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
+  '/staff/login': typeof StaffLoginRoute
+  '/_authenticated/admin/assign': typeof AuthenticatedAdminAssignRoute
+  '/_authenticated/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
+  '/_authenticated/admin/cases': typeof AuthenticatedAdminCasesRoute
+  '/_authenticated/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  '/_authenticated/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
+  '/_authenticated/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
+  '/_authenticated/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
+  '/_authenticated/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
+  '/_authenticated/investigator/register': typeof AuthenticatedInvestigatorRegisterRoute
   '/_authenticated/reports/$id': typeof AuthenticatedReportsIdRoute
   '/_authenticated/scan-report/$id': typeof AuthenticatedScanReportIdRoute
+  '/_authenticated/staff/cases': typeof AuthenticatedStaffCasesRoute
+  '/_authenticated/staff/profile': typeof AuthenticatedStaffProfileRoute
+  '/_authenticated/staff/register': typeof AuthenticatedStaffRegisterRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
@@ -306,6 +450,8 @@ export interface FileRoutesById {
   '/api/storage/upload': typeof ApiStorageUploadRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
+  '/_authenticated/admin/investigators/$id': typeof AuthenticatedAdminInvestigatorsIdRoute
+  '/_authenticated/admin/staff/$id': typeof AuthenticatedAdminStaffIdRoute
   '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
   '/api/public/hooks/scan-worker': typeof ApiPublicHooksScanWorkerRoute
 }
@@ -329,8 +475,21 @@ export interface FileRouteTypes {
     | '/storage'
     | '/submissions'
     | '/api/health'
+    | '/staff/login'
+    | '/admin/assign'
+    | '/admin/case-assignment'
+    | '/admin/cases'
+    | '/admin/investigators'
+    | '/admin/staff'
+    | '/investigator/cases'
+    | '/investigator/login'
+    | '/investigator/profile'
+    | '/investigator/register'
     | '/reports/$id'
     | '/scan-report/$id'
+    | '/staff/cases'
+    | '/staff/profile'
+    | '/staff/register'
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
@@ -341,6 +500,8 @@ export interface FileRouteTypes {
     | '/api/storage/upload'
     | '/api/workers/status'
     | '/reports/'
+    | '/admin/investigators/$id'
+    | '/admin/staff/$id'
     | '/api/extension/report/$id'
     | '/api/public/hooks/scan-worker'
   fileRoutesByTo: FileRoutesByTo
@@ -362,8 +523,21 @@ export interface FileRouteTypes {
     | '/storage'
     | '/submissions'
     | '/api/health'
+    | '/staff/login'
+    | '/admin/assign'
+    | '/admin/case-assignment'
+    | '/admin/cases'
+    | '/admin/investigators'
+    | '/admin/staff'
+    | '/investigator/cases'
+    | '/investigator/login'
+    | '/investigator/profile'
+    | '/investigator/register'
     | '/reports/$id'
     | '/scan-report/$id'
+    | '/staff/cases'
+    | '/staff/profile'
+    | '/staff/register'
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
@@ -374,6 +548,8 @@ export interface FileRouteTypes {
     | '/api/storage/upload'
     | '/api/workers/status'
     | '/reports'
+    | '/admin/investigators/$id'
+    | '/admin/staff/$id'
     | '/api/extension/report/$id'
     | '/api/public/hooks/scan-worker'
   id:
@@ -396,8 +572,21 @@ export interface FileRouteTypes {
     | '/_authenticated/storage'
     | '/_authenticated/submissions'
     | '/api/health'
+    | '/staff/login'
+    | '/_authenticated/admin/assign'
+    | '/_authenticated/admin/case-assignment'
+    | '/_authenticated/admin/cases'
+    | '/_authenticated/admin/investigators'
+    | '/_authenticated/admin/staff'
+    | '/_authenticated/investigator/cases'
+    | '/_authenticated/investigator/login'
+    | '/_authenticated/investigator/profile'
+    | '/_authenticated/investigator/register'
     | '/_authenticated/reports/$id'
     | '/_authenticated/scan-report/$id'
+    | '/_authenticated/staff/cases'
+    | '/_authenticated/staff/profile'
+    | '/_authenticated/staff/register'
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
@@ -408,6 +597,8 @@ export interface FileRouteTypes {
     | '/api/storage/upload'
     | '/api/workers/status'
     | '/_authenticated/reports/'
+    | '/_authenticated/admin/investigators/$id'
+    | '/_authenticated/admin/staff/$id'
     | '/api/extension/report/$id'
     | '/api/public/hooks/scan-worker'
   fileRoutesById: FileRoutesById
@@ -421,6 +612,7 @@ export interface RootRouteChildren {
   ResponsibleUseRoute: typeof ResponsibleUseRoute
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  StaffLoginRoute: typeof StaffLoginRoute
   ApiExtensionReportRoute: typeof ApiExtensionReportRouteWithChildren
   ApiExtensionStatusRoute: typeof ApiExtensionStatusRoute
   ApiExtensionSubmissionRoute: typeof ApiExtensionSubmissionRoute
@@ -561,6 +753,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/staff/login': {
+      id: '/staff/login'
+      path: '/staff/login'
+      fullPath: '/staff/login'
+      preLoaderRoute: typeof StaffLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin/assign': {
+      id: '/_authenticated/admin/assign'
+      path: '/admin/assign'
+      fullPath: '/admin/assign'
+      preLoaderRoute: typeof AuthenticatedAdminAssignRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/case-assignment': {
+      id: '/_authenticated/admin/case-assignment'
+      path: '/admin/case-assignment'
+      fullPath: '/admin/case-assignment'
+      preLoaderRoute: typeof AuthenticatedAdminCaseAssignmentRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/cases': {
+      id: '/_authenticated/admin/cases'
+      path: '/admin/cases'
+      fullPath: '/admin/cases'
+      preLoaderRoute: typeof AuthenticatedAdminCasesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/investigators': {
+      id: '/_authenticated/admin/investigators'
+      path: '/admin/investigators'
+      fullPath: '/admin/investigators'
+      preLoaderRoute: typeof AuthenticatedAdminInvestigatorsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/staff': {
+      id: '/_authenticated/admin/staff'
+      path: '/admin/staff'
+      fullPath: '/admin/staff'
+      preLoaderRoute: typeof AuthenticatedAdminStaffRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/investigator/cases': {
+      id: '/_authenticated/investigator/cases'
+      path: '/investigator/cases'
+      fullPath: '/investigator/cases'
+      preLoaderRoute: typeof AuthenticatedInvestigatorCasesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/investigator/login': {
+      id: '/_authenticated/investigator/login'
+      path: '/investigator/login'
+      fullPath: '/investigator/login'
+      preLoaderRoute: typeof AuthenticatedInvestigatorLoginRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/investigator/profile': {
+      id: '/_authenticated/investigator/profile'
+      path: '/investigator/profile'
+      fullPath: '/investigator/profile'
+      preLoaderRoute: typeof AuthenticatedInvestigatorProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/investigator/register': {
+      id: '/_authenticated/investigator/register'
+      path: '/investigator/register'
+      fullPath: '/investigator/register'
+      preLoaderRoute: typeof AuthenticatedInvestigatorRegisterRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reports/': {
       id: '/_authenticated/reports/'
       path: '/reports'
@@ -580,6 +842,27 @@ declare module '@tanstack/react-router' {
       path: '/scan-report/$id'
       fullPath: '/scan-report/$id'
       preLoaderRoute: typeof AuthenticatedScanReportIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/staff/cases': {
+      id: '/_authenticated/staff/cases'
+      path: '/staff/cases'
+      fullPath: '/staff/cases'
+      preLoaderRoute: typeof AuthenticatedStaffCasesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/staff/profile': {
+      id: '/_authenticated/staff/profile'
+      path: '/staff/profile'
+      fullPath: '/staff/profile'
+      preLoaderRoute: typeof AuthenticatedStaffProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/staff/register': {
+      id: '/_authenticated/staff/register'
+      path: '/staff/register'
+      fullPath: '/staff/register'
+      preLoaderRoute: typeof AuthenticatedStaffRegisterRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/extension/report': {
@@ -645,6 +928,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWorkersStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/investigators/$id': {
+      id: '/_authenticated/admin/investigators/$id'
+      path: '/$id'
+      fullPath: '/admin/investigators/$id'
+      preLoaderRoute: typeof AuthenticatedAdminInvestigatorsIdRouteImport
+      parentRoute: typeof AuthenticatedAdminInvestigatorsRoute
+    }
+    '/_authenticated/admin/staff/$id': {
+      id: '/_authenticated/admin/staff/$id'
+      path: '/$id'
+      fullPath: '/admin/staff/$id'
+      preLoaderRoute: typeof AuthenticatedAdminStaffIdRouteImport
+      parentRoute: typeof AuthenticatedAdminStaffRoute
+    }
     '/api/extension/report/$id': {
       id: '/api/extension/report/$id'
       path: '/$id'
@@ -662,6 +959,35 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAdminInvestigatorsRouteChildren {
+  AuthenticatedAdminInvestigatorsIdRoute: typeof AuthenticatedAdminInvestigatorsIdRoute
+}
+
+const AuthenticatedAdminInvestigatorsRouteChildren: AuthenticatedAdminInvestigatorsRouteChildren =
+  {
+    AuthenticatedAdminInvestigatorsIdRoute:
+      AuthenticatedAdminInvestigatorsIdRoute,
+  }
+
+const AuthenticatedAdminInvestigatorsRouteWithChildren =
+  AuthenticatedAdminInvestigatorsRoute._addFileChildren(
+    AuthenticatedAdminInvestigatorsRouteChildren,
+  )
+
+interface AuthenticatedAdminStaffRouteChildren {
+  AuthenticatedAdminStaffIdRoute: typeof AuthenticatedAdminStaffIdRoute
+}
+
+const AuthenticatedAdminStaffRouteChildren: AuthenticatedAdminStaffRouteChildren =
+  {
+    AuthenticatedAdminStaffIdRoute: AuthenticatedAdminStaffIdRoute,
+  }
+
+const AuthenticatedAdminStaffRouteWithChildren =
+  AuthenticatedAdminStaffRoute._addFileChildren(
+    AuthenticatedAdminStaffRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
@@ -673,8 +999,20 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStorageRoute: typeof AuthenticatedStorageRoute
   AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
+  AuthenticatedAdminAssignRoute: typeof AuthenticatedAdminAssignRoute
+  AuthenticatedAdminCaseAssignmentRoute: typeof AuthenticatedAdminCaseAssignmentRoute
+  AuthenticatedAdminCasesRoute: typeof AuthenticatedAdminCasesRoute
+  AuthenticatedAdminInvestigatorsRoute: typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  AuthenticatedAdminStaffRoute: typeof AuthenticatedAdminStaffRouteWithChildren
+  AuthenticatedInvestigatorCasesRoute: typeof AuthenticatedInvestigatorCasesRoute
+  AuthenticatedInvestigatorLoginRoute: typeof AuthenticatedInvestigatorLoginRoute
+  AuthenticatedInvestigatorProfileRoute: typeof AuthenticatedInvestigatorProfileRoute
+  AuthenticatedInvestigatorRegisterRoute: typeof AuthenticatedInvestigatorRegisterRoute
   AuthenticatedReportsIdRoute: typeof AuthenticatedReportsIdRoute
   AuthenticatedScanReportIdRoute: typeof AuthenticatedScanReportIdRoute
+  AuthenticatedStaffCasesRoute: typeof AuthenticatedStaffCasesRoute
+  AuthenticatedStaffProfileRoute: typeof AuthenticatedStaffProfileRoute
+  AuthenticatedStaffRegisterRoute: typeof AuthenticatedStaffRegisterRoute
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
 }
 
@@ -689,8 +1027,22 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStorageRoute: AuthenticatedStorageRoute,
   AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,
+  AuthenticatedAdminAssignRoute: AuthenticatedAdminAssignRoute,
+  AuthenticatedAdminCaseAssignmentRoute: AuthenticatedAdminCaseAssignmentRoute,
+  AuthenticatedAdminCasesRoute: AuthenticatedAdminCasesRoute,
+  AuthenticatedAdminInvestigatorsRoute:
+    AuthenticatedAdminInvestigatorsRouteWithChildren,
+  AuthenticatedAdminStaffRoute: AuthenticatedAdminStaffRouteWithChildren,
+  AuthenticatedInvestigatorCasesRoute: AuthenticatedInvestigatorCasesRoute,
+  AuthenticatedInvestigatorLoginRoute: AuthenticatedInvestigatorLoginRoute,
+  AuthenticatedInvestigatorProfileRoute: AuthenticatedInvestigatorProfileRoute,
+  AuthenticatedInvestigatorRegisterRoute:
+    AuthenticatedInvestigatorRegisterRoute,
   AuthenticatedReportsIdRoute: AuthenticatedReportsIdRoute,
   AuthenticatedScanReportIdRoute: AuthenticatedScanReportIdRoute,
+  AuthenticatedStaffCasesRoute: AuthenticatedStaffCasesRoute,
+  AuthenticatedStaffProfileRoute: AuthenticatedStaffProfileRoute,
+  AuthenticatedStaffRegisterRoute: AuthenticatedStaffRegisterRoute,
   AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
 }
 
@@ -717,6 +1069,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResponsibleUseRoute: ResponsibleUseRoute,
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
+  StaffLoginRoute: StaffLoginRoute,
   ApiExtensionReportRoute: ApiExtensionReportRouteWithChildren,
   ApiExtensionStatusRoute: ApiExtensionStatusRoute,
   ApiExtensionSubmissionRoute: ApiExtensionSubmissionRoute,
