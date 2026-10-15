@@ -41,6 +41,7 @@ begin
   if old.status is distinct from 'closed'
     and new.status = 'closed'
     and new.ai_status = 'removed'
+    and new.staff_id is not null
   then
     insert into public.staff_credits (staff_id, case_id, amount, reason)
     values (new.staff_id, new.id, 1, 'Review removal confirmed on closed case')
