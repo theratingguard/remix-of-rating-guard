@@ -15,11 +15,11 @@ import {
   getAdminStaffData,
   getClientStaffCases,
   getStaffWorkspace,
-  recordStaffNextAction,
   recordStaffSubmission,
   registerStaff,
   setStaffStatus,
   updateMyStaffProfile,
+  updateMyStaffLiveStatus,
   type StaffProfileInput,
 } from "@/lib/staff-case.functions";
 
@@ -157,9 +157,13 @@ export function StaffProfilePage() {
   const queryClient = useQueryClient();
   const workspace = useQuery({ queryKey: staffKey, queryFn: useServerFn(getStaffWorkspace) });
   const save = useServerFn(updateMyStaffProfile);
+  const saveLiveStatus = useServerFn(updateMyStaffLiveStatus);
   const [form, setForm] = useState<StaffProfileInput | null>(null);
   const [busy, setBusy] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
   const staff = workspace.data?.profile;
+  const stats = workspace.data;
   const value =
     form ??
     (staff
@@ -177,6 +181,7 @@ export function StaffProfilePage() {
       await save({ data: value });
       await queryClient.invalidateQueries({ queryKey: staffKey });
       setForm(null);
+      setEditing(false);
       toast.success("Staff profile updated.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not update staff profile.");
@@ -184,36 +189,95 @@ export function StaffProfilePage() {
       setBusy(false);
     }
   }
+  async function updateLiveStatus(live_status: "Available" | "Working" | "Offline") {
+    setStatusBusy(true);
+    try {
+      await saveLiveStatus({ data: { live_status } });
+      await queryClient.invalidateQueries({ queryKey: staffKey });
+      toast.success("Live status updated.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update live status.");
+    } finally {
+      setStatusBusy(false);
+    }
+  }
   if (workspace.isLoading) return <p>Loading profile…</p>;
   if (workspace.error || !staff)
-    return <p role="alert">{workspace.error?.message ?? "Active staff profile not found."}</p>;
+    return <p role="alert">{workspace.error?.message ?? "Staff profile not found."}</p>;
   return (
     <main className="mx-auto max-w-2xl space-y-5">
-      <PageHeader title="Staff profile" subtitle={`Access status: ${staff.status}`} />
-      <form className="surface space-y-5 p-5" onSubmit={submit}>
-        <StaffFields value={value} onChange={setForm} email={staff.email} disabled={busy} />
-        <Button type="submit" disabled={busy}>
-          {busy ? "Saving…" : "Save profile"}
-        </Button>
-      </form>
+      <PageHeader title="Profile" action={<StatusPill status={staff.status} />} />
+      {editing ? (
+        <form className="surface space-y-5 p-5" onSubmit={submit}>
+          <StaffFields value={value} onChange={setForm} email={staff.email} disabled={busy} />
+          <div className="flex gap-2">
+            <Button type="submit" disabled={busy}>
+              {busy ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                setEditing(false);
+                setForm(null);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <section className="surface space-y-4 p-5">
+          <div className="max-w-xs space-y-2">
+            <Label htmlFor="staff-live-status">Live status</Label>
+            <select
+              id="staff-live-status"
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              value={staff.live_status}
+              disabled={statusBusy}
+              onChange={(event) => {
+                const selected = event.target.value;
+                if (selected === "Available" || selected === "Working" || selected === "Offline")
+                  void updateLiveStatus(selected);
+              }}
+            >
+              <option>Available</option>
+              <option>Working</option>
+              <option>Offline</option>
+            </select>
+          </div>
+          <dl className="grid gap-4 sm:grid-cols-2">
+            {[
+              ["Name", staff.name],
+              ["Mobile", staff.mobile],
+              ["Email", staff.email],
+              ["Region", `${staff.region_city}, ${staff.region_state}`],
+              ["Total tasks", stats?.totalTasks ?? 0],
+              ["Total removed", stats?.totalRemoved ?? 0],
+            ].map(([label, fieldValue]) => (
+              <div key={label}>
+                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dd className="mt-1 font-medium">{fieldValue}</dd>
+              </div>
+            ))}
+          </dl>
+          <Button type="button" variant="outline" onClick={() => setEditing(true)}>
+            Edit profile
+          </Button>
+        </section>
+      )}
     </main>
   );
 }
 
-export function StaffCasesPage() {
+export function StaffTodayPage() {
   const queryClient = useQueryClient();
   const workspace = useQuery({ queryKey: staffKey, queryFn: useServerFn(getStaffWorkspace) });
   const submitCase = useServerFn(recordStaffSubmission);
   const analyze = useServerFn(analyzeStaffReply);
-  const recordNextAction = useServerFn(recordStaffNextAction);
   const [replyById, setReplyById] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [analysisById, setAnalysisById] = useState<
-    Record<
-      string,
-      { status: string; next_step: string; reasoning: string; suggested_angle: string | null }
-    >
-  >({});
   async function copyReport(text: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -242,10 +306,9 @@ export function StaffCasesPage() {
   async function analyzeReply(caseId: string) {
     setBusyId(caseId);
     try {
-      const result = await analyze({ data: { caseId, reply: replyById[caseId] ?? "" } });
-      setAnalysisById((current) => ({ ...current, [caseId]: result }));
+      await analyze({ data: { caseId, reply: replyById[caseId] ?? "" } });
       await queryClient.invalidateQueries({ queryKey: staffKey });
-      toast.success("Reply analyzed. Verify status with Google's actual response.");
+      toast.success("Reply analyzed and task moved out of your running list.");
     } catch (error) {
       await queryClient.invalidateQueries({ queryKey: staffKey });
       toast.error(error instanceof Error ? error.message : "Reply analysis failed.");
@@ -253,52 +316,25 @@ export function StaffCasesPage() {
       setBusyId(null);
     }
   }
-  async function completeNextAction(caseId: string) {
-    if (!window.confirm("Have you completed the suggested next action for this case?")) return;
-    setBusyId(caseId);
-    try {
-      await recordNextAction({ data: { caseId } });
-      await queryClient.invalidateQueries({ queryKey: staffKey });
-      toast.success("Next action recorded in the work log.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not record the next action.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-  if (workspace.isLoading) return <p>Loading staff cases…</p>;
+  if (workspace.isLoading) return <p>Loading today's tasks…</p>;
   if (workspace.error || !workspace.data)
     return (
       <main className="mx-auto max-w-2xl space-y-4">
-        <PageHeader title="Staff cases" />
-        <div className="surface space-y-3 p-5" role="alert">
+        <PageHeader title="Today's Tasks" />
+        <div className="surface p-5" role="alert">
           <p>{workspace.error?.message ?? "Could not load staff cases."}</p>
-          <Link className="underline" to="/staff/register">
-            Register or update staff profile
-          </Link>
         </div>
       </main>
     );
-  const { profile, cases, events, stats } = workspace.data;
+  const { profile, cases } = workspace.data;
   return (
     <main className="mx-auto max-w-4xl space-y-5">
-      <PageHeader
-        title={`Hi ${profile.name}`}
-        subtitle={`${profile.region_city}, ${profile.region_state}`}
-        action={
-          <Link className="text-sm underline" to="/staff/profile">
-            Staff profile
-          </Link>
-        }
-      />
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <PageHeader title="Today's Tasks" subtitle={`Hi ${profile.name}`} />
+      <section className="grid grid-cols-3 gap-3">
         {[
-          ["Today", stats.today],
-          ["This week", stats.thisWeek],
-          ["Open", stats.open],
-          ["Submitted", stats.submitted],
-          ["Reply received", stats.replyReceived],
-          ["Closed", stats.closed],
+          ["Today's assigned", workspace.data.todayAssigned],
+          ["Pending", workspace.data.todayPending],
+          ["Completed", workspace.data.todayCompleted],
         ].map(([label, count]) => (
           <div className="surface p-3" key={label}>
             <p className="text-xs text-muted-foreground">{label}</p>
@@ -307,37 +343,20 @@ export function StaffCasesPage() {
         ))}
       </section>
       {!cases.length ? (
-        <section className="surface p-6 text-sm text-muted-foreground">
-          No cases have been assigned.
+        <section className="surface p-6 text-sm text-muted-foreground" role="status">
+          No running tasks. Check back later.
         </section>
       ) : (
         cases.map((caseItem) => {
-          const analysis = analysisById[caseItem.id];
-          const evidenceReady = !caseItem.evidence_notes.startsWith("No exact");
           return (
             <article className="surface space-y-4 p-4 sm:p-6" key={caseItem.id}>
-              <header className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase text-muted-foreground">Case</p>
-                  <h2 className="text-lg font-bold">{caseItem.business_name}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {caseItem.business_region || "Business region unavailable"}
-                  </p>
-                </div>
-                <StatusPill status={caseItem.status} />
-              </header>
+              <h2 className="text-lg font-bold">{caseItem.business_name}</h2>
               <div className="rounded-lg border p-3">
-                <p className="text-xs font-semibold text-muted-foreground">SOURCE REVIEW</p>
+                <p className="text-xs font-semibold text-muted-foreground">REVIEW</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm">
                   {caseItem.review_text || "Review text unavailable."}
                 </p>
               </div>
-              <p className="text-sm">
-                <span className="font-semibold">Policy area:</span>{" "}
-                {caseItem.policy_angle || "Review required"} ·{" "}
-                <span className="font-semibold">Evidence:</span>{" "}
-                {evidenceReady ? "quote available—verify" : "needs review"}
-              </p>
               <pre className="whitespace-pre-wrap rounded-lg bg-muted/50 p-3 font-sans text-sm">
                 {caseItem.report_text}
               </pre>
@@ -355,17 +374,8 @@ export function StaffCasesPage() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Open Google Maps review
+                  Open Google review
                 </a>
-                {caseItem.status === "open" && (
-                  <Button
-                    type="button"
-                    disabled={busyId === caseItem.id}
-                    onClick={() => void recordSubmission(caseItem.id)}
-                  >
-                    {busyId === caseItem.id ? "Saving…" : "Record manual submission"}
-                  </Button>
-                )}
               </div>
               <p className="text-xs text-muted-foreground">
                 No Google form URL is assumed; use the exact review link and the approved official
@@ -392,58 +402,70 @@ export function StaffCasesPage() {
                   }
                   onClick={() => void analyzeReply(caseItem.id)}
                 >
-                  {busyId === caseItem.id ? "Analyzing…" : "Analyze reply"}
+                  {busyId === caseItem.id ? "Working…" : "Analyze reply"}
                 </Button>
-                {(analysis || caseItem.ai_status) && (
-                  <div className="rounded-lg border p-3 text-sm" aria-live="polite">
-                    <p>
-                      <span className="font-semibold">Advisory status:</span>{" "}
-                      {analysis?.status ?? caseItem.ai_status} · not verified
-                    </p>
-                    <p className="mt-1">{analysis?.next_step ?? caseItem.ai_next_step}</p>
-                    {(analysis?.suggested_angle ?? caseItem.suggested_angle) && (
-                      <p className="mt-1">
-                        <span className="font-semibold">Possible next angle:</span>{" "}
-                        {analysis?.suggested_angle ?? caseItem.suggested_angle}
-                      </p>
-                    )}
-                    {analysis && <p className="mt-1 text-muted-foreground">{analysis.reasoning}</p>}
-                    {(analysis?.next_step || caseItem.ai_next_step) &&
-                      caseItem.status !== "closed" && (
-                        <Button
-                          className="mt-3"
-                          type="button"
-                          variant="outline"
-                          disabled={busyId === caseItem.id}
-                          onClick={() => void completeNextAction(caseItem.id)}
-                        >
-                          Record next action completed
-                        </Button>
-                      )}
-                  </div>
-                )}
+                <Button
+                  type="button"
+                  disabled={busyId === caseItem.id}
+                  onClick={() => void recordSubmission(caseItem.id)}
+                >
+                  {busyId === caseItem.id ? "Submitting…" : "Submit"}
+                </Button>
               </div>
-              <details className="rounded-lg border p-3">
-                <summary className="cursor-pointer text-sm font-semibold">
-                  Case work log ({events.filter((event) => event.case_id === caseItem.id).length})
-                </summary>
-                <ol className="mt-3 space-y-2">
-                  {events
-                    .filter((event) => event.case_id === caseItem.id)
-                    .map((event) => (
-                      <li className="border-l-2 pl-3 text-xs" key={event.id}>
-                        <p className="font-medium">{event.event_type.replaceAll("_", " ")}</p>
-                        <time className="text-muted-foreground">
-                          {new Date(event.created_at).toLocaleString()}
-                        </time>
-                      </li>
-                    ))}
-                </ol>
-              </details>
             </article>
           );
         })
       )}
+    </main>
+  );
+}
+
+export function StaffWalletPage() {
+  const workspace = useQuery({ queryKey: staffKey, queryFn: useServerFn(getStaffWorkspace) });
+  if (workspace.isLoading) return <p>Loading wallet…</p>;
+  if (workspace.error || !workspace.data)
+    return <p role="alert">{workspace.error?.message ?? "Could not load wallet."}</p>;
+  const { profile, creditHistory } = workspace.data;
+  const totalEarnedCredits = creditHistory.reduce((total, item) => total + item.amount, 0);
+  const rupees = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" });
+  return (
+    <main className="mx-auto max-w-3xl space-y-5">
+      <PageHeader title="Wallet" subtitle="Credits are added after a case is closed as removed." />
+      <section className="grid gap-3 sm:grid-cols-3">
+        {[
+          ["Credits", profile.credits],
+          ["Value", rupees.format(profile.credits * 10)],
+          ["Total earned", rupees.format(totalEarnedCredits * 10)],
+        ].map(([label, amount]) => (
+          <div className="surface p-4" key={label}>
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className="mt-1 text-2xl font-bold">{amount}</p>
+          </div>
+        ))}
+      </section>
+      <section className="surface space-y-3 p-5">
+        <h2 className="font-semibold">Transaction history</h2>
+        {creditHistory.length ? (
+          <ul className="divide-y">
+            {creditHistory.map((item) => (
+              <li className="flex flex-wrap items-center justify-between gap-2 py-3" key={item.id}>
+                <div>
+                  <p className="text-sm font-medium">{item.reason}</p>
+                  <time className="text-xs text-muted-foreground">
+                    {new Date(item.created_at).toLocaleString()}
+                  </time>
+                </div>
+                <p className="font-semibold text-emerald-700">
+                  +{item.amount} credit{item.amount === 1 ? "" : "s"} ·{" "}
+                  {rupees.format(item.amount * 10)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">No wallet transactions yet.</p>
+        )}
+      </section>
     </main>
   );
 }

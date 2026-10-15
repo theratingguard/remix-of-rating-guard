@@ -7,7 +7,7 @@ test.describe.configure({ mode: "serial" });
 let admin: SupabaseClient;
 let testUserId: string;
 let scanId: string;
-let reviewId: string;
+let reviewIds: string[] = [];
 let staffCreatedByTest = false;
 const token = randomUUID();
 const reviewUrl = `https://www.google.com/maps/reviews/data=!1s${token}`;
@@ -77,21 +77,22 @@ test.beforeAll(async () => {
 
   const reviewResult = await admin
     .from("reviews")
-    .insert({
-      scan_id: scanId,
-      rating: 1,
-      text: "The owner offered payment in exchange for changing my review.",
-      review_uri: reviewUrl,
-      risk: "high",
-      policy_category: "Conflict of interest",
-      evidence: "offered payment in exchange for changing my review",
-      reason: "The review describes a specific incentive tied to changing its content.",
-      confidence: 90,
-    })
-    .select("id")
-    .single();
+    .insert(
+      Array.from({ length: 3 }, (_, index) => ({
+        scan_id: scanId,
+        rating: 1,
+        text: `The owner offered payment in exchange for changing my review. E2E task ${index + 1}.`,
+        review_uri: `${reviewUrl}-${index + 1}`,
+        risk: "high",
+        policy_category: "Conflict of interest",
+        evidence: "offered payment in exchange for changing my review",
+        reason: "The review describes a specific incentive tied to changing its content.",
+        confidence: 90,
+      })),
+    )
+    .select("id");
   if (reviewResult.error) throw reviewResult.error;
-  reviewId = reviewResult.data.id;
+  reviewIds = reviewResult.data.map((review) => review.id);
 });
 
 test.afterAll(async () => {
@@ -99,8 +100,8 @@ test.afterAll(async () => {
   if (scanId) {
     const cases = await admin.from("staff_cases").delete().eq("scan_id", scanId);
     if (cases.error) throw cases.error;
-    if (reviewId) {
-      const reviews = await admin.from("reviews").delete().eq("id", reviewId);
+    if (reviewIds.length) {
+      const reviews = await admin.from("reviews").delete().in("id", reviewIds);
       if (reviews.error) throw reviews.error;
     }
     const scans = await admin.from("scans").delete().eq("id", scanId);
@@ -123,34 +124,31 @@ test("logs in, assigns a case, reads it, records submission, and cleans up its o
 }) => {
   await page.goto("/admin/case-assignment");
   await expect(page.getByLabel("Active staff member")).toBeVisible();
-  await page.getByLabel("Review URL(s), one per line").fill(reviewUrl);
+  await page
+    .getByLabel("Review URL(s), one per line")
+    .fill(reviewIds.map((_, index) => `${reviewUrl}-${index + 1}`).join("\n"));
   await page.getByLabel("Active staff member").selectOption(testUserId);
-  await page.getByRole("button", { name: /Assign 1 eligible case/ }).click();
-  await expect(page.getByText("1 case assigned.")).toBeVisible();
+  await page.getByRole("button", { name: /Assign 3 eligible cases/ }).click();
+  await expect(page.getByText("3 cases assigned.")).toBeVisible();
 
-  await page.goto("/staff/cases");
-  await expect(page.getByText(businessName)).toBeVisible();
-  await expect(page.getByText(/Case assigned/i)).toBeVisible();
+  await page.goto("/staff/today");
+  await expect(page.getByText(businessName)).toHaveCount(3);
 
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Record manual submission" }).click();
-  await expect(page.getByText("submitted", { exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Submit", exact: true }).first().click();
+  await expect(page.getByText(businessName)).toHaveCount(2);
 
-  const storedCase = await admin
-    .from("staff_cases")
-    .select("status")
-    .eq("scan_id", scanId)
-    .eq("review_id", reviewId)
-    .single();
-  if (storedCase.error) throw storedCase.error;
-  expect(storedCase.data.status).toBe("submitted");
+  const storedCases = await admin.from("staff_cases").select("status").eq("scan_id", scanId);
+  if (storedCases.error) throw storedCases.error;
+  expect(storedCases.data.filter((item) => item.status === "submitted")).toHaveLength(1);
+  expect(storedCases.data.filter((item) => item.status === "open")).toHaveLength(2);
 });
 
-test("blocks an unauthenticated visitor from the staff case dashboard", async ({ browser }) => {
+test("blocks an unauthenticated visitor from the staff tasks page", async ({ browser }) => {
   const context = await browser.newContext();
   try {
     const page = await context.newPage();
-    await page.goto("/staff/cases");
+    await page.goto("/staff/today");
     await expect(page).toHaveURL(/\/auth(?:[/?#]|$)/);
   } finally {
     await context.close();

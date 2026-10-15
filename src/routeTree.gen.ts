@@ -43,6 +43,8 @@ import { Route as AuthenticatedScanReportIdRouteImport } from './routes/_authent
 import { Route as AuthenticatedStaffCasesRouteImport } from './routes/_authenticated/staff.cases'
 import { Route as AuthenticatedStaffProfileRouteImport } from './routes/_authenticated/staff.profile'
 import { Route as AuthenticatedStaffRegisterRouteImport } from './routes/_authenticated/staff.register'
+import { Route as AuthenticatedStaffTodayRouteImport } from './routes/_authenticated/staff.today'
+import { Route as AuthenticatedStaffWalletRouteImport } from './routes/_authenticated/staff.wallet'
 import { Route as ApiExtensionReportRouteImport } from './routes/api/extension/report'
 import { Route as ApiExtensionStatusRouteImport } from './routes/api/extension/status'
 import { Route as ApiExtensionSubmissionRouteImport } from './routes/api/extension/submission'
@@ -240,6 +242,17 @@ const AuthenticatedStaffRegisterRoute =
     path: '/staff/register',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedStaffTodayRoute = AuthenticatedStaffTodayRouteImport.update({
+  id: '/staff/today',
+  path: '/staff/today',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStaffWalletRoute =
+  AuthenticatedStaffWalletRouteImport.update({
+    id: '/staff/wallet',
+    path: '/staff/wallet',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiExtensionReportRoute = ApiExtensionReportRouteImport.update({
   id: '/api/extension/report',
   path: '/api/extension/report',
@@ -342,6 +355,8 @@ export interface FileRoutesByFullPath {
   '/staff/cases': typeof AuthenticatedStaffCasesRoute
   '/staff/profile': typeof AuthenticatedStaffProfileRoute
   '/staff/register': typeof AuthenticatedStaffRegisterRoute
+  '/staff/today': typeof AuthenticatedStaffTodayRoute
+  '/staff/wallet': typeof AuthenticatedStaffWalletRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
@@ -390,6 +405,8 @@ export interface FileRoutesByTo {
   '/staff/cases': typeof AuthenticatedStaffCasesRoute
   '/staff/profile': typeof AuthenticatedStaffProfileRoute
   '/staff/register': typeof AuthenticatedStaffRegisterRoute
+  '/staff/today': typeof AuthenticatedStaffTodayRoute
+  '/staff/wallet': typeof AuthenticatedStaffWalletRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
@@ -440,6 +457,8 @@ export interface FileRoutesById {
   '/_authenticated/staff/cases': typeof AuthenticatedStaffCasesRoute
   '/_authenticated/staff/profile': typeof AuthenticatedStaffProfileRoute
   '/_authenticated/staff/register': typeof AuthenticatedStaffRegisterRoute
+  '/_authenticated/staff/today': typeof AuthenticatedStaffTodayRoute
+  '/_authenticated/staff/wallet': typeof AuthenticatedStaffWalletRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
@@ -490,6 +509,8 @@ export interface FileRouteTypes {
     | '/staff/cases'
     | '/staff/profile'
     | '/staff/register'
+    | '/staff/today'
+    | '/staff/wallet'
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
@@ -538,6 +559,8 @@ export interface FileRouteTypes {
     | '/staff/cases'
     | '/staff/profile'
     | '/staff/register'
+    | '/staff/today'
+    | '/staff/wallet'
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
@@ -587,6 +610,8 @@ export interface FileRouteTypes {
     | '/_authenticated/staff/cases'
     | '/_authenticated/staff/profile'
     | '/_authenticated/staff/register'
+    | '/_authenticated/staff/today'
+    | '/_authenticated/staff/wallet'
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
@@ -865,6 +890,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStaffRegisterRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/staff/today': {
+      id: '/_authenticated/staff/today'
+      path: '/staff/today'
+      fullPath: '/staff/today'
+      preLoaderRoute: typeof AuthenticatedStaffTodayRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/staff/wallet': {
+      id: '/_authenticated/staff/wallet'
+      path: '/staff/wallet'
+      fullPath: '/staff/wallet'
+      preLoaderRoute: typeof AuthenticatedStaffWalletRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/extension/report': {
       id: '/api/extension/report'
       path: '/api/extension/report'
@@ -1013,6 +1052,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStaffCasesRoute: typeof AuthenticatedStaffCasesRoute
   AuthenticatedStaffProfileRoute: typeof AuthenticatedStaffProfileRoute
   AuthenticatedStaffRegisterRoute: typeof AuthenticatedStaffRegisterRoute
+  AuthenticatedStaffTodayRoute: typeof AuthenticatedStaffTodayRoute
+  AuthenticatedStaffWalletRoute: typeof AuthenticatedStaffWalletRoute
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
 }
 
@@ -1043,6 +1084,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStaffCasesRoute: AuthenticatedStaffCasesRoute,
   AuthenticatedStaffProfileRoute: AuthenticatedStaffProfileRoute,
   AuthenticatedStaffRegisterRoute: AuthenticatedStaffRegisterRoute,
+  AuthenticatedStaffTodayRoute: AuthenticatedStaffTodayRoute,
+  AuthenticatedStaffWalletRoute: AuthenticatedStaffWalletRoute,
   AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
 }
 

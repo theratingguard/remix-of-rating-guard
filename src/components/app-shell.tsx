@@ -18,6 +18,9 @@ import {
   Users,
   ListChecks,
   HardDrive,
+  CircleDollarSign,
+  ClipboardList,
+  UserRound,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -52,10 +55,18 @@ function Brand() {
   );
 }
 
-function SidebarBody({ email, onNavigate }: { email: string; onNavigate?: () => void }) {
+function SidebarBody({
+  email,
+  isStaff,
+  onNavigate,
+}: {
+  email: string;
+  isStaff: boolean;
+  onNavigate?: () => void;
+}) {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { data: profile } = useQuery(profileQuery());
+  const { data: profile } = useQuery({ ...profileQuery(), enabled: !isStaff });
   async function logout() {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -70,33 +81,74 @@ function SidebarBody({ email, onNavigate }: { email: string; onNavigate?: () => 
     <div className="flex h-full flex-col gap-6 p-4">
       <Brand />
       <nav className="flex flex-col gap-1" aria-label="Main navigation">
-        {nav.map((item) => {
-          const { to, label, Icon } = item;
-          const linkClass =
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
-          const activeProps = {
-            className:
-              "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
-          };
-          if (!to)
-            return (
-              <span
-                key={label}
-                aria-disabled="true"
-                title="This workspace feature is not configured."
-                className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground opacity-60"
+        {isStaff ? (
+          <>
+            {[
+              { to: "/staff/today" as const, label: "Today's Tasks", Icon: ClipboardList },
+              { to: "/staff/profile" as const, label: "Profile", Icon: UserRound },
+              { to: "/staff/wallet" as const, label: "Wallet", Icon: CircleDollarSign },
+            ].map(({ to, label, Icon }) => (
+              <Link
+                key={to}
+                to={to}
+                onClick={onNavigate}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                activeProps={{
+                  className:
+                    "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
+                }}
               >
                 <Icon className="h-4 w-4 shrink-0" /> {label}
-                <span className="ml-auto text-[9px]">Soon</span>
-              </span>
-            );
-          if ("search" in item)
+              </Link>
+            ))}
+            <button
+              type="button"
+              onClick={logout}
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+            >
+              <LogOut className="h-4 w-4 shrink-0" /> Logout
+            </button>
+          </>
+        ) : (
+          nav.map((item) => {
+            const { to, label, Icon } = item;
+            const linkClass =
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
+            const activeProps = {
+              className:
+                "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
+            };
+            if (!to)
+              return (
+                <span
+                  key={label}
+                  aria-disabled="true"
+                  title="This workspace feature is not configured."
+                  className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground opacity-60"
+                >
+                  <Icon className="h-4 w-4 shrink-0" /> {label}
+                  <span className="ml-auto text-[9px]">Soon</span>
+                </span>
+              );
+            if ("search" in item)
+              return (
+                <Link
+                  key={label}
+                  to="/scan"
+                  search={{ mode: "bulk" }}
+                  activeOptions={{ exact: true, includeSearch: true }}
+                  onClick={onNavigate}
+                  className={linkClass}
+                  activeProps={activeProps}
+                >
+                  <Icon className="h-4 w-4 shrink-0" /> {label}
+                </Link>
+              );
             return (
               <Link
                 key={label}
-                to="/scan"
-                search={{ mode: "bulk" }}
-                activeOptions={{ exact: true, includeSearch: true }}
+                to={to}
+                {...(to === "/scan" ? { activeOptions: { exact: true, includeSearch: true } } : {})}
                 onClick={onNavigate}
                 className={linkClass}
                 activeProps={activeProps}
@@ -104,86 +156,87 @@ function SidebarBody({ email, onNavigate }: { email: string; onNavigate?: () => 
                 <Icon className="h-4 w-4 shrink-0" /> {label}
               </Link>
             );
-          return (
-            <Link
-              key={label}
-              to={to}
-              {...(to === "/scan" ? { activeOptions: { exact: true, includeSearch: true } } : {})}
-              onClick={onNavigate}
-              className={linkClass}
-              activeProps={activeProps}
-            >
-              <Icon className="h-4 w-4 shrink-0" /> {label}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="mt-auto space-y-3 border-t pt-4">
-        <div className="rounded-xl border border-brand/20 bg-brand-soft/60 p-3">
-          <p className="text-xs font-semibold">Keep your Google reputation safe</p>
-          <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-            Review available public data and track scan findings in one place.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled
-            title="Billing and plan upgrades are not configured for this workspace."
-            className="mt-2 h-7 w-full text-[10px]"
-          >
-            Upgrade plan
-          </Button>
-        </div>
-        <a
-          href="mailto:support@ratingguard.online"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-sidebar-accent"
-        >
-          <CircleHelp className="h-4 w-4" /> Help &amp; Support
-        </a>
-        <Link
-          to="/profile"
-          onClick={onNavigate}
-          className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-sidebar-accent"
-          activeProps={{ className: "bg-sidebar-accent" }}
-        >
-          <Avatar name={profile?.name ?? "Admin"} url={profile?.avatarUrl ?? null} size={28} />
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-medium">{profile?.name ?? "Admin"}</span>
-            <span className="block truncate text-[11px] text-muted-foreground">{email}</span>
-          </span>
-        </Link>
-        <div className="flex items-center justify-between gap-2">
-          <button
-            onClick={logout}
-            className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent"
-          >
-            <LogOut className="h-4 w-4" /> Logout
-          </button>
-        </div>
-        {APP_DOMAIN && (
-          <div className="px-3 pt-2 text-[10px] text-muted-foreground">{APP_DOMAIN}</div>
+          })
         )}
-      </div>
+      </nav>
+      {!isStaff && (
+        <div className="mt-auto space-y-3 border-t pt-4">
+          <div className="rounded-xl border border-brand/20 bg-brand-soft/60 p-3">
+            <p className="text-xs font-semibold">Keep your Google reputation safe</p>
+            <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+              Review available public data and track scan findings in one place.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled
+              title="Billing and plan upgrades are not configured for this workspace."
+              className="mt-2 h-7 w-full text-[10px]"
+            >
+              Upgrade plan
+            </Button>
+          </div>
+          <a
+            href="mailto:support@ratingguard.online"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-sidebar-accent"
+          >
+            <CircleHelp className="h-4 w-4" /> Help &amp; Support
+          </a>
+          <Link
+            to="/profile"
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-sidebar-accent"
+            activeProps={{ className: "bg-sidebar-accent" }}
+          >
+            <Avatar name={profile?.name ?? "Admin"} url={profile?.avatarUrl ?? null} size={28} />
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium">{profile?.name ?? "Admin"}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{email}</span>
+            </span>
+          </Link>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={logout}
+              className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent"
+            >
+              <LogOut className="h-4 w-4" /> Logout
+            </button>
+          </div>
+          {APP_DOMAIN && (
+            <div className="px-3 pt-2 text-[10px] text-muted-foreground">{APP_DOMAIN}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-export function AppShell({ email, children }: { email: string; children: ReactNode }) {
+export function AppShell({
+  email,
+  isStaff,
+  children,
+}: {
+  email: string;
+  isStaff: boolean;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen">
       <aside className="no-print fixed inset-y-0 left-0 hidden w-[200px] border-r bg-sidebar backdrop-blur-xl lg:block">
-        <SidebarBody email={email} />
+        <SidebarBody email={email} isStaff={isStaff} />
       </aside>
       <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b bg-card/80 px-4 py-3 backdrop-blur lg:hidden">
         <Brand />
         <div className="flex items-center gap-2">
-          <Button size="sm" asChild>
-            <Link to="/scan" search={{}}>
-              Scan
-            </Link>
-          </Button>
+          {!isStaff && (
+            <Button size="sm" asChild>
+              <Link to="/scan" search={{}}>
+                Scan
+              </Link>
+            </Button>
+          )}
           <Button size="icon" variant="ghost" onClick={() => setOpen(true)} aria-label="Open menu">
             <Menu />
           </Button>
@@ -191,7 +244,7 @@ export function AppShell({ email, children }: { email: string; children: ReactNo
       </header>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-64 p-0">
-          <SidebarBody email={email} onNavigate={() => setOpen(false)} />
+          <SidebarBody email={email} isStaff={isStaff} onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
       <main className="lg:pl-[200px]">

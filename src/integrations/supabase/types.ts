@@ -19,6 +19,8 @@ export type Database = {
           region_city: string;
           region_state: string;
           status: string;
+          credits: number;
+          live_status: "Available" | "Working" | "Offline";
           last_seen_at: string | null;
           created_at: string;
           updated_at: string;
@@ -30,6 +32,8 @@ export type Database = {
           email: string;
           region_city: string;
           region_state: string;
+          credits?: number;
+          live_status?: "Available" | "Working" | "Offline";
           status?: string;
           last_seen_at?: string | null;
           created_at?: string;
@@ -41,9 +45,34 @@ export type Database = {
           email?: string;
           region_city?: string;
           region_state?: string;
+          credits?: number;
+          live_status?: "Available" | "Working" | "Offline";
           status?: string;
           last_seen_at?: string | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      staff_credits: {
+        Row: {
+          id: string;
+          staff_id: string;
+          case_id: string;
+          amount: number;
+          reason: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          staff_id: string;
+          case_id: string;
+          amount: number;
+          reason: string;
+          created_at?: string;
+        };
+        Update: {
+          amount?: number;
+          reason?: string;
         };
         Relationships: [];
       };

@@ -140,49 +140,86 @@ export const updateMyStaffProfile = createServerFn({ method: "POST" })
     return updated;
   });
 
+export const updateMyStaffLiveStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input) =>
+    z.object({ live_status: z.enum(["Available", "Working", "Offline"]) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await requireActiveStaff(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: updated, error } = await supabaseAdmin
+      .from("staff")
+      .update({ live_status: data.live_status, updated_at: new Date().toISOString() })
+      .eq("id", context.userId)
+      .select("live_status")
+      .single();
+    if (error) throw new Error(`Could not update live status: ${error.message}`);
+    return updated;
+  });
+
 export const getStaffWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const profile = await requireActiveStaff(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const now = new Date().toISOString();
-    const { error: seenError } = await supabaseAdmin
-      .from("staff")
-      .update({ last_seen_at: now })
-      .eq("id", context.userId);
-    if (seenError) throw new Error(`Could not update staff activity: ${seenError.message}`);
     const { data: cases, error } = await supabaseAdmin
       .from("staff_cases")
       .select("*")
       .eq("staff_id", context.userId)
+      .eq("status", "open")
       .order("assigned_at", { ascending: false });
-    if (error) throw new Error(`Could not load assigned staff cases: ${error.message}`);
-    const caseIds = (cases ?? []).map((item) => item.id);
-    const eventsResult = caseIds.length
-      ? await supabaseAdmin
-          .from("staff_case_events")
-          .select("*")
-          .in("case_id", caseIds)
-          .order("created_at", { ascending: true })
-      : { data: [], error: null };
-    if (eventsResult.error)
-      throw new Error(`Could not load staff case activity: ${eventsResult.error.message}`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const weekStart = new Date(today);
-    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+    if (error) throw new Error(`Could not load running staff tasks: ${error.message}`);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const [taskCount, removedCount, creditHistory, todayPending, todayCompleted] =
+      await Promise.all([
+        supabaseAdmin
+          .from("staff_cases")
+          .select("id", { count: "exact", head: true })
+          .eq("staff_id", context.userId),
+        supabaseAdmin
+          .from("staff_cases")
+          .select("id", { count: "exact", head: true })
+          .eq("staff_id", context.userId)
+          .eq("status", "closed")
+          .eq("ai_status", "removed"),
+        supabaseAdmin
+          .from("staff_credits")
+          .select("id,case_id,amount,reason,created_at")
+          .eq("staff_id", context.userId)
+          .order("created_at", { ascending: false }),
+        supabaseAdmin
+          .from("staff_cases")
+          .select("id", { count: "exact", head: true })
+          .eq("staff_id", context.userId)
+          .eq("status", "open")
+          .gte("assigned_at", todayStart.toISOString()),
+        supabaseAdmin
+          .from("staff_cases")
+          .select("id", { count: "exact", head: true })
+          .eq("staff_id", context.userId)
+          .in("status", ["submitted", "reply_received", "closed"])
+          .gte("assigned_at", todayStart.toISOString()),
+      ]);
+    if (taskCount.error) throw new Error(`Could not count staff tasks: ${taskCount.error.message}`);
+    if (removedCount.error)
+      throw new Error(`Could not count removed cases: ${removedCount.error.message}`);
+    if (creditHistory.error)
+      throw new Error(`Could not load wallet history: ${creditHistory.error.message}`);
+    if (todayPending.error)
+      throw new Error(`Could not count today's pending tasks: ${todayPending.error.message}`);
+    if (todayCompleted.error)
+      throw new Error(`Could not count today's completed tasks: ${todayCompleted.error.message}`);
     return {
       profile,
       cases: cases ?? [],
-      events: eventsResult.data ?? [],
-      stats: {
-        today: (cases ?? []).filter((item) => item.assigned_at >= today.toISOString()).length,
-        thisWeek: (cases ?? []).filter((item) => item.updated_at >= weekStart.toISOString()).length,
-        open: (cases ?? []).filter((item) => item.status === "open").length,
-        submitted: (cases ?? []).filter((item) => item.status === "submitted").length,
-        replyReceived: (cases ?? []).filter((item) => item.status === "reply_received").length,
-        closed: (cases ?? []).filter((item) => item.status === "closed").length,
-      },
+      totalTasks: taskCount.count ?? 0,
+      totalRemoved: removedCount.count ?? 0,
+      creditHistory: creditHistory.data ?? [],
+      todayPending: todayPending.count ?? 0,
+      todayCompleted: todayCompleted.count ?? 0,
+      todayAssigned: (todayPending.count ?? 0) + (todayCompleted.count ?? 0),
     };
   });
 
