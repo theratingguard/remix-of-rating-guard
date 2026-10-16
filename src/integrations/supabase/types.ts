@@ -24,6 +24,7 @@ export type Database = {
           skills: string[];
           credits: number;
           live_status: "Available" | "Working" | "Offline";
+          monthly_task_target: number;
           last_seen_at: string | null;
           created_at: string;
           updated_at: string;
@@ -40,6 +41,7 @@ export type Database = {
           skills?: string[];
           credits?: number;
           live_status?: "Available" | "Working" | "Offline";
+          monthly_task_target?: number;
           status?: string;
           last_seen_at?: string | null;
           created_at?: string;
@@ -56,6 +58,7 @@ export type Database = {
           skills?: string[];
           credits?: number;
           live_status?: "Available" | "Working" | "Offline";
+          monthly_task_target?: number;
           status?: string;
           last_seen_at?: string | null;
           updated_at?: string;
@@ -100,6 +103,8 @@ export type Database = {
           evidence_notes: string;
           policy_angle: string;
           status: string;
+          submission_attempts: number | null;
+          first_attempt_approved: boolean | null;
           priority: string;
           deadline_at: string | null;
           staff_decision_reason: string | null;
@@ -130,6 +135,8 @@ export type Database = {
           evidence_notes?: string;
           policy_angle?: string;
           status?: string;
+          submission_attempts?: number | null;
+          first_attempt_approved?: boolean | null;
           priority?: string;
           deadline_at?: string | null;
           staff_decision_reason?: string | null;
@@ -153,6 +160,8 @@ export type Database = {
           evidence_notes?: string;
           policy_angle?: string;
           status?: string;
+          submission_attempts?: number | null;
+          first_attempt_approved?: boolean | null;
           priority?: string;
           deadline_at?: string | null;
           staff_decision_reason?: string | null;
@@ -166,6 +175,61 @@ export type Database = {
           submitted_at?: string | null;
           closed_at?: string | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      staff_wallet_ledger: {
+        Row: {
+          id: string;
+          staff_id: string;
+          case_id: string | null;
+          transaction_type: "quality_bonus" | "penalty";
+          amount: number;
+          reason: string;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          staff_id: string;
+          case_id?: string | null;
+          transaction_type: "quality_bonus" | "penalty";
+          amount: number;
+          reason: string;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          case_id?: string | null;
+          transaction_type?: "quality_bonus" | "penalty";
+          amount?: number;
+          reason?: string;
+        };
+        Relationships: [];
+      };
+      staff_quality_notes: {
+        Row: {
+          id: string;
+          staff_id: string;
+          case_id: string | null;
+          note_type: "warning" | "appreciation";
+          note: string;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          staff_id: string;
+          case_id?: string | null;
+          note_type: "warning" | "appreciation";
+          note: string;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          case_id?: string | null;
+          note_type?: "warning" | "appreciation";
+          note?: string;
         };
         Relationships: [];
       };

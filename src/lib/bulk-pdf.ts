@@ -1,11 +1,18 @@
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-GlobalWorkerOptions.workerSrc = workerUrl;
+let pdfModule: Promise<typeof import("pdfjs-dist")> | undefined;
+let workerModule: Promise<{ default: string }> | undefined;
+
 export async function extractBulkPdf(file: File) {
   if (file.size > 10 * 1024 * 1024) throw new Error("PDF exceeds the 10 MB limit.");
   const data = new Uint8Array(await file.arrayBuffer());
   if (new TextDecoder().decode(data.subarray(0, 5)) !== "%PDF-")
     throw new Error("Not a valid PDF file.");
+  pdfModule ??= import("pdfjs-dist");
+  workerModule ??= import("pdfjs-dist/build/pdf.worker.min.mjs?url");
+  const [{ getDocument, GlobalWorkerOptions }, { default: workerUrl }] = await Promise.all([
+    pdfModule,
+    workerModule,
+  ]);
+  GlobalWorkerOptions.workerSrc = workerUrl;
   const task = getDocument({ data });
   try {
     const pdf = await task.promise;

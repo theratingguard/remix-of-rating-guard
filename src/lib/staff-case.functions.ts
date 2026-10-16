@@ -696,6 +696,84 @@ export const closeStaffCase = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const setStaffMonthlyTarget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input) =>
+    z
+      .object({ staffId: z.string().uuid(), target: z.number().int().min(0).max(10000) })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: updated, error } = await supabaseAdmin
+      .from("staff")
+      .update({ monthly_task_target: data.target, updated_at: new Date().toISOString() })
+      .eq("id", data.staffId)
+      .select("id,monthly_task_target")
+      .single();
+    if (error) throw new Error(`Could not update monthly target: ${error.message}`);
+    return updated;
+  });
+
+export const addStaffQualityNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input) =>
+    z
+      .object({
+        staffId: z.string().uuid(),
+        noteType: z.enum(["warning", "appreciation"]),
+        note: z.string().trim().min(1).max(2000),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: saved, error } = await supabaseAdmin
+      .from("staff_quality_notes")
+      .insert({
+        staff_id: data.staffId,
+        note_type: data.noteType,
+        note: data.note,
+        created_by: context.userId,
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(`Could not save staff quality note: ${error.message}`);
+    return saved;
+  });
+
+export const addStaffWalletAdjustment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input) =>
+    z
+      .object({
+        staffId: z.string().uuid(),
+        transactionType: z.enum(["quality_bonus", "penalty"]),
+        amount: z.number().finite().positive().max(1_000_000),
+        reason: z.string().trim().min(1).max(1000),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: saved, error } = await supabaseAdmin
+      .from("staff_wallet_ledger")
+      .insert({
+        staff_id: data.staffId,
+        transaction_type: data.transactionType,
+        amount: data.amount,
+        reason: data.reason,
+        created_by: context.userId,
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(`Could not record wallet adjustment: ${error.message}`);
+    return saved;
+  });
+
 export const getClientStaffCases = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input) => z.object({ scanId: z.string().uuid() }).parse(input))

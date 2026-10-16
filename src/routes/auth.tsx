@@ -185,6 +185,7 @@ function AuthPage() {
             alt=""
             width={220}
             height={220}
+            loading="lazy"
             className="icon-3d animate-float mb-8 w-52"
           />
           <h1 className="text-5xl font-bold leading-[1.1]">{s.title}</h1>

@@ -67,31 +67,44 @@ export const getStaffDashboard = createServerFn({ method: "GET" })
       })
       .join(", ");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [casesResult, payoutResult, messagesResult, creditsResult] = await Promise.all([
-      supabaseAdmin
-        .from("staff_cases")
-        .select("*")
-        .eq("staff_id", context.userId)
-        .order("assigned_at", { ascending: false })
-        .limit(500),
-      supabaseAdmin
-        .from("staff_payout_details")
-        .select("*")
-        .eq("staff_id", context.userId)
-        .maybeSingle(),
-      supabaseAdmin
-        .from("staff_admin_messages")
-        .select("*")
-        .eq("staff_id", context.userId)
-        .order("created_at", { ascending: true })
-        .limit(200),
-      supabaseAdmin
-        .from("staff_credits")
-        .select("id,amount,reason,created_at,case_id")
-        .eq("staff_id", context.userId)
-        .order("created_at", { ascending: false })
-        .limit(200),
-    ]);
+    const [casesResult, payoutResult, messagesResult, creditsResult, ledgerResult, notesResult] =
+      await Promise.all([
+        supabaseAdmin
+          .from("staff_cases")
+          .select("*")
+          .eq("staff_id", context.userId)
+          .order("assigned_at", { ascending: false })
+          .limit(500),
+        supabaseAdmin
+          .from("staff_payout_details")
+          .select("*")
+          .eq("staff_id", context.userId)
+          .maybeSingle(),
+        supabaseAdmin
+          .from("staff_admin_messages")
+          .select("*")
+          .eq("staff_id", context.userId)
+          .order("created_at", { ascending: true })
+          .limit(200),
+        supabaseAdmin
+          .from("staff_credits")
+          .select("id,amount,reason,created_at,case_id")
+          .eq("staff_id", context.userId)
+          .order("created_at", { ascending: false })
+          .limit(200),
+        supabaseAdmin
+          .from("staff_wallet_ledger")
+          .select("*")
+          .eq("staff_id", context.userId)
+          .order("created_at", { ascending: false })
+          .limit(200),
+        supabaseAdmin
+          .from("staff_quality_notes")
+          .select("*")
+          .eq("staff_id", context.userId)
+          .order("created_at", { ascending: false })
+          .limit(100),
+      ]);
     if (casesResult.error)
       throw new Error(`Could not load assigned tasks: ${casesResult.error.message}`);
     if (payoutResult.error)
@@ -100,6 +113,10 @@ export const getStaffDashboard = createServerFn({ method: "GET" })
       throw new Error(`Could not load Admin Chat: ${messagesResult.error.message}`);
     if (creditsResult.error)
       throw new Error(`Could not load wallet history: ${creditsResult.error.message}`);
+    if (ledgerResult.error)
+      throw new Error(`Could not load wallet adjustments: ${ledgerResult.error.message}`);
+    if (notesResult.error)
+      throw new Error(`Could not load quality notes: ${notesResult.error.message}`);
     return {
       profile,
       ipLocation,
@@ -107,6 +124,8 @@ export const getStaffDashboard = createServerFn({ method: "GET" })
       payout: payoutResult.data,
       messages: messagesResult.data ?? [],
       credits: creditsResult.data ?? [],
+      walletLedger: ledgerResult.data ?? [],
+      qualityNotes: notesResult.data ?? [],
     };
   });
 

@@ -16,6 +16,7 @@ import {
   updateStaffTaskStatus,
 } from "@/lib/staff-dashboard.functions";
 import { analyzeStaffReply, updateMyStaffLiveStatus } from "@/lib/staff-case.functions";
+import { getStaffPerformanceMetrics, getStaffWalletSummary } from "@/lib/staff-dashboard-metrics";
 
 const dashboardKey = ["staff-dashboard"];
 const activeStatuses = new Set(["open", "accepted", "in_progress", "rework"]);
@@ -307,24 +308,119 @@ function MyTasks({ data, refresh }: { data: StaffDashboardData; refresh: () => P
 }
 
 function StatusBoard({ data }: { data: StaffDashboardData }) {
+  const queryClient = useQueryClient();
+  const transition = useServerFn(updateStaffTaskStatus);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function moveTask(task: DashboardCase, target: "accepted" | "in_progress") {
+    const action =
+      target === "accepted" && task.status === "open"
+        ? "accept"
+        : target === "in_progress" && ["accepted", "rework"].includes(task.status)
+          ? "start"
+          : null;
+    if (!action || busyId) return;
+    const previous = queryClient.getQueryData<StaffDashboardData>(dashboardKey);
+    if (!previous) return;
+    setBusyId(task.id);
+    queryClient.setQueryData<StaffDashboardData>(dashboardKey, {
+      ...previous,
+      cases: previous.cases.map((item) =>
+        item.id === task.id
+          ? { ...item, status: target, updated_at: new Date().toISOString() }
+          : item,
+      ),
+    });
+    try {
+      await transition({ data: { caseId: task.id, action } });
+      await queryClient.invalidateQueries({ queryKey: dashboardKey });
+    } catch (error) {
+      queryClient.setQueryData(dashboardKey, previous);
+      toast.error(error instanceof Error ? error.message : "Could not move this task.");
+    } finally {
+      setBusyId(null);
+      setDraggedId(null);
+    }
+  }
+
   return (
     <div className="space-y-5">
-      <PageHeader title="Status Board" subtitle="Your assigned work by current status." />
+      <PageHeader
+        title="Status Board"
+        subtitle="Drag Open to Accepted or Accepted/Rework to In Progress. Other status changes are admin-managed."
+      />
       <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
         {boardColumns.map(([title, statuses]) => {
           const tasks = data.cases.filter((task) =>
             (statuses as readonly string[]).includes(task.status),
           );
           return (
-            <section className="surface min-h-44 space-y-3 p-4" key={title}>
+            <section
+              className={`surface min-h-44 space-y-3 p-4 ${draggedId ? "border-primary/50" : ""}`}
+              key={title}
+              onDragOver={(event) => {
+                const columnStatuses = statuses as readonly string[];
+                if (columnStatuses.includes("accepted") || columnStatuses.includes("in_progress"))
+                  event.preventDefault();
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                const caseId = event.dataTransfer.getData("text/plain");
+                const task = data.cases.find((item) => item.id === caseId);
+                const columnStatuses = statuses as readonly string[];
+                const target = columnStatuses.includes("accepted")
+                  ? "accepted"
+                  : columnStatuses.includes("in_progress")
+                    ? "in_progress"
+                    : null;
+                if (task && target) void moveTask(task, target);
+              }}
+            >
               <header className="flex items-center justify-between">
                 <h2 className="font-semibold">{title}</h2>
                 <span className="text-sm text-muted-foreground">{tasks.length}</span>
               </header>
               {tasks.map((task) => (
-                <article className="rounded-lg border p-3 text-sm" key={task.id}>
+                <article
+                  className={`rounded-lg border p-3 text-sm ${
+                    ["open", "accepted", "rework"].includes(task.status)
+                      ? "cursor-grab active:cursor-grabbing"
+                      : ""
+                  }`}
+                  key={task.id}
+                  draggable={["open", "accepted", "rework"].includes(task.status)}
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData("text/plain", task.id);
+                    event.dataTransfer.effectAllowed = "move";
+                    setDraggedId(task.id);
+                  }}
+                  onDragEnd={() => setDraggedId(null)}
+                >
                   <p className="font-medium">{task.business_name}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{task.priority}</p>
+                  {task.status === "open" && (
+                    <Button
+                      className="mt-2 h-8"
+                      size="sm"
+                      variant="outline"
+                      disabled={busyId === task.id}
+                      onClick={() => void moveTask(task, "accepted")}
+                    >
+                      Accept
+                    </Button>
+                  )}
+                  {["accepted", "rework"].includes(task.status) && (
+                    <Button
+                      className="mt-2 h-8"
+                      size="sm"
+                      variant="outline"
+                      disabled={busyId === task.id}
+                      onClick={() => void moveTask(task, "in_progress")}
+                    >
+                      Start
+                    </Button>
+                  )}
                 </article>
               ))}
               {!tasks.length && <p className="text-xs text-muted-foreground">No tasks</p>}
@@ -338,55 +434,37 @@ function StatusBoard({ data }: { data: StaffDashboardData }) {
 
 function Performance({ data }: { data: StaffDashboardData }) {
   const total = data.cases.length;
-  const completed = data.cases.filter((task) => completedStatuses.has(task.status)).length;
-  const pending = data.cases.filter((task) => activeStatuses.has(task.status)).length;
-  const submitted = data.cases.filter((task) =>
-    [
-      "submitted",
-      "reply_received",
-      "approved",
-      "rejected",
-      "rework",
-      "completed",
-      "closed",
-    ].includes(task.status),
-  );
-  const approved = data.cases.filter((task) =>
-    ["approved", "completed", "closed"].includes(task.status),
-  ).length;
-  const reworkRejected = data.cases.filter((task) =>
-    ["rework", "rejected"].includes(task.status),
-  ).length;
-  const turnaround = data.cases
-    .filter((task) => task.closed_at)
-    .map((task) => (Date.parse(task.closed_at!) - Date.parse(task.assigned_at)) / 3_600_000);
-  const averageHours = turnaround.length
-    ? (turnaround.reduce((sum, value) => sum + Math.max(0, value), 0) / turnaround.length).toFixed(
-        1,
-      )
-    : "—";
-  const firstTimeRate = submitted.length ? Math.round((approved / submitted.length) * 100) : 0;
-  const qualityScore = submitted.length
-    ? Math.max(0, Math.round(100 - (reworkRejected / submitted.length) * 100))
+  const metrics = getStaffPerformanceMetrics(data.cases, data.profile.monthly_task_target);
+  const qualityScore = total
+    ? Math.max(0, Math.round((1 - metrics.reworkRejected / total) * 100))
     : 0;
   return (
     <div className="space-y-5">
       <PageHeader title="Performance" subtitle="Personal case outcomes and workload." />
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric title="Total assigned" value={total} />
-        <Metric title="Completed" value={completed} />
-        <Metric title="Pending" value={pending} />
-        <Metric title="First-time approval rate" value={`${firstTimeRate}%`} />
-        <Metric title="Rework / rejection" value={reworkRejected} />
+        <Metric title="Completed" value={metrics.completed} />
+        <Metric title="Pending" value={metrics.pending} />
+        <Metric
+          title="First-time approval rate"
+          value={metrics.firstAttemptRate === null ? "—" : `${metrics.firstAttemptRate}%`}
+          note={`${metrics.firstAttemptApprovals} first-attempt approvals / ${metrics.firstAttemptDecisions} decided cases`}
+        />
+        <Metric title="Rework / rejection" value={metrics.reworkRejected} />
         <Metric
           title="Average TAT"
-          value={averageHours === "—" ? averageHours : `${averageHours} h`}
+          value={metrics.averageTatHours === null ? "—" : `${metrics.averageTatHours.toFixed(1)} h`}
+          note="Average elapsed time from assignment to case closure"
         />
         <Metric title="Quality score" value={`${qualityScore}%`} />
         <Metric
           title="Target vs achieved"
-          value={`${completed} / ${total}`}
-          note="Target: assigned cases"
+          value={
+            metrics.monthlyTarget
+              ? `${metrics.achievedThisMonth} / ${metrics.monthlyTarget}`
+              : `${metrics.achievedThisMonth} / Not set`
+          }
+          note="Completed this UTC calendar month vs admin-set target"
         />
       </section>
     </div>
@@ -401,7 +479,7 @@ function Quality({ data }: { data: StaffDashboardData }) {
   return (
     <div className="space-y-5">
       <PageHeader title="Quality / Rework" subtitle="Review feedback and required corrections." />
-      {!flagged.length && (
+      {!flagged.length && !data.qualityNotes.length && (
         <p className="surface p-5 text-sm text-muted-foreground">No quality or rework remarks.</p>
       )}
       {flagged.map((task) => (
@@ -418,6 +496,23 @@ function Quality({ data }: { data: StaffDashboardData }) {
                 <dd className="mt-1 text-sm">{value || "Not provided"}</dd>
               </div>
             ))}
+            <section className="surface space-y-3 p-5" aria-label="Warning and appreciation notes">
+              <h2 className="font-semibold">Warning / Appreciation notes</h2>
+              {data.qualityNotes.map((item) => (
+                <article className="rounded-lg border p-3" key={item.id}>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <p className="font-semibold capitalize">{item.note_type}</p>
+                    <time className="text-xs text-muted-foreground">
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </time>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap text-sm">{item.note}</p>
+                </article>
+              ))}
+              {!data.qualityNotes.length && (
+                <p className="text-sm text-muted-foreground">No warning or appreciation notes.</p>
+              )}
+            </section>
           </dl>
         </CaseCard>
       ))}
@@ -468,6 +563,23 @@ function Incentive({ data, refresh }: { data: StaffDashboardData; refresh: () =>
   }
 
   const credits = data.credits.reduce((sum, item) => sum + item.amount, 0);
+  const wallet = getStaffWalletSummary(data.credits, data.walletLedger, data.cases);
+  const transactions = [
+    ...data.credits.map((entry) => ({
+      id: entry.id,
+      created_at: entry.created_at,
+      amount: entry.amount * 10,
+      reason: entry.reason,
+      label: "Credit",
+    })),
+    ...data.walletLedger.map((entry) => ({
+      id: entry.id,
+      created_at: entry.created_at,
+      amount: entry.transaction_type === "penalty" ? -entry.amount : entry.amount,
+      reason: entry.reason,
+      label: entry.transaction_type === "penalty" ? "Penalty" : "Quality bonus",
+    })),
+  ].sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at));
   return (
     <div className="space-y-5">
       <PageHeader
@@ -477,7 +589,19 @@ function Incentive({ data, refresh }: { data: StaffDashboardData; refresh: () =>
       <section className="grid gap-3 sm:grid-cols-3">
         <Metric title="Credits" value={credits} />
         <Metric title="Value" value={`₹${(credits * 10).toFixed(2)}`} note="1 credit = ₹10" />
-        <Metric title="Total earned" value={`₹${(credits * 10).toFixed(2)}`} />
+        <Metric title="Total earned" value={`₹${wallet.totalEarned.toFixed(2)}`} />
+      </section>
+      <section
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        aria-label="Monthly payout summary"
+      >
+        <Metric title="Approved tasks this month (UTC)" value={wallet.approvedTaskCount} />
+        <Metric
+          title="Quality bonus this month (UTC)"
+          value={`₹${wallet.qualityBonus.toFixed(2)}`}
+        />
+        <Metric title="Penalty this month (UTC)" value={`₹${wallet.penalty.toFixed(2)}`} />
+        <Metric title="Monthly payout" value={`₹${wallet.monthlyPayout.toFixed(2)}`} />
       </section>
       <form className="surface space-y-4 p-5" onSubmit={(event) => void submit(event)}>
         <h2 className="font-semibold">Payout details</h2>
@@ -566,15 +690,17 @@ function Incentive({ data, refresh }: { data: StaffDashboardData; refresh: () =>
       </form>
       <section className="surface space-y-3 p-5">
         <h2 className="font-semibold">Transaction history</h2>
-        {data.credits.length ? (
-          data.credits.map((credit) => (
+        {transactions.length ? (
+          transactions.map((entry) => (
             <div
               className="flex flex-wrap justify-between gap-2 border-b py-2 text-sm"
-              key={credit.id}
+              key={entry.id}
             >
-              <span>{credit.reason}</span>
               <span>
-                +{credit.amount} · ₹{(credit.amount * 10).toFixed(2)}
+                {entry.label}: {entry.reason}
+              </span>
+              <span>
+                {entry.amount < 0 ? "−" : "+"}₹{Math.abs(entry.amount).toFixed(2)}
               </span>
             </div>
           ))
@@ -648,38 +774,90 @@ function AdminChat({ data, refresh }: { data: StaffDashboardData; refresh: () =>
 
 function Alerts({ data }: { data: StaffDashboardData }) {
   const now = Date.now();
+  const inactivityDays = 7;
+  const latestAssignment = data.cases.reduce<string | null>(
+    (latest, task) => (!latest || task.assigned_at > latest ? task.assigned_at : latest),
+    null,
+  );
+  const noRecentAssignment =
+    !latestAssignment || now - Date.parse(latestAssignment) >= inactivityDays * 24 * 60 * 60 * 1000;
   const alerts = data.cases.flatMap((task) => {
-    const items: { id: string; title: string; detail: string }[] = [];
+    const items: { id: string; title: string; detail: string; at: string }[] = [];
     if (task.status === "open")
-      items.push({ id: `${task.id}-new`, title: "New task", detail: task.business_name });
+      items.push({
+        id: `${task.id}-new`,
+        title: "New task",
+        detail: task.business_name,
+        at: task.assigned_at,
+      });
     if (task.deadline_at) {
       const time = Date.parse(task.deadline_at);
       if (time < now && activeStatuses.has(task.status))
-        items.push({ id: `${task.id}-overdue`, title: "Overdue", detail: task.business_name });
+        items.push({
+          id: `${task.id}-overdue`,
+          title: "Overdue",
+          detail: task.business_name,
+          at: task.deadline_at,
+        });
       else if (time - now <= 24 * 60 * 60 * 1000 && activeStatuses.has(task.status))
-        items.push({ id: `${task.id}-near`, title: "Deadline near", detail: task.business_name });
+        items.push({
+          id: `${task.id}-near`,
+          title: "Deadline near",
+          detail: task.business_name,
+          at: task.deadline_at,
+        });
     }
     if (task.status === "rework")
       items.push({
         id: `${task.id}-rework`,
         title: "Rework assigned",
         detail: task.rework_instructions || task.business_name,
+        at: task.updated_at,
       });
     if (["rejected", "rework"].includes(task.status))
       items.push({
         id: `${task.id}-quality`,
         title: "Low quality alert",
         detail: task.mistake_category || task.staff_decision_reason || task.business_name,
+        at: task.updated_at,
       });
     return items;
   });
+  if (noRecentAssignment) {
+    alerts.push({
+      id: "no-recent-task",
+      title: "No task since long",
+      detail: latestAssignment
+        ? `No task has been assigned for ${inactivityDays} days.`
+        : "No task has been assigned to this staff account yet.",
+      at: latestAssignment ?? new Date().toISOString(),
+    });
+  }
+  alerts.push(
+    ...data.qualityNotes.map((note) => ({
+      id: note.id,
+      title: note.note_type === "warning" ? "Warning note" : "Appreciation note",
+      detail: note.note,
+      at: note.created_at,
+    })),
+  );
+  alerts.sort((left, right) => Date.parse(right.at) - Date.parse(left.at));
   return (
     <div className="space-y-5">
-      <PageHeader title="Alerts" subtitle="New tasks, deadlines, rework and quality alerts." />
+      <PageHeader
+        title="Alerts"
+        subtitle="Notification feed: new tasks, deadlines, rework and staff notes."
+      />
+      <h2 className="font-semibold">Notification feed</h2>
       {alerts.map((alert) => (
         <article className="surface flex flex-wrap justify-between gap-3 p-4" key={alert.id}>
-          <p className="font-semibold">{alert.title}</p>
-          <p className="text-sm text-muted-foreground">{alert.detail}</p>
+          <div>
+            <p className="font-semibold">{alert.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{alert.detail}</p>
+          </div>
+          <time className="text-xs text-muted-foreground">
+            {new Date(alert.at).toLocaleString()}
+          </time>
         </article>
       ))}
       {!alerts.length && (

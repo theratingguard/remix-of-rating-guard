@@ -23,6 +23,7 @@ import {
   type StaffProfileInput,
 } from "@/lib/staff-case.functions";
 import { AdminStaffChat } from "@/components/admin-staff-chat";
+import { AdminStaffPhaseTwo } from "@/components/admin-staff-phase-two";
 
 const staffKey = ["staff-workspace"];
 const adminStaffKey = ["admin-staff-cases"];
@@ -886,6 +887,7 @@ export function AdminStaffDetailPage({ id }: { id: string }) {
         <p>Status: {person.status}</p>
         <p>Cases: {cases.length}</p>
       </section>
+      <AdminStaffPhaseTwo staffId={person.id} monthlyTarget={person.monthly_task_target} />
       <section className="surface space-y-3 p-5">
         <h2 className="font-bold">Assigned cases</h2>
         {cases.map((item) => (

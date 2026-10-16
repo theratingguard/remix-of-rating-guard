@@ -88,6 +88,7 @@ function HeroVisual() {
         alt=""
         width={120}
         height={120}
+        loading="lazy"
         className="icon-3d animate-float absolute -left-14 -top-12 z-10 w-28"
       />
       <img
@@ -95,6 +96,7 @@ function HeroVisual() {
         alt=""
         width={96}
         height={96}
+        loading="lazy"
         className="icon-3d animate-float absolute -bottom-10 -right-10 z-10 w-24 [animation-delay:1.5s]"
       />
       <img
@@ -102,6 +104,7 @@ function HeroVisual() {
         alt=""
         width={90}
         height={90}
+        loading="lazy"
         className="icon-3d animate-float absolute -right-12 -top-8 z-10 w-20 [animation-delay:3s]"
       />
       <div className="surface neon-outline relative overflow-hidden p-5">
@@ -189,7 +192,14 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
       <header className="glass sticky top-0 z-30 border-x-0 border-t-0">
         <nav className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
           <a href="#top" className="flex items-center gap-2 font-bold">
-            <img src={shield} alt="" width={36} height={36} className="icon-3d size-9" />
+            <img
+              src={shield}
+              alt=""
+              width={36}
+              height={36}
+              loading="lazy"
+              className="icon-3d size-9"
+            />
             <span className="hidden font-display sm:inline">
               The Rating <span className="text-gradient">Guard</span>
             </span>
