@@ -26,7 +26,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const nav = [
+const adminNav = [
   { to: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { to: "/scan", label: "URL Scanner", Icon: ScanSearch },
   { to: "/scan", search: { mode: "bulk" }, label: "Bulk URL Scan", Icon: ListChecks },
@@ -36,6 +36,18 @@ const nav = [
   { to: "/reports", label: "Reports", Icon: FileText },
   { to: "/storage", label: "Storage Manager", Icon: HardDrive },
   { to: "/settings", label: "Settings", Icon: Settings },
+] as const;
+
+const staffNav = [
+  { to: "/staff/today", label: "Overview", Icon: LayoutDashboard },
+  { to: "/staff/tasks", label: "My Tasks", Icon: ClipboardList },
+  { to: "/staff/status-board", label: "Status Board", Icon: ListChecks },
+  { to: "/staff/performance", label: "Performance", Icon: FileText },
+  { to: "/staff/quality", label: "Quality / Rework", Icon: CircleHelp },
+  { to: "/staff/wallet", label: "Incentive (Wallet)", Icon: CircleDollarSign },
+  { to: "/staff/communication", label: "Communication", Icon: Users },
+  { to: "/staff/alerts", label: "Alerts", Icon: Star },
+  { to: "/staff/profile", label: "Profile", Icon: UserRound },
 ] as const;
 
 function Brand() {
@@ -67,7 +79,7 @@ function SidebarBody({
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { data: profile } = useQuery({ ...profileQuery(), enabled: !isStaff });
+  const { data: profile } = useQuery({ ...profileQuery(), enabled: isSuperAdmin });
   async function logout() {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -82,94 +94,61 @@ function SidebarBody({
     <div className="flex h-full flex-col gap-6 p-4">
       <Brand />
       <nav className="flex flex-col gap-1" aria-label="Main navigation">
-        {isStaff ? (
-          <>
-            {[
-              { to: "/staff/today" as const, label: "Overview", Icon: LayoutDashboard },
-              { to: "/staff/tasks" as const, label: "My Tasks", Icon: ClipboardList },
-              { to: "/staff/status-board" as const, label: "Status Board", Icon: ListChecks },
-              { to: "/staff/performance" as const, label: "Performance", Icon: FileText },
-              { to: "/staff/quality" as const, label: "Quality / Rework", Icon: CircleHelp },
-              { to: "/staff/wallet" as const, label: "Incentive (Wallet)", Icon: CircleDollarSign },
-              { to: "/staff/communication" as const, label: "Communication", Icon: Users },
-              { to: "/staff/alerts" as const, label: "Alerts", Icon: Star },
-              { to: "/staff/profile" as const, label: "Profile", Icon: UserRound },
-            ].map(({ to, label, Icon }) => (
+        {(isSuperAdmin ? adminNav : isStaff ? staffNav : []).map((item) => {
+          const { to, label, Icon } = item;
+          const linkClass =
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
+          const activeProps = {
+            className:
+              "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
+          };
+          if ("search" in item)
+            return (
               <Link
-                key={to}
-                to={to}
+                key={label}
+                to="/scan"
+                search={{ mode: "bulk" }}
+                activeOptions={{ exact: true, includeSearch: true }}
                 onClick={onNavigate}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-                activeProps={{
-                  className:
-                    "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
-                }}
+                className={linkClass}
+                activeProps={activeProps}
               >
                 <Icon className="h-4 w-4 shrink-0" /> {label}
               </Link>
-            ))}
-          </>
-        ) : (
-          <>
-            {nav.map((item) => {
-              const { to, label, Icon } = item;
-              const linkClass =
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
-              const activeProps = {
-                className:
-                  "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
-              };
-              if ("search" in item)
-                return (
-                  <Link
-                    key={label}
-                    to="/scan"
-                    search={{ mode: "bulk" }}
-                    activeOptions={{ exact: true, includeSearch: true }}
-                    onClick={onNavigate}
-                    className={linkClass}
-                    activeProps={activeProps}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" /> {label}
-                  </Link>
-                );
-              return (
-                <Link
-                  key={label}
-                  to={to}
-                  {...(to === "/scan"
-                    ? { activeOptions: { exact: true, includeSearch: true } }
-                    : {})}
-                  onClick={onNavigate}
-                  className={linkClass}
-                  activeProps={activeProps}
-                >
-                  <Icon className="h-4 w-4 shrink-0" /> {label}
-                </Link>
-              );
-            })}
-            {isSuperAdmin && (
-              <Link
-                to="/admin/staff"
-                onClick={onNavigate}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-                activeProps={{
-                  className:
-                    "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
-                }}
-              >
-                <Users className="h-4 w-4 shrink-0" /> Staff Approvals
-                {staffPendingCount > 0 && (
-                  <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">
-                    {staffPendingCount}
-                  </span>
-                )}
-              </Link>
+            );
+          return (
+            <Link
+              key={label}
+              to={to}
+              {...(to === "/scan" ? { activeOptions: { exact: true, includeSearch: true } } : {})}
+              onClick={onNavigate}
+              className={linkClass}
+              activeProps={activeProps}
+            >
+              <Icon className="h-4 w-4 shrink-0" /> {label}
+            </Link>
+          );
+        })}
+        {isSuperAdmin && (
+          <Link
+            to="/admin/staff"
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+            activeProps={{
+              className:
+                "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
+            }}
+          >
+            <Users className="h-4 w-4 shrink-0" /> Staff Approvals
+            {staffPendingCount > 0 && (
+              <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">
+                {staffPendingCount}
+              </span>
             )}
-          </>
+          </Link>
         )}
       </nav>
-      {isStaff ? (
+      {!isSuperAdmin ? (
         <div className="mt-auto border-t pt-4">
           <button
             type="button"
@@ -259,7 +238,7 @@ export function AppShell({
       <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b bg-card/80 px-4 py-3 backdrop-blur lg:hidden">
         <Brand />
         <div className="flex items-center gap-2">
-          {!isStaff && (
+          {isSuperAdmin && (
             <Button size="sm" asChild>
               <Link to="/scan" search={{}}>
                 Scan
