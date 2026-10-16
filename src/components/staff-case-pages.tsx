@@ -1,5 +1,5 @@
-import { useMemo, useState, type FormEvent } from "react";
-import { Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -17,13 +17,17 @@ import {
   getStaffWorkspace,
   recordStaffSubmission,
   registerStaff,
+  recordStaffLogin,
   setStaffStatus,
   updateMyStaffProfile,
   updateMyStaffLiveStatus,
   type StaffProfileInput,
+  type StaffRegistrationInput,
 } from "@/lib/staff-case.functions";
 import { AdminStaffChat } from "@/components/admin-staff-chat";
 import { AdminStaffPhaseTwo } from "@/components/admin-staff-phase-two";
+import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
 
 const staffKey = ["staff-workspace"];
 const adminStaffKey = ["admin-staff-cases"];
@@ -95,65 +99,478 @@ function StaffFields({
   );
 }
 
-export function StaffRegisterPage({ email }: { email: string }) {
-  const [value, setValue] = useState(emptyStaff);
-  const [status, setStatus] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const save = useServerFn(registerStaff);
+const staffSkills = [
+  ["review_handling", "Review handling"],
+  ["negotiation", "Negotiation"],
+  ["communication", "Communication"],
+  ["evidence_collection", "Evidence collection"],
+  ["customer_support", "Customer support"],
+  ["case_management", "Case management"],
+] as const;
+
+type CapturedLocation = {
+  latitude: number;
+  longitude: number;
+  address: string;
+  city: string;
+  state: string;
+  area: string;
+  pincode: string;
+};
+
+const locationResponseSchema = z.object({
+  address: z.string().min(1),
+  city: z.string().min(1),
+  state: z.string().min(1),
+  area: z.string(),
+  pincode: z.string(),
+});
+
+export function StaffRegisterPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const save = useServerFn(registerStaff);
+  const recordLogin = useServerFn(recordStaffLogin);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [name, setName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [signedIn, setSignedIn] = useState(false);
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [teamLead, setTeamLead] = useState("");
+  const [referralBy, setReferralBy] = useState("");
+  const [skills, setSkills] = useState<string[]>([]);
+  const [location, setLocation] = useState<CapturedLocation | null>(null);
+  const [selfie, setSelfie] = useState<Blob | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (videoRef.current && streamRef.current) videoRef.current.srcObject = streamRef.current;
+  }, [cameraOpen]);
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
+      if (sessionError) setError(`Could not check your sign-in: ${sessionError.message}`);
+      if (data.session?.user.email) {
+        setEmail(data.session.user.email);
+        setSignedIn(true);
+      }
+    });
+  }, []);
+  useEffect(
+    () => () => {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    },
+    [],
+  );
+
+  async function openCamera() {
+    setError(null);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia)
+        throw new Error("This browser does not support secure camera access.");
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: "user" },
+      });
+      setCameraOpen(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not open the camera.");
+    }
+  }
+
+  async function captureSelfie() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || !video.videoWidth || !video.videoHeight) {
+      setError("Wait for the live camera preview before capturing your selfie.");
+      return;
+    }
+    const scale = Math.min(1, 1600 / video.videoWidth);
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    const context = canvas.getContext("2d");
+    if (!context) {
+      setError("The captured photo could not be processed in this browser.");
+      return;
+    }
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const photo = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.84),
+    );
+    if (!photo) {
+      setError("The camera image could not be captured. Please try again.");
+      return;
+    }
+    if (photo.size > 5 * 1024 * 1024) {
+      setError("The captured photo exceeds the 5 MB limit.");
+      return;
+    }
+    setSelfie(photo);
+    setCameraOpen(false);
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setError(null);
+  }
+
+  function captureLocation() {
+    setLocationBusy(true);
+    setError(null);
+    if (!navigator.geolocation) {
+      setError("Location services are not supported by this browser.");
+      setLocationBusy(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const response = await fetch("/api/staff/geocode", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+            }),
+          });
+          const result: unknown = await response.json();
+          const parsed = locationResponseSchema.safeParse(result);
+          if (!response.ok || !parsed.success)
+            throw new Error(
+              result && typeof result === "object" && "error" in result
+                ? String(result.error)
+                : "Could not resolve your location.",
+            );
+          const address = parsed.data;
+          setLocation({
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            ...address,
+          });
+          setCity(address.city);
+          setState(address.state);
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : "Could not resolve your location.");
+        } finally {
+          setLocationBusy(false);
+        }
+      },
+      (cause) => {
+        setError(
+          cause.code === cause.PERMISSION_DENIED
+            ? "Location permission is required to register."
+            : "Could not capture your location. Check location services and try again.",
+        );
+        setLocationBusy(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (!selfie || !location || !termsAccepted) {
+      setError("A live selfie, location, and acceptance of the terms are required.");
+      return;
+    }
     setBusy(true);
+    setError(null);
     try {
-      const result = await save({ data: value });
-      setStatus(result.status);
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      let user = sessionData.session?.user ?? null;
+      if (!user) {
+        if (password.length < 8) throw new Error("Password must contain at least 8 characters.");
+        const { data, error: signupError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth`,
+            data: {
+              is_staff_registration: true,
+              name,
+              mobile,
+              region_city: city,
+              region_state: state,
+              address: location.address,
+              latitude: location.latitude,
+              longitude: location.longitude,
+              skills,
+              team_lead: teamLead,
+              referral_by: referralBy,
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            },
+          },
+        });
+        if (signupError) throw signupError;
+        user = data.user;
+        if (!data.session || !user) {
+          setStatus("confirmation_required");
+          return;
+        }
+      }
+      const sessionEmail = user.email;
+      if (!sessionEmail) throw new Error("The account has no email address.");
+      const photoPath = `${user.id}/selfie-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from("staff-photos")
+        .upload(photoPath, selfie, { contentType: "image/jpeg", upsert: false });
+      if (uploadError) throw new Error(`Could not save the live selfie: ${uploadError.message}`);
+      const payload: StaffRegistrationInput = {
+        name,
+        mobile,
+        region_city: city,
+        region_state: state,
+        address: location.address,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        live_selfie_url: photoPath,
+        skills,
+        team_lead: teamLead,
+        referral_by: referralBy,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+      };
+      const result = await save({ data: payload });
+      await recordLogin();
       await queryClient.invalidateQueries({ queryKey: ["my-staff-profile"] });
-      toast.success("Staff registration saved.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Staff registration failed.");
+      setStatus(result.status);
+      toast.success("Staff application sent for superadmin review.");
+      if (result.emailNotification === "failed")
+        toast.error("Registration saved, but the confirmation email could not be sent.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Staff registration failed.");
     } finally {
       setBusy(false);
     }
   }
-  return (
-    <main className="mx-auto max-w-2xl space-y-5">
-      <PageHeader
-        title="Staff registration"
-        subtitle="Register your internal case-handler profile using your existing account."
-      />
-      {status && (
-        <section className="surface p-4" role="status">
-          <p className="font-semibold">Status: {status}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {status === "active"
-              ? "Your case-handler access is active."
-              : "An administrator must approve your registration before case access."}
+
+  if (status === "confirmation_required")
+    return (
+      <main className="grid min-h-screen place-items-center p-5">
+        <section className="surface max-w-lg space-y-4 p-6" role="status">
+          <h1 className="text-xl font-bold">Email confirmation is still enabled</h1>
+          <p className="text-sm text-muted-foreground">
+            This project requires email confirmation before a session can upload the required
+            selfie. The application record is pending, but the photo could not be uploaded. Contact
+            the administrator to disable confirmation, then sign in and finish your registration.
           </p>
+          <Button asChild>
+            <Link to="/auth">Go to Login</Link>
+          </Button>
         </section>
-      )}
-      <form className="surface space-y-5 p-5 sm:p-6" onSubmit={submit}>
-        <StaffFields value={value} onChange={setValue} email={email} disabled={busy} />
-        <Button type="submit" disabled={busy}>
-          {busy ? "Saving…" : "Submit registration"}
+      </main>
+    );
+
+  if (status)
+    return (
+      <main className="grid min-h-screen place-items-center p-5">
+        <section className="surface max-w-lg space-y-4 p-6 text-center" role="status">
+          <h1 className="text-2xl font-bold">Pending Approval</h1>
+          <p className="text-sm text-muted-foreground">
+            Your registration, live selfie, and location have been submitted. A superadmin will
+            review your application.
+          </p>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              const { error: logoutError } = await supabase.auth.signOut();
+              if (logoutError) setError(`Could not log out: ${logoutError.message}`);
+              else await navigate({ to: "/auth", replace: true });
+            }}
+          >
+            Logout
+          </Button>
+          {error && <p role="alert">{error}</p>}
+        </section>
+      </main>
+    );
+
+  return (
+    <main className="mx-auto max-w-3xl space-y-5 p-5">
+      <PageHeader
+        title="Register as Staff"
+        subtitle="Create one account and submit your profile for superadmin approval."
+        action={
+          <Link className="text-sm underline" to="/auth">
+            Back to Login
+          </Link>
+        }
+      />
+      <form className="surface space-y-6 p-5 sm:p-6" onSubmit={submit}>
+        <section className="space-y-3">
+          <h2 className="font-semibold">Live selfie (required)</h2>
+          {cameraOpen ? (
+            <div className="space-y-3">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="max-h-80 w-full rounded-xl bg-black object-contain"
+              />
+              <Button type="button" onClick={() => void captureSelfie()}>
+                Capture live selfie
+              </Button>
+            </div>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => void openCamera()}>
+              {selfie ? "Retake live selfie" : "Open camera"}
+            </Button>
+          )}
+          <canvas ref={canvasRef} className="hidden" />
+          {selfie && (
+            <p className="text-sm text-emerald-700" role="status">
+              Live selfie captured ({(selfie.size / 1024).toFixed(0)} KB). Gallery uploads are not
+              supported.
+            </p>
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="font-semibold">Location (required)</h2>
+          <Button type="button" variant="outline" disabled={locationBusy} onClick={captureLocation}>
+            {locationBusy ? "Finding your address…" : "Capture current location"}
+          </Button>
+          {location && (
+            <div className="rounded-lg border p-3 text-sm" role="status">
+              <p className="font-medium">
+                Your location: {location.area ? `${location.area}, ` : ""}
+                {location.city}, {location.state}
+                {location.pincode ? ` - ${location.pincode}` : ""}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{location.address}</p>
+            </div>
+          )}
+        </section>
+
+        <section className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="registration-name">Name</Label>
+            <Input
+              id="registration-name"
+              required
+              maxLength={120}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="registration-mobile">Mobile number</Label>
+            <Input
+              id="registration-mobile"
+              required
+              type="tel"
+              minLength={6}
+              maxLength={32}
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="registration-email">Email</Label>
+            <Input
+              id="registration-email"
+              required
+              type="email"
+              maxLength={320}
+              value={email}
+              readOnly={signedIn}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          {!signedIn && (
+            <div className="space-y-2">
+              <Label htmlFor="registration-password">Password (minimum 8 characters)</Label>
+              <Input
+                id="registration-password"
+                required
+                type="password"
+                minLength={8}
+                maxLength={128}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="registration-city">City (from location)</Label>
+            <Input id="registration-city" readOnly required value={city} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="registration-state">State (from location)</Label>
+            <Input id="registration-state" readOnly required value={state} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="registration-team-lead">Team lead (optional)</Label>
+            <Input
+              id="registration-team-lead"
+              maxLength={120}
+              value={teamLead}
+              onChange={(e) => setTeamLead(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="registration-referral">Referred by (optional)</Label>
+            <Input
+              id="registration-referral"
+              maxLength={160}
+              value={referralBy}
+              onChange={(e) => setReferralBy(e.target.value)}
+            />
+          </div>
+        </section>
+
+        <fieldset className="space-y-2">
+          <legend className="font-semibold">Skills</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {staffSkills.map(([skill, label]) => (
+              <label className="flex items-center gap-2 text-sm" key={skill}>
+                <input
+                  type="checkbox"
+                  checked={skills.includes(skill)}
+                  onChange={(event) =>
+                    setSkills((current) =>
+                      event.target.checked
+                        ? [...current, skill]
+                        : current.filter((item) => item !== skill),
+                    )
+                  }
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+          <input
+            className="mt-1"
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(event) => setTermsAccepted(event.target.checked)}
+          />
+          <span>
+            Main confirm karta/karti hoon ki di gayi info sach hai. Main samajhta/samajhti hoon ki
+            mera photo, location, IP address aur device information verify aur record kiya jayega.
+          </span>
+        </label>
+        {error && (
+          <p className="rounded-lg bg-risk-high-soft px-3 py-2 text-sm text-risk-high" role="alert">
+            {error}
+          </p>
+        )}
+        <Button type="submit" disabled={busy || !selfie || !location || !termsAccepted}>
+          {busy ? "Submitting…" : "Submit for approval"}
         </Button>
       </form>
-    </main>
-  );
-}
-
-export function StaffLoginPage() {
-  return (
-    <main className="mx-auto max-w-lg space-y-4">
-      <PageHeader title="Staff sign-in" subtitle="Use your existing Rating Guard account." />
-      <section className="surface space-y-3 p-5">
-        <p className="text-sm">
-          Staff do not use a separate mobile/code login. Sign-in remains managed by the existing
-          account authentication.
-        </p>
-        <Button asChild>
-          <Link to="/auth">Continue to sign in</Link>
-        </Button>
-      </section>
     </main>
   );
 }
@@ -630,18 +1047,37 @@ export function AdminStaffPage() {
   const result = useQuery({ queryKey: adminStaffKey, queryFn: useServerFn(getAdminStaffData) });
   const setStatus = useServerFn(setStaffStatus);
   const [busyId, setBusyId] = useState<string | null>(null);
-  async function updateStatus(id: string, status: "approved" | "active" | "rejected" | "disabled") {
+  const [tab, setTab] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+  const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
+  const [customReasons, setCustomReasons] = useState<Record<string, string>>({});
+  async function updateStatus(
+    id: string,
+    status: "pending" | "approved" | "active" | "rejected" | "disabled",
+  ) {
     setBusyId(id);
     try {
-      await setStatus({ data: { staffId: id, status } });
+      const rejectReason = rejectReasons[id] ?? "incomplete_info";
+      const result = await setStatus({
+        data: {
+          staffId: id,
+          status,
+          ...(status === "rejected"
+            ? { rejectReason, rejectReasonCustom: customReasons[id] ?? "" }
+            : {}),
+        },
+      });
       await queryClient.invalidateQueries({ queryKey: adminStaffKey });
       toast.success(
         status === "approved"
           ? "Staff approved."
           : status === "rejected"
             ? "Staff rejected."
-            : `Staff ${status}.`,
+            : status === "pending"
+              ? "Application moved back to pending."
+              : `Staff ${status}.`,
       );
+      if (result.emailNotification === "failed")
+        toast.error("Status updated, but the notification email could not be sent.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not update staff.");
     } finally {
@@ -663,6 +1099,30 @@ export function AdminStaffPage() {
       (statusOrder[left.status] ?? 3) - (statusOrder[right.status] ?? 3) ||
       Date.parse(right.created_at) - Date.parse(left.created_at),
   );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayActions = result.data.activity.filter(
+    (event) => new Date(event.created_at).getTime() >= today.getTime(),
+  );
+  const todayApprovedIds = new Set(
+    todayActions.filter((event) => event.action === "approval").map((event) => event.staff_id),
+  );
+  const todayRejectedIds = new Set(
+    todayActions.filter((event) => event.action === "rejection").map((event) => event.staff_id),
+  );
+  const visibleStaff = orderedStaff.filter((person) => {
+    if (tab === "pending") return person.status === "pending";
+    if (tab === "approved") return person.status === "approved" || person.status === "active";
+    if (tab === "rejected") return person.status === "rejected";
+    return true;
+  });
+  const relativeTime = (date: string) => {
+    const hours = Math.max(0, Math.floor((Date.now() - Date.parse(date)) / 3_600_000));
+    if (hours < 1) return "less than an hour ago";
+    if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  };
   return (
     <main className="space-y-6">
       <PageHeader
@@ -674,6 +1134,18 @@ export function AdminStaffPage() {
           </Link>
         }
       />
+      <section className="grid gap-3 sm:grid-cols-3">
+        {[
+          ["Pending", staff.filter((person) => person.status === "pending").length],
+          ["Approved today", todayApprovedIds.size],
+          ["Rejected today", todayRejectedIds.size],
+        ].map(([label, value]) => (
+          <div className="surface p-4" key={label}>
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="mt-1 text-2xl font-bold">{value}</p>
+          </div>
+        ))}
+      </section>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         {[
           ["Total staff", stats.totalStaff],
@@ -692,56 +1164,130 @@ export function AdminStaffPage() {
           </div>
         ))}
       </section>
-      <section className="surface overflow-x-auto p-4 sm:p-6">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead>
-            <tr className="border-b">
-              <th className="p-2">Name</th>
-              <th>Email</th>
-              <th>Mobile</th>
-              <th>Status</th>
-              <th>Applied</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orderedStaff.map((person) => (
-              <tr className="border-b" key={person.id}>
-                <td className="p-2">
-                  <Link className="underline" to="/admin/staff/$id" params={{ id: person.id }}>
-                    {person.name}
-                  </Link>
-                </td>
-                <td>{person.email}</td>
-                <td>{person.mobile}</td>
-                <td>
-                  <StatusPill status={person.status} />
-                </td>
-                <td>{new Date(person.created_at).toLocaleDateString()}</td>
-                <td>
-                  <div className="flex gap-2">
-                    {["pending", "rejected", "disabled"].includes(person.status) ? (
+      <section className="surface space-y-4 p-4 sm:p-6">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Staff status">
+          {(["pending", "approved", "rejected", "all"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={tab === value}
+              className={`rounded-full border px-4 py-2 text-sm capitalize ${tab === value ? "bg-primary text-primary-foreground" : ""}`}
+              onClick={() => setTab(value)}
+            >
+              {value}
+            </button>
+          ))}
+        </div>
+        {visibleStaff.length ? (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {visibleStaff.map((person) => (
+              <article
+                className="flex flex-col gap-4 rounded-xl border p-4 sm:flex-row"
+                key={person.id}
+              >
+                {person.selfie_url ? (
+                  <img
+                    className="size-24 shrink-0 rounded-lg object-cover"
+                    src={person.selfie_url}
+                    alt={`Live selfie of ${person.name}`}
+                  />
+                ) : (
+                  <div className="grid size-24 shrink-0 place-items-center rounded-lg bg-muted text-xs text-muted-foreground">
+                    No selfie
+                  </div>
+                )}
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Link
+                      className="font-semibold underline"
+                      to="/admin/staff/$id"
+                      params={{ id: person.id }}
+                    >
+                      {person.name}
+                    </Link>
+                    <StatusPill status={person.status} />
+                  </div>
+                  <p className="break-all text-sm">
+                    {person.email} · {person.mobile}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {person.address ?? `${person.region_city}, ${person.region_state}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Registered {new Date(person.created_at).toLocaleString()} ·{" "}
+                    {relativeTime(person.created_at)}
+                  </p>
+                  <p className="text-xs">
+                    Skills: {person.skills.length ? person.skills.join(", ") : "—"} · Referred by:{" "}
+                    {person.referral_by ?? "—"}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {person.status === "pending" && (
                       <>
                         <Button
                           size="sm"
-                          variant="outline"
                           disabled={busyId === person.id}
                           onClick={() => void updateStatus(person.id, "approved")}
                         >
                           Approve
                         </Button>
-                        {person.status === "pending" && (
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={busyId === person.id}
-                            onClick={() => void updateStatus(person.id, "rejected")}
-                          >
-                            Reject
-                          </Button>
+                        <select
+                          aria-label={`Rejection reason for ${person.name}`}
+                          className="h-9 rounded-md border bg-background px-2 text-xs"
+                          value={rejectReasons[person.id] ?? "incomplete_info"}
+                          onChange={(event) =>
+                            setRejectReasons((current) => ({
+                              ...current,
+                              [person.id]: event.target.value,
+                            }))
+                          }
+                        >
+                          <option value="fake_account">Fake account</option>
+                          <option value="duplicate">Duplicate</option>
+                          <option value="suspicious_location">Suspicious location</option>
+                          <option value="incomplete_info">Incomplete information</option>
+                          <option value="other">Other</option>
+                        </select>
+                        {(rejectReasons[person.id] ?? "incomplete_info") === "other" && (
+                          <Input
+                            className="h-9 w-40"
+                            aria-label={`Custom rejection reason for ${person.name}`}
+                            maxLength={500}
+                            value={customReasons[person.id] ?? ""}
+                            onChange={(event) =>
+                              setCustomReasons((current) => ({
+                                ...current,
+                                [person.id]: event.target.value,
+                              }))
+                            }
+                          />
                         )}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={
+                            busyId === person.id ||
+                            ((rejectReasons[person.id] ?? "incomplete_info") === "other" &&
+                              !customReasons[person.id]?.trim())
+                          }
+                          onClick={() => void updateStatus(person.id, "rejected")}
+                        >
+                          Reject
+                        </Button>
                       </>
-                    ) : (
+                    )}
+                    {person.status === "rejected" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busyId === person.id}
+                        onClick={() => void updateStatus(person.id, "pending")}
+                      >
+                        Send to Pending
+                      </Button>
+                    )}
+                    {person.status === "approved" || person.status === "active" ? (
                       <Button
                         size="sm"
                         variant="outline"
@@ -750,13 +1296,22 @@ export function AdminStaffPage() {
                       >
                         Disable
                       </Button>
-                    )}
+                    ) : null}
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to="/admin/staff/$id" params={{ id: person.id }}>
+                        View Full
+                      </Link>
+                    </Button>
                   </div>
-                </td>
-              </tr>
+                </div>
+              </article>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ) : (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            No staff members in this tab.
+          </p>
+        )}
       </section>
       <p>
         <Link className="text-sm underline" to="/admin/cases">
@@ -870,13 +1425,55 @@ export function AdminCasesPage() {
 }
 
 export function AdminStaffDetailPage({ id }: { id: string }) {
+  const queryClient = useQueryClient();
   const result = useQuery({ queryKey: adminStaffKey, queryFn: useServerFn(getAdminStaffData) });
+  const saveStatus = useServerFn(setStaffStatus);
+  const [busy, setBusy] = useState(false);
+  const [rejectReason, setRejectReason] = useState("incomplete_info");
+  const [customReason, setCustomReason] = useState("");
+  async function updateStatus(status: "pending" | "approved" | "rejected") {
+    setBusy(true);
+    try {
+      const updated = await saveStatus({
+        data: {
+          staffId: id,
+          status,
+          ...(status === "rejected" ? { rejectReason, rejectReasonCustom: customReason } : {}),
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: adminStaffKey });
+      toast.success(
+        status === "approved"
+          ? "Staff approved."
+          : status === "rejected"
+            ? "Staff rejected."
+            : "Application moved back to pending.",
+      );
+      if (updated.emailNotification === "failed")
+        toast.error("Status updated, but the notification email could not be sent.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update staff status.");
+    } finally {
+      setBusy(false);
+    }
+  }
   if (result.isLoading) return <p>Loading staff record…</p>;
   if (result.error || !result.data)
     return <p role="alert">{result.error?.message ?? "Could not load staff."}</p>;
   const person = result.data.staff.find((row) => row.id === id);
   if (!person) return <p role="alert">Staff member not found.</p>;
   const cases = result.data.cases.filter((row) => row.staff_id === id);
+  const activity = result.data.activity.filter((row) => row.staff_id === id);
+  const submittedCases = cases.filter((item) =>
+    ["submitted", "reply_received", "approved", "rework", "completed", "closed"].includes(
+      item.status,
+    ),
+  );
+  const reviewedCases = cases.filter((item) => ["approved", "rework"].includes(item.status));
+  const mapUrl =
+    person.latitude != null && person.longitude != null
+      ? `https://maps.google.com/maps?q=${person.latitude},${person.longitude}&z=15&output=embed`
+      : null;
   return (
     <main className="space-y-5">
       <PageHeader
@@ -888,6 +1485,15 @@ export function AdminStaffDetailPage({ id }: { id: string }) {
           </Link>
         }
       />
+      {person.selfie_url && (
+        <section className="surface p-4">
+          <img
+            className="mx-auto max-h-[560px] w-full rounded-xl object-contain"
+            src={person.selfie_url}
+            alt={`Live selfie of ${person.name}`}
+          />
+        </section>
+      )}
       <section className="surface grid gap-3 p-5 sm:grid-cols-3">
         <p>Email: {person.email}</p>
         <p>Mobile: {person.mobile}</p>
@@ -896,6 +1502,10 @@ export function AdminStaffDetailPage({ id }: { id: string }) {
         <p>
           Region: {person.region_city}, {person.region_state}
         </p>
+        <p>Address: {person.address ?? "—"}</p>
+        <p>IP address: {person.ip_address ?? "Not captured"}</p>
+        <p>Device: {person.user_agent ?? "Not captured"}</p>
+        <p>Timezone: {person.timezone ?? "—"}</p>
         <p>Role: {person.role}</p>
         <p>Team lead: {person.team_lead ?? "—"}</p>
         <p>Skills: {person.skills.length ? person.skills.join(", ") : "—"}</p>
@@ -903,18 +1513,66 @@ export function AdminStaffDetailPage({ id }: { id: string }) {
         <p>
           Last active: {person.last_seen_at ? new Date(person.last_seen_at).toLocaleString() : "—"}
         </p>
-        <p>Cases: {cases.length}</p>
+        <p>Referred by: {person.referral_by ?? "—"}</p>
+        <p>
+          Approved at: {person.approved_at ? new Date(person.approved_at).toLocaleString() : "—"}
+        </p>
+        <p>Cases assigned: {cases.length}</p>
       </section>
-      <AdminStaffPhaseTwo staffId={person.id} monthlyTarget={person.monthly_task_target} />
-      <section className="surface space-y-3 p-5">
-        <h2 className="font-bold">Assigned cases</h2>
+      {mapUrl && (
+        <section className="surface space-y-3 p-4">
+          <h2 className="font-bold">Captured location</h2>
+          <iframe
+            className="h-72 w-full rounded-lg border"
+            src={mapUrl}
+            title={`Captured registration location for ${person.name}`}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
+        </section>
+      )}
+      <section className="surface space-y-4 p-5">
+        <h2 className="font-bold">Activity log</h2>
+        {activity.length ? (
+          <ol className="space-y-3 border-l pl-4">
+            {activity.map((event) => (
+              <li className="relative space-y-1" key={event.id}>
+                <span className="absolute -left-[21px] top-1 size-2 rounded-full bg-primary" />
+                <p className="font-medium capitalize">{event.action.replaceAll("_", " ")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(event.created_at).toLocaleString()}
+                  {event.ip_address ? ` · ${event.ip_address}` : ""}
+                </p>
+                {event.user_agent && (
+                  <p className="break-all text-xs text-muted-foreground">{event.user_agent}</p>
+                )}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-sm text-muted-foreground">No recorded activity.</p>
+        )}
+      </section>
+      <section className="surface space-y-4 p-5">
+        <h2 className="font-bold">Submitted work</h2>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <p>Cases assigned: {cases.length}</p>
+          <p>Cases submitted: {submittedCases.length}</p>
+          <p>Approved / rework: {reviewedCases.length}</p>
+        </div>
         {cases.map((item) => (
           <article className="rounded-lg border p-3" key={item.id}>
             <div className="flex flex-wrap justify-between gap-2">
               <p className="font-semibold">{item.business_name}</p>
               <StatusPill status={item.status} />
             </div>
-            <p className="mt-1 text-sm">{item.policy_angle || "Evidence review"}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Assigned {new Date(item.assigned_at).toLocaleString()}
+              {item.submitted_at
+                ? ` · Submitted ${new Date(item.submitted_at).toLocaleString()}`
+                : ""}
+              {item.closed_at ? ` · Closed ${new Date(item.closed_at).toLocaleString()}` : ""}
+            </p>
             <a
               className="mt-2 inline-block text-sm underline"
               href={item.review_url}
@@ -926,7 +1584,50 @@ export function AdminStaffDetailPage({ id }: { id: string }) {
           </article>
         ))}
       </section>
+      <AdminStaffPhaseTwo staffId={person.id} monthlyTarget={person.monthly_task_target} />
       <AdminStaffChat staffId={person.id} staffName={person.name} />
+      <section className="sticky bottom-2 z-20 flex flex-wrap items-center gap-2 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur">
+        {person.status === "pending" && (
+          <>
+            <Button disabled={busy} onClick={() => void updateStatus("approved")}>
+              Approve
+            </Button>
+            <select
+              aria-label="Rejection reason"
+              className="h-9 rounded-md border bg-background px-2 text-sm"
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+            >
+              <option value="fake_account">Fake account</option>
+              <option value="duplicate">Duplicate</option>
+              <option value="suspicious_location">Suspicious location</option>
+              <option value="incomplete_info">Incomplete information</option>
+              <option value="other">Other</option>
+            </select>
+            {rejectReason === "other" && (
+              <Input
+                aria-label="Custom rejection reason"
+                className="h-9 max-w-xs"
+                maxLength={500}
+                value={customReason}
+                onChange={(event) => setCustomReason(event.target.value)}
+              />
+            )}
+            <Button
+              variant="destructive"
+              disabled={busy || (rejectReason === "other" && !customReason.trim())}
+              onClick={() => void updateStatus("rejected")}
+            >
+              Reject
+            </Button>
+          </>
+        )}
+        {person.status === "rejected" && (
+          <Button variant="outline" disabled={busy} onClick={() => void updateStatus("pending")}>
+            Send to Pending
+          </Button>
+        )}
+      </section>
     </main>
   );
 }

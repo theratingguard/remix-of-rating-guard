@@ -4,12 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   signInWithPassword: vi.fn(),
-  signUp: vi.fn(),
   resetPasswordForEmail: vi.fn(),
   updateUser: vi.fn(),
   getSession: vi.fn(),
   unsubscribe: vi.fn(),
   resend: vi.fn(),
+}));
+vi.mock("@tanstack/react-start", () => ({
+  useServerFn: () => vi.fn().mockResolvedValue({ recorded: false }),
+}));
+vi.mock("@/lib/staff-case.functions", () => ({
+  recordStaffLogin: vi.fn(),
 }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: object) => ({ options }),
@@ -47,7 +52,7 @@ describe("Authentication UI contract (unit tests, not production login evidence)
     mocks.signInWithPassword.mockResolvedValue({ error: new Error("Invalid login credentials") });
     render(<Page />);
     credentials();
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Login" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Invalid login credentials");
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
@@ -58,7 +63,7 @@ describe("Authentication UI contract (unit tests, not production login evidence)
     mocks.resend.mockResolvedValue({ error: null });
     render(<Page />);
     credentials();
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Login" }));
     fireEvent.click(await screen.findByRole("button", { name: "Resend confirmation email" }));
     await waitFor(() =>
       expect(mocks.resend).toHaveBeenCalledWith({
@@ -75,19 +80,15 @@ describe("Authentication UI contract (unit tests, not production login evidence)
     mocks.signInWithPassword.mockRejectedValue(new Error("Network unavailable"));
     render(<Page />);
     credentials();
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Login" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Network unavailable");
-    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Login" })).toBeEnabled();
   });
 
-  it("requires email verification when signup returns no session", async () => {
-    mocks.signUp.mockResolvedValue({ data: { session: null }, error: null });
+  it("offers staff registration instead of unrestricted account signup", async () => {
     render(<Page />);
-    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-    credentials();
-    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("verify your account");
-    expect(mocks.navigate).not.toHaveBeenCalled();
+    expect(screen.getByText("Register as Staff")).toBeInTheDocument();
+    expect(screen.queryByText("Create account")).not.toBeInTheDocument();
   });
 
   it("sends password recovery to the recovery flow on the current origin", async () => {

@@ -217,7 +217,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
           </div>
           <div className="ml-auto flex items-center gap-2 md:ml-0">
             <Button asChild variant="outline" size="sm">
-              <Link to="/staff/login">Staff Login</Link>
+              <Link to="/staff/register">Register as Staff</Link>
             </Button>
             <Button asChild size="sm">
               <Link to="/auth">{c.ctaPrimary}</Link>
@@ -248,7 +248,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
                 <a href="#how">{c.ctaSecondary}</a>
               </Button>
               <Button asChild size="lg" variant="secondary">
-                <Link to="/staff/login">Staff Login</Link>
+                <Link to="/staff/register">Register as Staff</Link>
               </Button>
             </div>
           </Reveal>

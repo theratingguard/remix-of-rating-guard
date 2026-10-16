@@ -19,6 +19,23 @@ const profileSchema = z.object({
   region_city: z.string().trim().min(1).max(120),
   region_state: z.string().trim().min(1).max(120),
 });
+const registrationSchema = profileSchema.extend({
+  address: z.string().trim().min(1).max(500),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  live_selfie_url: z.string().trim().min(1).max(200),
+  skills: z.array(z.string().trim().min(1).max(40)).max(20),
+  team_lead: z.string().trim().max(120).optional(),
+  referral_by: z.string().trim().max(160).optional(),
+  timezone: z.string().trim().min(1).max(100),
+});
+const rejectReasonSchema = z.enum([
+  "fake_account",
+  "duplicate",
+  "suspicious_location",
+  "incomplete_info",
+  "other",
+]);
 const adminMessage = "Super Admin access is required for staff case operations.";
 const caseTargetSchema = z.object({ reviewId: z.string().uuid(), scanId: z.string().uuid() });
 
@@ -26,6 +43,17 @@ async function requireAdmin(client: UserClient) {
   const { data, error } = await client.rpc("report_access_level");
   if (error) throw new Error(`Could not verify administrator access: ${error.message}`);
   if (data !== "super_admin") throw new Error(adminMessage);
+}
+
+async function staffRequestFingerprint() {
+  const { getRequest } = await import("@tanstack/react-start/server");
+  const { isIP } = await import("node:net");
+  const headers = getRequest()?.headers;
+  const candidateIp = headers?.get("cf-connecting-ip") ?? headers?.get("x-real-ip") ?? null;
+  return {
+    ipAddress: candidateIp && isIP(candidateIp) ? candidateIp : null,
+    userAgent: headers?.get("user-agent")?.slice(0, 500) ?? null,
+  };
 }
 
 async function requireActiveStaff(userId: string) {
@@ -90,12 +118,15 @@ export const getMyStaffProfile = createServerFn({ method: "GET" })
 
 export const registerStaff = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input) => profileSchema.parse(input))
+  .validator((input) => registrationSchema.parse(input))
   .handler(async ({ data, context }) => {
     const email = context.claims["email"];
     if (typeof email !== "string" || !z.string().email().safeParse(email).success)
       throw new Error("Your signed-in account does not contain a valid email address.");
+    if (!new RegExp(`^${context.userId}/selfie-[0-9]+\\.jpg$`).test(data.live_selfie_url))
+      throw new Error("The uploaded selfie path is invalid or does not belong to this account.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { ipAddress, userAgent } = await staffRequestFingerprint();
     const { data: existing, error: findError } = await supabaseAdmin
       .from("staff")
       .select("id,status")
@@ -104,7 +135,17 @@ export const registerStaff = createServerFn({ method: "POST" })
     if (findError) throw new Error(`Could not check staff registration: ${findError.message}`);
     if (existing?.status === "disabled")
       throw new Error("This staff profile is disabled. Contact an administrator.");
-    const values = { ...data, email, updated_at: new Date().toISOString() };
+    const { timezone, ...profile } = data;
+    const values = {
+      ...profile,
+      team_lead: profile.team_lead || null,
+      referral_by: profile.referral_by || null,
+      email,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      timezone,
+      updated_at: new Date().toISOString(),
+    };
     const result = existing
       ? await supabaseAdmin
           .from("staff")
@@ -122,10 +163,88 @@ export const registerStaff = createServerFn({ method: "POST" })
         throw new Error("That mobile number belongs to another staff profile.");
       throw new Error(`Could not save staff registration: ${result.error.message}`);
     }
+    const { error: activityError } = await supabaseAdmin.from("staff_activity_log").insert([
+      {
+        staff_id: context.userId,
+        action: "location_capture",
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        metadata: { latitude: data.latitude, longitude: data.longitude, timezone },
+      },
+      {
+        staff_id: context.userId,
+        action: "photo_upload",
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        metadata: { storage_path: data.live_selfie_url },
+      },
+    ]);
+    if (activityError)
+      throw new Error("Registration was saved, but its activity log could not be recorded.");
+    const { error: messageError } = await supabaseAdmin.from("staff_admin_messages").insert({
+      staff_id: context.userId,
+      sender_id: context.userId,
+      sender_role: "staff",
+      message: "New staff registration submitted for superadmin review.",
+    });
+    if (messageError)
+      throw new Error("Registration was saved, but the superadmin notification could not be sent.");
+    let emailNotification: "sent" | "not_configured" | "failed" = "not_configured";
+    const { smtpConfigured, sendTextEmail } = await import("@/lib/email.server");
+    if (smtpConfigured()) {
+      try {
+        await sendTextEmail(
+          email,
+          "Rating Guard staff registration received",
+          "Your staff registration has been submitted and is pending superadmin review.",
+        );
+        emailNotification = "sent";
+      } catch (emailError) {
+        logEvent(
+          "error",
+          "staff.registration.email.failed",
+          "Could not email registration receipt",
+          {
+            staffId: context.userId,
+            error: emailError instanceof Error ? emailError.message : "Unknown email error",
+          },
+        );
+        emailNotification = "failed";
+      }
+    }
     logEvent("info", "staff.profile.registered", "Staff profile registration saved", {
       status: result.data.status,
     });
-    return result.data;
+    return { ...result.data, emailNotification };
+  });
+
+export const recordStaffLogin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { ipAddress, userAgent } = await staffRequestFingerprint();
+    const { data: staff, error: staffError } = await supabaseAdmin
+      .from("staff")
+      .select("id")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (staffError) throw new Error("Could not record the staff login.");
+    if (!staff) return { recorded: false };
+    const { error } = await supabaseAdmin.from("staff_activity_log").insert({
+      staff_id: context.userId,
+      action: "login",
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      metadata: {},
+    });
+    if (error) throw new Error("Could not record the staff login.");
+    const { error: seenError } = await supabaseAdmin
+      .from("staff")
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq("id", context.userId);
+    if (seenError)
+      throw new Error("Login was recorded, but the last-active time could not be updated.");
+    return { recorded: true };
   });
 
 export const updateMyStaffProfile = createServerFn({ method: "POST" })
@@ -134,6 +253,7 @@ export const updateMyStaffProfile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireActiveStaff(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { ipAddress, userAgent } = await staffRequestFingerprint();
     const { data: updated, error } = await supabaseAdmin
       .from("staff")
       .update({ ...data, updated_at: new Date().toISOString() })
@@ -141,6 +261,15 @@ export const updateMyStaffProfile = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(`Could not update staff profile: ${error.message}`);
+    const { error: activityError } = await supabaseAdmin.from("staff_activity_log").insert({
+      staff_id: context.userId,
+      action: "update_profile",
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      metadata: { updated_fields: Object.keys(data) },
+    });
+    if (activityError)
+      throw new Error("Profile was updated, but its activity could not be recorded.");
     logEvent("info", "staff.profile.updated", "Staff profile updated");
     return updated;
   });
@@ -153,6 +282,7 @@ export const updateMyStaffLiveStatus = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireActiveStaff(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { ipAddress, userAgent } = await staffRequestFingerprint();
     const { data: updated, error } = await supabaseAdmin
       .from("staff")
       .update({ live_status: data.live_status, updated_at: new Date().toISOString() })
@@ -160,6 +290,15 @@ export const updateMyStaffLiveStatus = createServerFn({ method: "POST" })
       .select("live_status")
       .single();
     if (error) throw new Error(`Could not update live status: ${error.message}`);
+    const { error: activityError } = await supabaseAdmin.from("staff_activity_log").insert({
+      staff_id: context.userId,
+      action: "live_status_update",
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      metadata: { live_status: updated.live_status },
+    });
+    if (activityError)
+      throw new Error("Live status was updated, but its activity could not be recorded.");
     logEvent("info", "staff.live-status.updated", "Staff live status updated", {
       status: updated.live_status,
     });
@@ -239,6 +378,7 @@ export const recordStaffSubmission = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireActiveStaff(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { ipAddress, userAgent } = await staffRequestFingerprint();
     const submittedAt = new Date().toISOString();
     const { data: updated, error } = await supabaseAdmin
       .from("staff_cases")
@@ -250,6 +390,15 @@ export const recordStaffSubmission = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(`Could not record staff submission: ${error.message}`);
     if (!updated) throw new Error("This case is not assigned to you or is no longer open.");
+    const { error: activityError } = await supabaseAdmin.from("staff_activity_log").insert({
+      staff_id: context.userId,
+      action: "submit_case",
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      metadata: { case_id: data.caseId, submitted_at: submittedAt },
+    });
+    if (activityError)
+      throw new Error("Submission was recorded, but its activity could not be logged.");
     await appendStaffEvent(data.caseId, context.userId, "submission_recorded", {
       submitted_at: submittedAt,
       submitted_manually: true,
@@ -398,6 +547,7 @@ export const getAdminStaffData = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [
       staffResult,
+      activityResult,
       casesResult,
       allCount,
       submittedCount,
@@ -407,10 +557,15 @@ export const getAdminStaffData = createServerFn({ method: "GET" })
     ] = await Promise.all([
       supabaseAdmin.from("staff").select("*").order("created_at", { ascending: false }),
       supabaseAdmin
+        .from("staff_activity_log")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5000),
+      supabaseAdmin
         .from("staff_cases")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(500),
+        .limit(5000),
       supabaseAdmin.from("staff_cases").select("id", { count: "exact", head: true }),
       supabaseAdmin
         .from("staff_cases")
@@ -435,6 +590,8 @@ export const getAdminStaffData = createServerFn({ method: "GET" })
         .limit(100),
     ]);
     if (staffResult.error) throw new Error(`Could not load staff: ${staffResult.error.message}`);
+    if (activityResult.error)
+      throw new Error(`Could not load staff activity: ${activityResult.error.message}`);
     if (casesResult.error)
       throw new Error(`Could not load staff cases: ${casesResult.error.message}`);
     if (allCount.error) throw new Error(`Could not count staff cases: ${allCount.error.message}`);
@@ -446,6 +603,23 @@ export const getAdminStaffData = createServerFn({ method: "GET" })
       throw new Error(`Could not load case handling times: ${handlingResult.error.message}`);
     if (scansResult.error)
       throw new Error(`Could not load completed client scans: ${scansResult.error.message}`);
+    const selfiePaths = (staffResult.data ?? [])
+      .map((person) => person.live_selfie_url)
+      .filter((path): path is string => Boolean(path));
+    const selfieResults = selfiePaths.length
+      ? await supabaseAdmin.storage.from("staff-photos").createSignedUrls(selfiePaths, 3600)
+      : { data: [], error: null };
+    if (selfieResults.error)
+      throw new Error("Could not create temporary access links for staff photos.");
+    const selfieUrls = new Map(
+      (selfieResults.data ?? [])
+        .filter((item) => item.signedUrl)
+        .map((item) => [item.path, item.signedUrl]),
+    );
+    const staff = (staffResult.data ?? []).map((person) => ({
+      ...person,
+      selfie_url: person.live_selfie_url ? (selfieUrls.get(person.live_selfie_url) ?? null) : null,
+    }));
     const scans = scansResult.data ?? [];
     const scanMap = new Map(scans.map((row) => [row.id, row]));
     const scanIds = scans.map((row) => row.id);
@@ -502,7 +676,8 @@ export const getAdminStaffData = createServerFn({ method: "GET" })
     if (eventsResult.error)
       throw new Error(`Could not load admin case work logs: ${eventsResult.error.message}`);
     return {
-      staff: staffResult.data ?? [],
+      staff,
+      activity: activityResult.data ?? [],
       cases: casesResult.data ?? [],
       events: eventsResult.data ?? [],
       candidates,
@@ -671,24 +846,98 @@ export const setStaffStatus = createServerFn({ method: "POST" })
     z
       .object({
         staffId: z.string().uuid(),
-        status: z.enum(["approved", "active", "rejected", "disabled"]),
+        status: z.enum(["pending", "approved", "active", "rejected", "disabled"]),
+        rejectReason: rejectReasonSchema.optional(),
+        rejectReasonCustom: z.string().trim().max(500).optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     await requireAdmin(context.supabase);
+    if (data.status === "rejected" && !data.rejectReason)
+      throw new Error("Choose a rejection reason before rejecting this application.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { ipAddress, userAgent } = await staffRequestFingerprint();
+    const updatedAt = new Date().toISOString();
     const { data: updated, error } = await supabaseAdmin
       .from("staff")
-      .update({ status: data.status, updated_at: new Date().toISOString() })
+      .update({
+        status: data.status,
+        reject_reason: data.status === "rejected" ? data.rejectReason! : null,
+        reject_reason_custom:
+          data.status === "rejected" && data.rejectReason === "other"
+            ? data.rejectReasonCustom || null
+            : null,
+        approved_by: data.status === "approved" || data.status === "active" ? context.userId : null,
+        approved_at: data.status === "approved" || data.status === "active" ? updatedAt : null,
+        updated_at: updatedAt,
+      })
       .eq("id", data.staffId)
       .select("id,status")
       .single();
     if (error) throw new Error(`Could not update staff status: ${error.message}`);
+    const notice =
+      data.status === "approved" || data.status === "active"
+        ? "Your staff application has been approved."
+        : data.status === "rejected"
+          ? `Your staff application was rejected (${data.rejectReason}${data.rejectReasonCustom ? `: ${data.rejectReasonCustom}` : ""}).`
+          : data.status === "pending"
+            ? "Your staff application has been moved back to pending review."
+            : "Your staff access has been disabled.";
+    const [activityResult, messageResult] = await Promise.all([
+      supabaseAdmin.from("staff_activity_log").insert({
+        staff_id: data.staffId,
+        action:
+          data.status === "approved" || data.status === "active"
+            ? "approval"
+            : data.status === "rejected"
+              ? "rejection"
+              : "status_update",
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        metadata: {
+          status: data.status,
+          reason: data.rejectReason ?? null,
+          custom_reason: data.rejectReasonCustom ?? null,
+          actor_id: context.userId,
+        },
+      }),
+      supabaseAdmin.from("staff_admin_messages").insert({
+        staff_id: data.staffId,
+        sender_id: context.userId,
+        sender_role: "admin",
+        message: notice,
+      }),
+    ]);
+    if (activityResult.error || messageResult.error)
+      throw new Error(
+        "Staff status changed, but the activity or in-app notice could not be saved.",
+      );
+    const { smtpConfigured, sendTextEmail } = await import("@/lib/email.server");
+    let emailNotification: "sent" | "not_configured" | "failed" = "not_configured";
+    if (smtpConfigured()) {
+      const { data: staff, error: staffError } = await supabaseAdmin
+        .from("staff")
+        .select("email,name")
+        .eq("id", data.staffId)
+        .single();
+      if (staffError)
+        throw new Error("Status changed, but the staff email address could not be loaded.");
+      try {
+        await sendTextEmail(staff.email, "Rating Guard staff application update", notice);
+        emailNotification = "sent";
+      } catch (emailError) {
+        logEvent("error", "staff.approval.email.failed", "Could not email staff status update", {
+          staffId: data.staffId,
+          error: emailError instanceof Error ? emailError.message : "Unknown email error",
+        });
+        emailNotification = "failed";
+      }
+    }
     logEvent("info", "admin.staff.status.updated", "Admin updated staff status", {
       status: updated.status,
     });
-    return updated;
+    return { ...updated, emailNotification };
   });
 
 export const closeStaffCase = createServerFn({ method: "POST" })
@@ -830,3 +1079,4 @@ export const getClientStaffCases = createServerFn({ method: "GET" })
   });
 
 export type StaffProfileInput = z.infer<typeof profileSchema>;
+export type StaffRegistrationInput = z.infer<typeof registrationSchema>;

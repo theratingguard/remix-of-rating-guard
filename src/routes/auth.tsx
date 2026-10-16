@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { recordStaffLogin } from "@/lib/staff-case.functions";
 import scanIcon from "@/assets/icon-scan.png";
 import reportIcon from "@/assets/icon-report.png";
 
@@ -49,13 +51,14 @@ const SLIDES = [
 
 function AuthPage() {
   const navigate = useNavigate();
+  const recordLogin = useServerFn(recordStaffLogin);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [slide, setSlide] = useState(0);
-  const [mode, setMode] = useState<"login" | "signup" | "reset" | "recovery">("login");
+  const [mode, setMode] = useState<"login" | "reset" | "recovery">("login");
   const [notice, setNotice] = useState<string | null>(null);
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
@@ -113,15 +116,6 @@ function AuthPage() {
         const { error: updateError } = await supabase.auth.updateUser({ password });
         if (updateError) throw updateError;
         await navigate({ to: "/dashboard", replace: true });
-      } else if (mode === "signup") {
-        const { data, error: signupError } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: { emailRedirectTo: redirect },
-        });
-        if (signupError) throw signupError;
-        if (data.session) await navigate({ to: "/dashboard", replace: true });
-        else setNotice("Check your email to verify your account, then sign in.");
       } else {
         const { error: loginError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -134,6 +128,7 @@ function AuthPage() {
           );
           throw loginError;
         }
+        await recordLogin();
         await navigate({ to: "/dashboard", replace: true });
       }
     } catch (cause) {
@@ -222,20 +217,16 @@ function AuthPage() {
               Rating Guard Remix
             </p>
             <h2 className="mt-2 text-3xl font-bold">
-              {mode === "signup"
-                ? "Create your account"
-                : mode === "reset"
-                  ? "Reset password"
-                  : mode === "recovery"
-                    ? "Set a new password"
-                    : "Welcome back"}
+              {mode === "reset"
+                ? "Reset password"
+                : mode === "recovery"
+                  ? "Set a new password"
+                  : "Welcome back"}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {mode === "login"
                 ? "Sign in to your command center."
-                : mode === "signup"
-                  ? "Use your email to create a secure account."
-                  : "Use the emailed recovery link to reset your password."}
+                : "Use the emailed recovery link to reset your password."}
             </p>
           </div>
           {mode !== "recovery" && (
@@ -311,26 +302,30 @@ function AuthPage() {
               "Please wait…"
             ) : (
               <>
-                {mode === "signup"
-                  ? "Create account"
-                  : mode === "reset"
-                    ? "Send reset link"
-                    : mode === "recovery"
-                      ? "Save new password"
-                      : "Sign in"}{" "}
+                {mode === "reset"
+                  ? "Send reset link"
+                  : mode === "recovery"
+                    ? "Save new password"
+                    : "Login"}{" "}
                 <ArrowRight />
               </>
             )}
           </Button>
           <div className="flex flex-wrap justify-between gap-3 text-sm">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => changeMode(mode === "login" ? "signup" : "login")}
-              className="text-primary hover:underline"
-            >
-              {mode === "login" ? "Create account" : "Back to sign in"}
-            </button>
+            {mode === "login" ? (
+              <Link className="text-primary hover:underline" to="/staff/register">
+                Register as Staff
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => changeMode("login")}
+                className="text-primary hover:underline"
+              >
+                Back to sign in
+              </button>
+            )}
             {mode === "login" && (
               <button
                 type="button"

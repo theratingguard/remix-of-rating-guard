@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResponsibleUseRouteImport } from './routes/responsible-use'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -28,12 +29,13 @@ import { Route as AuthenticatedStorageRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiScanWorkerRouteImport } from './routes/api/scan-worker'
-import { Route as StaffLoginRouteImport } from './routes/staff.login'
+import { Route as StaffRegisterRouteImport } from './routes/staff.register'
 import { Route as AuthenticatedAdminAssignRouteImport } from './routes/_authenticated/admin.assign'
 import { Route as AuthenticatedAdminCaseAssignmentRouteImport } from './routes/_authenticated/admin.case-assignment'
 import { Route as AuthenticatedAdminCasesRouteImport } from './routes/_authenticated/admin.cases'
 import { Route as AuthenticatedAdminInvestigatorsRouteImport } from './routes/_authenticated/admin.investigators'
 import { Route as AuthenticatedAdminStaffRouteImport } from './routes/_authenticated/admin.staff'
+import { Route as AuthenticatedClientOutcomesRouteImport } from './routes/_authenticated/client.outcomes'
 import { Route as AuthenticatedInvestigatorCasesRouteImport } from './routes/_authenticated/investigator.cases'
 import { Route as AuthenticatedInvestigatorLoginRouteImport } from './routes/_authenticated/investigator.login'
 import { Route as AuthenticatedInvestigatorProfileRouteImport } from './routes/_authenticated/investigator.profile'
@@ -47,7 +49,6 @@ import { Route as AuthenticatedStaffCommunicationRouteImport } from './routes/_a
 import { Route as AuthenticatedStaffPerformanceRouteImport } from './routes/_authenticated/staff.performance'
 import { Route as AuthenticatedStaffProfileRouteImport } from './routes/_authenticated/staff.profile'
 import { Route as AuthenticatedStaffQualityRouteImport } from './routes/_authenticated/staff.quality'
-import { Route as AuthenticatedStaffRegisterRouteImport } from './routes/_authenticated/staff.register'
 import { Route as AuthenticatedStaffStatusBoardRouteImport } from './routes/_authenticated/staff.status-board'
 import { Route as AuthenticatedStaffTasksRouteImport } from './routes/_authenticated/staff.tasks'
 import { Route as AuthenticatedStaffTodayRouteImport } from './routes/_authenticated/staff.today'
@@ -55,6 +56,7 @@ import { Route as AuthenticatedStaffWalletRouteImport } from './routes/_authenti
 import { Route as ApiExtensionReportRouteImport } from './routes/api/extension/report'
 import { Route as ApiExtensionStatusRouteImport } from './routes/api/extension/status'
 import { Route as ApiExtensionSubmissionRouteImport } from './routes/api/extension/submission'
+import { Route as ApiStaffGeocodeRouteImport } from './routes/api/staff/geocode'
 import { Route as ApiStorageDeleteRouteImport } from './routes/api/storage/delete'
 import { Route as ApiStorageDownloadRouteImport } from './routes/api/storage/download'
 import { Route as ApiStorageListRouteImport } from './routes/api/storage/list'
@@ -83,6 +85,11 @@ const AuthRoute = AuthRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -163,9 +170,9 @@ const ApiScanWorkerRoute = ApiScanWorkerRouteImport.update({
   path: '/api/scan-worker',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StaffLoginRoute = StaffLoginRouteImport.update({
-  id: '/staff/login',
-  path: '/staff/login',
+const StaffRegisterRoute = StaffRegisterRouteImport.update({
+  id: '/staff/register',
+  path: '/staff/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminAssignRoute =
@@ -196,6 +203,12 @@ const AuthenticatedAdminStaffRoute = AuthenticatedAdminStaffRouteImport.update({
   path: '/admin/staff',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedClientOutcomesRoute =
+  AuthenticatedClientOutcomesRouteImport.update({
+    id: '/client/outcomes',
+    path: '/client/outcomes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedInvestigatorCasesRoute =
   AuthenticatedInvestigatorCasesRouteImport.update({
     id: '/investigator/cases',
@@ -272,12 +285,6 @@ const AuthenticatedStaffQualityRoute =
     path: '/staff/quality',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedStaffRegisterRoute =
-  AuthenticatedStaffRegisterRouteImport.update({
-    id: '/staff/register',
-    path: '/staff/register',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedStaffStatusBoardRoute =
   AuthenticatedStaffStatusBoardRouteImport.update({
     id: '/staff/status-board',
@@ -313,6 +320,11 @@ const ApiExtensionStatusRoute = ApiExtensionStatusRouteImport.update({
 const ApiExtensionSubmissionRoute = ApiExtensionSubmissionRouteImport.update({
   id: '/api/extension/submission',
   path: '/api/extension/submission',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStaffGeocodeRoute = ApiStaffGeocodeRouteImport.update({
+  id: '/api/staff/geocode',
+  path: '/api/staff/geocode',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStorageDeleteRoute = ApiStorageDeleteRouteImport.update({
@@ -373,6 +385,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/responsible-use': typeof ResponsibleUseRoute
   '/terms': typeof TermsRoute
@@ -388,12 +401,13 @@ export interface FileRoutesByFullPath {
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
-  '/staff/login': typeof StaffLoginRoute
+  '/staff/register': typeof StaffRegisterRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/admin/cases': typeof AuthenticatedAdminCasesRoute
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
+  '/client/outcomes': typeof AuthenticatedClientOutcomesRoute
   '/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
   '/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
   '/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
@@ -406,7 +420,6 @@ export interface FileRoutesByFullPath {
   '/staff/performance': typeof AuthenticatedStaffPerformanceRoute
   '/staff/profile': typeof AuthenticatedStaffProfileRoute
   '/staff/quality': typeof AuthenticatedStaffQualityRoute
-  '/staff/register': typeof AuthenticatedStaffRegisterRoute
   '/staff/status-board': typeof AuthenticatedStaffStatusBoardRoute
   '/staff/tasks': typeof AuthenticatedStaffTasksRoute
   '/staff/today': typeof AuthenticatedStaffTodayRoute
@@ -414,6 +427,7 @@ export interface FileRoutesByFullPath {
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
+  '/api/staff/geocode': typeof ApiStaffGeocodeRoute
   '/api/storage/delete': typeof ApiStorageDeleteRoute
   '/api/storage/download': typeof ApiStorageDownloadRoute
   '/api/storage/list': typeof ApiStorageListRoute
@@ -430,6 +444,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/responsible-use': typeof ResponsibleUseRoute
   '/terms': typeof TermsRoute
@@ -445,12 +460,13 @@ export interface FileRoutesByTo {
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
-  '/staff/login': typeof StaffLoginRoute
+  '/staff/register': typeof StaffRegisterRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/admin/cases': typeof AuthenticatedAdminCasesRoute
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
+  '/client/outcomes': typeof AuthenticatedClientOutcomesRoute
   '/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
   '/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
   '/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
@@ -463,7 +479,6 @@ export interface FileRoutesByTo {
   '/staff/performance': typeof AuthenticatedStaffPerformanceRoute
   '/staff/profile': typeof AuthenticatedStaffProfileRoute
   '/staff/quality': typeof AuthenticatedStaffQualityRoute
-  '/staff/register': typeof AuthenticatedStaffRegisterRoute
   '/staff/status-board': typeof AuthenticatedStaffStatusBoardRoute
   '/staff/tasks': typeof AuthenticatedStaffTasksRoute
   '/staff/today': typeof AuthenticatedStaffTodayRoute
@@ -471,6 +486,7 @@ export interface FileRoutesByTo {
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
+  '/api/staff/geocode': typeof ApiStaffGeocodeRoute
   '/api/storage/delete': typeof ApiStorageDeleteRoute
   '/api/storage/download': typeof ApiStorageDownloadRoute
   '/api/storage/list': typeof ApiStorageListRoute
@@ -489,6 +505,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/responsible-use': typeof ResponsibleUseRoute
   '/terms': typeof TermsRoute
@@ -504,12 +521,13 @@ export interface FileRoutesById {
   '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
-  '/staff/login': typeof StaffLoginRoute
+  '/staff/register': typeof StaffRegisterRoute
   '/_authenticated/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/_authenticated/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/_authenticated/admin/cases': typeof AuthenticatedAdminCasesRoute
   '/_authenticated/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/_authenticated/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
+  '/_authenticated/client/outcomes': typeof AuthenticatedClientOutcomesRoute
   '/_authenticated/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
   '/_authenticated/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
   '/_authenticated/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
@@ -522,7 +540,6 @@ export interface FileRoutesById {
   '/_authenticated/staff/performance': typeof AuthenticatedStaffPerformanceRoute
   '/_authenticated/staff/profile': typeof AuthenticatedStaffProfileRoute
   '/_authenticated/staff/quality': typeof AuthenticatedStaffQualityRoute
-  '/_authenticated/staff/register': typeof AuthenticatedStaffRegisterRoute
   '/_authenticated/staff/status-board': typeof AuthenticatedStaffStatusBoardRoute
   '/_authenticated/staff/tasks': typeof AuthenticatedStaffTasksRoute
   '/_authenticated/staff/today': typeof AuthenticatedStaffTodayRoute
@@ -530,6 +547,7 @@ export interface FileRoutesById {
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
+  '/api/staff/geocode': typeof ApiStaffGeocodeRoute
   '/api/storage/delete': typeof ApiStorageDeleteRoute
   '/api/storage/download': typeof ApiStorageDownloadRoute
   '/api/storage/list': typeof ApiStorageListRoute
@@ -548,6 +566,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/contact'
+    | '/login'
     | '/privacy'
     | '/responsible-use'
     | '/terms'
@@ -563,12 +582,13 @@ export interface FileRouteTypes {
     | '/submissions'
     | '/api/health'
     | '/api/scan-worker'
-    | '/staff/login'
+    | '/staff/register'
     | '/admin/assign'
     | '/admin/case-assignment'
     | '/admin/cases'
     | '/admin/investigators'
     | '/admin/staff'
+    | '/client/outcomes'
     | '/investigator/cases'
     | '/investigator/login'
     | '/investigator/profile'
@@ -581,7 +601,6 @@ export interface FileRouteTypes {
     | '/staff/performance'
     | '/staff/profile'
     | '/staff/quality'
-    | '/staff/register'
     | '/staff/status-board'
     | '/staff/tasks'
     | '/staff/today'
@@ -589,6 +608,7 @@ export interface FileRouteTypes {
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
+    | '/api/staff/geocode'
     | '/api/storage/delete'
     | '/api/storage/download'
     | '/api/storage/list'
@@ -605,6 +625,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/contact'
+    | '/login'
     | '/privacy'
     | '/responsible-use'
     | '/terms'
@@ -620,12 +641,13 @@ export interface FileRouteTypes {
     | '/submissions'
     | '/api/health'
     | '/api/scan-worker'
-    | '/staff/login'
+    | '/staff/register'
     | '/admin/assign'
     | '/admin/case-assignment'
     | '/admin/cases'
     | '/admin/investigators'
     | '/admin/staff'
+    | '/client/outcomes'
     | '/investigator/cases'
     | '/investigator/login'
     | '/investigator/profile'
@@ -638,7 +660,6 @@ export interface FileRouteTypes {
     | '/staff/performance'
     | '/staff/profile'
     | '/staff/quality'
-    | '/staff/register'
     | '/staff/status-board'
     | '/staff/tasks'
     | '/staff/today'
@@ -646,6 +667,7 @@ export interface FileRouteTypes {
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
+    | '/api/staff/geocode'
     | '/api/storage/delete'
     | '/api/storage/download'
     | '/api/storage/list'
@@ -663,6 +685,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/contact'
+    | '/login'
     | '/privacy'
     | '/responsible-use'
     | '/terms'
@@ -678,12 +701,13 @@ export interface FileRouteTypes {
     | '/_authenticated/submissions'
     | '/api/health'
     | '/api/scan-worker'
-    | '/staff/login'
+    | '/staff/register'
     | '/_authenticated/admin/assign'
     | '/_authenticated/admin/case-assignment'
     | '/_authenticated/admin/cases'
     | '/_authenticated/admin/investigators'
     | '/_authenticated/admin/staff'
+    | '/_authenticated/client/outcomes'
     | '/_authenticated/investigator/cases'
     | '/_authenticated/investigator/login'
     | '/_authenticated/investigator/profile'
@@ -696,7 +720,6 @@ export interface FileRouteTypes {
     | '/_authenticated/staff/performance'
     | '/_authenticated/staff/profile'
     | '/_authenticated/staff/quality'
-    | '/_authenticated/staff/register'
     | '/_authenticated/staff/status-board'
     | '/_authenticated/staff/tasks'
     | '/_authenticated/staff/today'
@@ -704,6 +727,7 @@ export interface FileRouteTypes {
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
+    | '/api/staff/geocode'
     | '/api/storage/delete'
     | '/api/storage/download'
     | '/api/storage/list'
@@ -722,15 +746,17 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
+  LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   ResponsibleUseRoute: typeof ResponsibleUseRoute
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiScanWorkerRoute: typeof ApiScanWorkerRoute
-  StaffLoginRoute: typeof StaffLoginRoute
+  StaffRegisterRoute: typeof StaffRegisterRoute
   ApiExtensionReportRoute: typeof ApiExtensionReportRouteWithChildren
   ApiExtensionStatusRoute: typeof ApiExtensionStatusRoute
   ApiExtensionSubmissionRoute: typeof ApiExtensionSubmissionRoute
+  ApiStaffGeocodeRoute: typeof ApiStaffGeocodeRoute
   ApiStorageDeleteRoute: typeof ApiStorageDeleteRoute
   ApiStorageDownloadRoute: typeof ApiStorageDownloadRoute
   ApiStorageListRoute: typeof ApiStorageListRoute
@@ -768,6 +794,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -875,11 +908,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiScanWorkerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/staff/login': {
-      id: '/staff/login'
-      path: '/staff/login'
-      fullPath: '/staff/login'
-      preLoaderRoute: typeof StaffLoginRouteImport
+    '/staff/register': {
+      id: '/staff/register'
+      path: '/staff/register'
+      fullPath: '/staff/register'
+      preLoaderRoute: typeof StaffRegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/assign': {
@@ -915,6 +948,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/staff'
       fullPath: '/admin/staff'
       preLoaderRoute: typeof AuthenticatedAdminStaffRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/client/outcomes': {
+      id: '/_authenticated/client/outcomes'
+      path: '/client/outcomes'
+      fullPath: '/client/outcomes'
+      preLoaderRoute: typeof AuthenticatedClientOutcomesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/investigator/cases': {
@@ -1008,13 +1048,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStaffQualityRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/staff/register': {
-      id: '/_authenticated/staff/register'
-      path: '/staff/register'
-      fullPath: '/staff/register'
-      preLoaderRoute: typeof AuthenticatedStaffRegisterRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/staff/status-board': {
       id: '/_authenticated/staff/status-board'
       path: '/staff/status-board'
@@ -1062,6 +1095,13 @@ declare module '@tanstack/react-router' {
       path: '/api/extension/submission'
       fullPath: '/api/extension/submission'
       preLoaderRoute: typeof ApiExtensionSubmissionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/staff/geocode': {
+      id: '/api/staff/geocode'
+      path: '/api/staff/geocode'
+      fullPath: '/api/staff/geocode'
+      preLoaderRoute: typeof ApiStaffGeocodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/storage/delete': {
@@ -1182,6 +1222,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminCasesRoute: typeof AuthenticatedAdminCasesRoute
   AuthenticatedAdminInvestigatorsRoute: typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   AuthenticatedAdminStaffRoute: typeof AuthenticatedAdminStaffRouteWithChildren
+  AuthenticatedClientOutcomesRoute: typeof AuthenticatedClientOutcomesRoute
   AuthenticatedInvestigatorCasesRoute: typeof AuthenticatedInvestigatorCasesRoute
   AuthenticatedInvestigatorLoginRoute: typeof AuthenticatedInvestigatorLoginRoute
   AuthenticatedInvestigatorProfileRoute: typeof AuthenticatedInvestigatorProfileRoute
@@ -1194,7 +1235,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStaffPerformanceRoute: typeof AuthenticatedStaffPerformanceRoute
   AuthenticatedStaffProfileRoute: typeof AuthenticatedStaffProfileRoute
   AuthenticatedStaffQualityRoute: typeof AuthenticatedStaffQualityRoute
-  AuthenticatedStaffRegisterRoute: typeof AuthenticatedStaffRegisterRoute
   AuthenticatedStaffStatusBoardRoute: typeof AuthenticatedStaffStatusBoardRoute
   AuthenticatedStaffTasksRoute: typeof AuthenticatedStaffTasksRoute
   AuthenticatedStaffTodayRoute: typeof AuthenticatedStaffTodayRoute
@@ -1219,6 +1259,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminInvestigatorsRoute:
     AuthenticatedAdminInvestigatorsRouteWithChildren,
   AuthenticatedAdminStaffRoute: AuthenticatedAdminStaffRouteWithChildren,
+  AuthenticatedClientOutcomesRoute: AuthenticatedClientOutcomesRoute,
   AuthenticatedInvestigatorCasesRoute: AuthenticatedInvestigatorCasesRoute,
   AuthenticatedInvestigatorLoginRoute: AuthenticatedInvestigatorLoginRoute,
   AuthenticatedInvestigatorProfileRoute: AuthenticatedInvestigatorProfileRoute,
@@ -1232,7 +1273,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStaffPerformanceRoute: AuthenticatedStaffPerformanceRoute,
   AuthenticatedStaffProfileRoute: AuthenticatedStaffProfileRoute,
   AuthenticatedStaffQualityRoute: AuthenticatedStaffQualityRoute,
-  AuthenticatedStaffRegisterRoute: AuthenticatedStaffRegisterRoute,
   AuthenticatedStaffStatusBoardRoute: AuthenticatedStaffStatusBoardRoute,
   AuthenticatedStaffTasksRoute: AuthenticatedStaffTasksRoute,
   AuthenticatedStaffTodayRoute: AuthenticatedStaffTodayRoute,
@@ -1259,15 +1299,17 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
+  LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   ResponsibleUseRoute: ResponsibleUseRoute,
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiScanWorkerRoute: ApiScanWorkerRoute,
-  StaffLoginRoute: StaffLoginRoute,
+  StaffRegisterRoute: StaffRegisterRoute,
   ApiExtensionReportRoute: ApiExtensionReportRouteWithChildren,
   ApiExtensionStatusRoute: ApiExtensionStatusRoute,
   ApiExtensionSubmissionRoute: ApiExtensionSubmissionRoute,
+  ApiStaffGeocodeRoute: ApiStaffGeocodeRoute,
   ApiStorageDeleteRoute: ApiStorageDeleteRoute,
   ApiStorageDownloadRoute: ApiStorageDownloadRoute,
   ApiStorageListRoute: ApiStorageListRoute,

@@ -56,11 +56,13 @@ function SidebarBody({
   email,
   isStaff,
   isSuperAdmin,
+  staffPendingCount,
   onNavigate,
 }: {
   email: string;
   isStaff: boolean;
   isSuperAdmin: boolean;
+  staffPendingCount: number;
   onNavigate?: () => void;
 }) {
   const qc = useQueryClient();
@@ -157,6 +159,11 @@ function SidebarBody({
                 }}
               >
                 <Users className="h-4 w-4 shrink-0" /> Staff Approvals
+                {staffPendingCount > 0 && (
+                  <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">
+                    {staffPendingCount}
+                  </span>
+                )}
               </Link>
             )}
           </>
@@ -229,18 +236,25 @@ export function AppShell({
   email,
   isStaff,
   isSuperAdmin,
+  staffPendingCount,
   children,
 }: {
   email: string;
   isStaff: boolean;
   isSuperAdmin: boolean;
+  staffPendingCount: number;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen">
       <aside className="no-print fixed inset-y-0 left-0 hidden w-[200px] border-r bg-sidebar backdrop-blur-xl lg:block">
-        <SidebarBody email={email} isStaff={isStaff} isSuperAdmin={isSuperAdmin} />
+        <SidebarBody
+          email={email}
+          isStaff={isStaff}
+          isSuperAdmin={isSuperAdmin}
+          staffPendingCount={staffPendingCount}
+        />
       </aside>
       <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b bg-card/80 px-4 py-3 backdrop-blur lg:hidden">
         <Brand />
@@ -263,6 +277,7 @@ export function AppShell({
             email={email}
             isStaff={isStaff}
             isSuperAdmin={isSuperAdmin}
+            staffPendingCount={staffPendingCount}
             onNavigate={() => setOpen(false)}
           />
         </SheetContent>

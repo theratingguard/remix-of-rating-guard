@@ -26,6 +26,18 @@ export type Database = {
           live_status: "Available" | "Working" | "Offline";
           monthly_task_target: number;
           last_seen_at: string | null;
+          live_selfie_url: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          address: string | null;
+          referral_by: string | null;
+          reject_reason: string | null;
+          reject_reason_custom: string | null;
+          approved_by: string | null;
+          approved_at: string | null;
+          ip_address: string | null;
+          user_agent: string | null;
+          timezone: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -44,6 +56,18 @@ export type Database = {
           monthly_task_target?: number;
           status?: string;
           last_seen_at?: string | null;
+          live_selfie_url?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          address?: string | null;
+          referral_by?: string | null;
+          reject_reason?: string | null;
+          reject_reason_custom?: string | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          timezone?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -61,6 +85,18 @@ export type Database = {
           monthly_task_target?: number;
           status?: string;
           last_seen_at?: string | null;
+          live_selfie_url?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          address?: string | null;
+          referral_by?: string | null;
+          reject_reason?: string | null;
+          reject_reason_custom?: string | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          timezone?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -284,6 +320,34 @@ export type Database = {
         };
         Update: {
           message?: string;
+        };
+        Relationships: [];
+      };
+      staff_activity_log: {
+        Row: {
+          id: string;
+          staff_id: string;
+          action: string;
+          ip_address: string | null;
+          user_agent: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          staff_id: string;
+          action: string;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          action?: string;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          metadata?: Json;
+          created_at?: string;
         };
         Relationships: [];
       };

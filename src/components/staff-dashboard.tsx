@@ -929,7 +929,15 @@ function Profile({ data, refresh }: { data: StaffDashboardData; refresh: () => P
   );
 }
 
-export function StaffApprovalScreen({ status }: { status: string }) {
+export function StaffApprovalScreen({
+  status,
+  rejectReason,
+  notice,
+}: {
+  status: string;
+  rejectReason?: string | null;
+  notice?: string | null;
+}) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const rejected = status === "rejected" || status === "disabled";
@@ -954,6 +962,12 @@ export function StaffApprovalScreen({ status }: { status: string }) {
             ? "Your staff dashboard access is not approved. Contact the superadmin for assistance."
             : "Your staff registration is awaiting superadmin approval. Dashboard modules will be available after approval."}
         </p>
+        {rejected && rejectReason && (
+          <p className="rounded-lg border border-risk-high/30 bg-risk-high-soft p-3 text-sm">
+            Reason: {rejectReason.replaceAll("_", " ")}
+          </p>
+        )}
+        {notice && <p className="rounded-lg border p-3 text-sm">{notice}</p>}
         <Button onClick={() => void logout()} disabled={busy}>
           {busy ? "Logging out…" : "Logout"}
         </Button>
