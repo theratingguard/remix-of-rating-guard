@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { logEvent } from "./logger.server";
 
 const payoutSchema = z
   .object({
@@ -184,6 +185,10 @@ export const updateStaffTaskStatus = createServerFn({ method: "POST" })
       .maybeSingle();
     if (updateError) throw new Error(`Could not update task status: ${updateError.message}`);
     if (!updated) throw new Error("This task changed in another session. Refresh and try again.");
+    logEvent("info", "staff.task.status.updated", "Staff task status changed", {
+      action: data.action,
+      newStatus: updated.status,
+    });
     return updated;
   });
 
@@ -211,6 +216,9 @@ export const saveStaffPayoutDetails = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(`Could not save payout details: ${error.message}`);
+    logEvent("info", "staff.payout.updated", "Staff payout details updated", {
+      method: data.method,
+    });
     return saved;
   });
 
@@ -231,6 +239,7 @@ export const sendStaffAdminMessage = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(`Could not send Admin Chat message: ${error.message}`);
+    logEvent("info", "staff.communication.sent", "Staff sent an Admin Chat message");
     return message;
   });
 
@@ -301,5 +310,6 @@ export const sendAdminStaffMessage = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(`Could not send Admin Chat reply: ${error.message}`);
+    logEvent("info", "admin.staff.communication.replied", "Admin replied to a staff message");
     return message;
   });

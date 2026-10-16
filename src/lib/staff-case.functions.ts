@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isGoogleMapsUrl } from "./google-url";
+import { logEvent } from "./logger.server";
 import {
   analyzeReplyWithRules,
   explicitlyConfirmsReviewRemoval,
@@ -121,6 +122,9 @@ export const registerStaff = createServerFn({ method: "POST" })
         throw new Error("That mobile number belongs to another staff profile.");
       throw new Error(`Could not save staff registration: ${result.error.message}`);
     }
+    logEvent("info", "staff.profile.registered", "Staff profile registration saved", {
+      status: result.data.status,
+    });
     return result.data;
   });
 
@@ -137,6 +141,7 @@ export const updateMyStaffProfile = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(`Could not update staff profile: ${error.message}`);
+    logEvent("info", "staff.profile.updated", "Staff profile updated");
     return updated;
   });
 
@@ -155,6 +160,9 @@ export const updateMyStaffLiveStatus = createServerFn({ method: "POST" })
       .select("live_status")
       .single();
     if (error) throw new Error(`Could not update live status: ${error.message}`);
+    logEvent("info", "staff.live-status.updated", "Staff live status updated", {
+      status: updated.live_status,
+    });
     return updated;
   });
 
@@ -247,6 +255,7 @@ export const recordStaffSubmission = createServerFn({ method: "POST" })
       submitted_manually: true,
       google_verified: false,
     });
+    logEvent("info", "staff.case.submitted", "Staff case submission recorded");
     return { ok: true, submittedAt };
   });
 
@@ -349,6 +358,9 @@ export const analyzeStaffReply = createServerFn({ method: "POST" })
       next_step: result.next_step,
       suggested_angle: result.suggested_angle,
       outcome_verified: false,
+    });
+    logEvent("info", "staff.case.reply-analyzed", "Staff case reply analyzed", {
+      status: result.status,
     });
     return { ...result, google_status_verified: false };
   });
@@ -647,6 +659,9 @@ export const assignStaffCases = createServerFn({ method: "POST" })
       throw new Error(
         `Cases were assigned, but audit events could not be written: ${eventError.message}`,
       );
+    logEvent("info", "admin.staff.cases.assigned", "Staff cases assigned", {
+      assignedCount: created?.length ?? 0,
+    });
     return { assignedCount: created?.length ?? 0 };
   });
 
@@ -670,6 +685,9 @@ export const setStaffStatus = createServerFn({ method: "POST" })
       .select("id,status")
       .single();
     if (error) throw new Error(`Could not update staff status: ${error.message}`);
+    logEvent("info", "admin.staff.status.updated", "Admin updated staff status", {
+      status: updated.status,
+    });
     return updated;
   });
 
@@ -693,6 +711,7 @@ export const closeStaffCase = createServerFn({ method: "POST" })
       closed_at: closedAt,
       removal_outcome_verified: false,
     });
+    logEvent("info", "admin.staff.case.closed", "Admin closed a staff case");
     return { ok: true };
   });
 
@@ -713,6 +732,9 @@ export const setStaffMonthlyTarget = createServerFn({ method: "POST" })
       .select("id,monthly_task_target")
       .single();
     if (error) throw new Error(`Could not update monthly target: ${error.message}`);
+    logEvent("info", "admin.staff.target.updated", "Admin updated staff monthly target", {
+      target: data.target,
+    });
     return updated;
   });
 
@@ -741,6 +763,9 @@ export const addStaffQualityNote = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(`Could not save staff quality note: ${error.message}`);
+    logEvent("info", "admin.staff.quality-note.created", "Admin created a staff quality note", {
+      noteType: data.noteType,
+    });
     return saved;
   });
 
@@ -771,6 +796,9 @@ export const addStaffWalletAdjustment = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(`Could not record wallet adjustment: ${error.message}`);
+    logEvent("info", "admin.staff.wallet-adjustment.created", "Admin created a wallet adjustment", {
+      transactionType: data.transactionType,
+    });
     return saved;
   });
 

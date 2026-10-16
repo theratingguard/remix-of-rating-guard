@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { rateLimitResponse, sensitiveApiRateLimit } from "@/lib/rate-limit.server";
 
 export const Route = createFileRoute("/api/extension/report/$id")({
   server: {
     handlers: {
       GET: async ({ params, request }) => {
+        const limited = await rateLimitResponse(request, sensitiveApiRateLimit);
+        if (limited) return limited;
         try {
           if (!request.headers.get("authorization")?.startsWith("Bearer "))
             return Response.json(

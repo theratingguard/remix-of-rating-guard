@@ -3,6 +3,8 @@ import { createMiddleware } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
+import { isDatabaseOperationError, logServerError, sanitizeDbError } from "@/lib/errors.server";
+import { logEvent } from "@/lib/logger.server";
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
@@ -94,12 +96,20 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
       throw new Error("Unauthorized: No user ID found in token");
     }
 
-    return next({
-      context: {
-        supabase,
-        userId: data.claims.sub,
-        claims: data.claims,
-      },
-    });
+    logEvent("info", "auth.server-function.authorized", "Authenticated server function request");
+
+    try {
+      return await next({
+        context: {
+          supabase,
+          userId: data.claims.sub,
+          claims: data.claims,
+        },
+      });
+    } catch (error) {
+      logServerError("authenticated-server-function", error);
+      if (isDatabaseOperationError(error)) throw new Error(sanitizeDbError(error));
+      throw error;
+    }
   },
 );

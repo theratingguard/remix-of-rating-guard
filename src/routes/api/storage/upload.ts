@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { storageErrorResponse } from "@/lib/storage-http.server";
+import { generalApiRateLimit, rateLimitResponse } from "@/lib/rate-limit.server";
 
 export const Route = createFileRoute("/api/storage/upload")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const limited = await rateLimitResponse(request, generalApiRateLimit);
+        if (limited) return limited;
         try {
           const { uploadStorageFile } = await import("@/lib/storage.functions");
           const form = await request.formData();

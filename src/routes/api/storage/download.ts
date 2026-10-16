@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { storageErrorResponse } from "@/lib/storage-http.server";
 import { validateStorageFilename, validateStorageFolder } from "@/lib/storage";
+import { generalApiRateLimit, rateLimitResponse } from "@/lib/rate-limit.server";
 
 export const Route = createFileRoute("/api/storage/download")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const limited = await rateLimitResponse(request, generalApiRateLimit);
+        if (limited) return limited;
         try {
           const query = new URL(request.url).searchParams;
           const folder = query.get("folder") ?? "";

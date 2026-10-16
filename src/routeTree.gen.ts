@@ -27,6 +27,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedStorageRouteImport } from './routes/_authenticated/storage'
 import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiScanWorkerRouteImport } from './routes/api/scan-worker'
 import { Route as StaffLoginRouteImport } from './routes/staff.login'
 import { Route as AuthenticatedAdminAssignRouteImport } from './routes/_authenticated/admin.assign'
 import { Route as AuthenticatedAdminCaseAssignmentRouteImport } from './routes/_authenticated/admin.case-assignment'
@@ -155,6 +156,11 @@ const AuthenticatedSubmissionsRoute =
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiScanWorkerRoute = ApiScanWorkerRouteImport.update({
+  id: '/api/scan-worker',
+  path: '/api/scan-worker',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StaffLoginRoute = StaffLoginRouteImport.update({
@@ -381,6 +387,7 @@ export interface FileRoutesByFullPath {
   '/storage': typeof AuthenticatedStorageRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/scan-worker': typeof ApiScanWorkerRoute
   '/staff/login': typeof StaffLoginRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
@@ -437,6 +444,7 @@ export interface FileRoutesByTo {
   '/storage': typeof AuthenticatedStorageRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/scan-worker': typeof ApiScanWorkerRoute
   '/staff/login': typeof StaffLoginRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
@@ -495,6 +503,7 @@ export interface FileRoutesById {
   '/_authenticated/storage': typeof AuthenticatedStorageRoute
   '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/scan-worker': typeof ApiScanWorkerRoute
   '/staff/login': typeof StaffLoginRoute
   '/_authenticated/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/_authenticated/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
@@ -553,6 +562,7 @@ export interface FileRouteTypes {
     | '/storage'
     | '/submissions'
     | '/api/health'
+    | '/api/scan-worker'
     | '/staff/login'
     | '/admin/assign'
     | '/admin/case-assignment'
@@ -609,6 +619,7 @@ export interface FileRouteTypes {
     | '/storage'
     | '/submissions'
     | '/api/health'
+    | '/api/scan-worker'
     | '/staff/login'
     | '/admin/assign'
     | '/admin/case-assignment'
@@ -666,6 +677,7 @@ export interface FileRouteTypes {
     | '/_authenticated/storage'
     | '/_authenticated/submissions'
     | '/api/health'
+    | '/api/scan-worker'
     | '/staff/login'
     | '/_authenticated/admin/assign'
     | '/_authenticated/admin/case-assignment'
@@ -714,6 +726,7 @@ export interface RootRouteChildren {
   ResponsibleUseRoute: typeof ResponsibleUseRoute
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiScanWorkerRoute: typeof ApiScanWorkerRoute
   StaffLoginRoute: typeof StaffLoginRoute
   ApiExtensionReportRoute: typeof ApiExtensionReportRouteWithChildren
   ApiExtensionStatusRoute: typeof ApiExtensionStatusRoute
@@ -853,6 +866,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/scan-worker': {
+      id: '/api/scan-worker'
+      path: '/api/scan-worker'
+      fullPath: '/api/scan-worker'
+      preLoaderRoute: typeof ApiScanWorkerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/staff/login': {
@@ -1243,6 +1263,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResponsibleUseRoute: ResponsibleUseRoute,
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiScanWorkerRoute: ApiScanWorkerRoute,
   StaffLoginRoute: StaffLoginRoute,
   ApiExtensionReportRoute: ApiExtensionReportRouteWithChildren,
   ApiExtensionStatusRoute: ApiExtensionStatusRoute,

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { generalApiRateLimit, rateLimitResponse } from "@/lib/rate-limit.server";
 
 type HealthDependencies = {
   fetcher?: typeof fetch;
@@ -72,7 +73,10 @@ export async function healthResponse({
 export const Route = createFileRoute("/api/health")({
   server: {
     handlers: {
-      GET: () => healthResponse(),
+      GET: async ({ request }) => {
+        const limited = await rateLimitResponse(request, generalApiRateLimit);
+        return limited ?? healthResponse();
+      },
     },
   },
 });

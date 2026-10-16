@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { generalApiRateLimit, rateLimitResponse } from "@/lib/rate-limit.server";
+
 export const Route = createFileRoute("/api/workers/status")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
+        const limited = await rateLimitResponse(request, generalApiRateLimit);
+        if (limited) return limited;
         try {
           const { getWorkersStatus } = await import("@/lib/workers-status.functions");
           return Response.json(await getWorkersStatus(), {
