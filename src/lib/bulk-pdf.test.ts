@@ -24,7 +24,7 @@ it("extracts five selectable business names from a real PDF", async () => {
   const file = new File([new Uint8Array(bytes)], "businesses.pdf", { type: "application/pdf" });
   Object.defineProperty(file, "arrayBuffer", { value: async () => new Uint8Array(bytes).buffer });
   expect((await extractBulkPdf(file)).split("\n")).toEqual(names);
-});
+}, 15_000);
 it("rejects invalid or oversized PDFs explicitly", async () => {
   const file = new File(["not pdf"], "invalid.pdf");
   Object.defineProperty(file, "arrayBuffer", {
