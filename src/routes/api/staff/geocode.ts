@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { rateLimitResponse, sensitiveApiRateLimit } from "@/lib/rate-limit.server";
 import { logServerError } from "@/lib/errors.server";
+import { logEvent } from "@/lib/logger.server";
 
 const coordinatesSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -65,7 +66,23 @@ export const Route = createFileRoute("/api/staff/geocode")({
           );
         }
         const geocode = geocodeResponseSchema.safeParse(geocodeBody);
-        if (!geocode.success || geocode.data.status !== "OK" || !geocode.data.results[0])
+        if (!geocode.success)
+          return Response.json(
+            { error: "Could not resolve an address for this location." },
+            { status: 422 },
+          );
+        if (geocode.data.status === "REQUEST_DENIED") {
+          logEvent(
+            "error",
+            "staff.geocode.denied",
+            "Geocoding provider rejected the configured key",
+          );
+          return Response.json(
+            { error: "Location lookup is misconfigured. Contact the administrator." },
+            { status: 503 },
+          );
+        }
+        if (geocode.data.status !== "OK" || !geocode.data.results[0])
           return Response.json(
             { error: "Could not resolve an address for this location." },
             { status: 422 },
