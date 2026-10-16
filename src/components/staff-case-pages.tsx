@@ -652,11 +652,22 @@ export function AdminStaffPage() {
   if (result.error || !result.data)
     return <p role="alert">{result.error?.message ?? "Could not load staff."}</p>;
   const { staff, cases, stats } = result.data;
+  const statusOrder: Record<string, number> = {
+    pending: 0,
+    approved: 1,
+    active: 1,
+    rejected: 2,
+  };
+  const orderedStaff = [...staff].sort(
+    (left, right) =>
+      (statusOrder[left.status] ?? 3) - (statusOrder[right.status] ?? 3) ||
+      Date.parse(right.created_at) - Date.parse(left.created_at),
+  );
   return (
     <main className="space-y-6">
       <PageHeader
-        title="Case handler staff"
-        subtitle="Manage access and case workload."
+        title="Staff approvals"
+        subtitle="Review registrations and manage staff access."
         action={
           <Link className="text-sm underline" to="/admin/case-assignment">
             Assign cases
@@ -682,36 +693,31 @@ export function AdminStaffPage() {
         ))}
       </section>
       <section className="surface overflow-x-auto p-4 sm:p-6">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className="w-full min-w-[760px] text-left text-sm">
           <thead>
             <tr className="border-b">
-              <th className="p-2">Staff</th>
-              <th>Region</th>
-              <th>Cases</th>
+              <th className="p-2">Name</th>
+              <th>Email</th>
+              <th>Mobile</th>
               <th>Status</th>
-              <th>Last active</th>
+              <th>Applied</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {staff.map((person) => (
+            {orderedStaff.map((person) => (
               <tr className="border-b" key={person.id}>
                 <td className="p-2">
                   <Link className="underline" to="/admin/staff/$id" params={{ id: person.id }}>
                     {person.name}
                   </Link>
-                  <span className="block text-xs text-muted-foreground">{person.email}</span>
                 </td>
-                <td>
-                  {person.region_city}, {person.region_state}
-                </td>
-                <td>{cases.filter((item) => item.staff_id === person.id).length}</td>
+                <td>{person.email}</td>
+                <td>{person.mobile}</td>
                 <td>
                   <StatusPill status={person.status} />
                 </td>
-                <td>
-                  {person.last_seen_at ? new Date(person.last_seen_at).toLocaleString() : "—"}
-                </td>
+                <td>{new Date(person.created_at).toLocaleDateString()}</td>
                 <td>
                   <div className="flex gap-2">
                     {["pending", "rejected", "disabled"].includes(person.status) ? (
@@ -883,8 +889,20 @@ export function AdminStaffDetailPage({ id }: { id: string }) {
         }
       />
       <section className="surface grid gap-3 p-5 sm:grid-cols-3">
+        <p>Email: {person.email}</p>
         <p>Mobile: {person.mobile}</p>
         <p>Status: {person.status}</p>
+        <p>Applied: {new Date(person.created_at).toLocaleString()}</p>
+        <p>
+          Region: {person.region_city}, {person.region_state}
+        </p>
+        <p>Role: {person.role}</p>
+        <p>Team lead: {person.team_lead ?? "—"}</p>
+        <p>Skills: {person.skills.length ? person.skills.join(", ") : "—"}</p>
+        <p>Live status: {person.live_status}</p>
+        <p>
+          Last active: {person.last_seen_at ? new Date(person.last_seen_at).toLocaleString() : "—"}
+        </p>
         <p>Cases: {cases.length}</p>
       </section>
       <AdminStaffPhaseTwo staffId={person.id} monthlyTarget={person.monthly_task_target} />

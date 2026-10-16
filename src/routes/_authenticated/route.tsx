@@ -41,18 +41,23 @@ export const Route = createFileRoute("/_authenticated")({
     ) {
       throw redirect({ to: "/staff/register" });
     }
-    return { user: data.user, isStaff, staffStatus: staff?.status ?? null };
+    return {
+      user: data.user,
+      isStaff,
+      isSuperAdmin: accessLevel === "super_admin",
+      staffStatus: staff?.status ?? null,
+    };
   },
   component: Layout,
 });
 
 function Layout() {
-  const { user, isStaff, staffStatus } = Route.useRouteContext();
+  const { user, isStaff, isSuperAdmin, staffStatus } = Route.useRouteContext();
   if (isStaff && staffStatus !== "active" && staffStatus !== "approved") {
     return <StaffApprovalScreen status={staffStatus ?? "pending"} />;
   }
   return (
-    <AppShell email={user.email ?? "admin"} isStaff={isStaff}>
+    <AppShell email={user.email ?? "admin"} isStaff={isStaff} isSuperAdmin={isSuperAdmin}>
       <Outlet />
     </AppShell>
   );

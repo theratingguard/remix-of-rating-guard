@@ -55,10 +55,12 @@ function Brand() {
 function SidebarBody({
   email,
   isStaff,
+  isSuperAdmin,
   onNavigate,
 }: {
   email: string;
   isStaff: boolean;
+  isSuperAdmin: boolean;
   onNavigate?: () => void;
 }) {
   const qc = useQueryClient();
@@ -106,21 +108,36 @@ function SidebarBody({
             ))}
           </>
         ) : (
-          nav.map((item) => {
-            const { to, label, Icon } = item;
-            const linkClass =
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
-            const activeProps = {
-              className:
-                "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
-            };
-            if ("search" in item)
+          <>
+            {nav.map((item) => {
+              const { to, label, Icon } = item;
+              const linkClass =
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
+              const activeProps = {
+                className:
+                  "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
+              };
+              if ("search" in item)
+                return (
+                  <Link
+                    key={label}
+                    to="/scan"
+                    search={{ mode: "bulk" }}
+                    activeOptions={{ exact: true, includeSearch: true }}
+                    onClick={onNavigate}
+                    className={linkClass}
+                    activeProps={activeProps}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" /> {label}
+                  </Link>
+                );
               return (
                 <Link
                   key={label}
-                  to="/scan"
-                  search={{ mode: "bulk" }}
-                  activeOptions={{ exact: true, includeSearch: true }}
+                  to={to}
+                  {...(to === "/scan"
+                    ? { activeOptions: { exact: true, includeSearch: true } }
+                    : {})}
                   onClick={onNavigate}
                   className={linkClass}
                   activeProps={activeProps}
@@ -128,19 +145,21 @@ function SidebarBody({
                   <Icon className="h-4 w-4 shrink-0" /> {label}
                 </Link>
               );
-            return (
+            })}
+            {isSuperAdmin && (
               <Link
-                key={label}
-                to={to}
-                {...(to === "/scan" ? { activeOptions: { exact: true, includeSearch: true } } : {})}
+                to="/admin/staff"
                 onClick={onNavigate}
-                className={linkClass}
-                activeProps={activeProps}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                activeProps={{
+                  className:
+                    "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
+                }}
               >
-                <Icon className="h-4 w-4 shrink-0" /> {label}
+                <Users className="h-4 w-4 shrink-0" /> Staff Approvals
               </Link>
-            );
-          })
+            )}
+          </>
         )}
       </nav>
       {isStaff ? (
@@ -209,17 +228,19 @@ function SidebarBody({
 export function AppShell({
   email,
   isStaff,
+  isSuperAdmin,
   children,
 }: {
   email: string;
   isStaff: boolean;
+  isSuperAdmin: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen">
       <aside className="no-print fixed inset-y-0 left-0 hidden w-[200px] border-r bg-sidebar backdrop-blur-xl lg:block">
-        <SidebarBody email={email} isStaff={isStaff} />
+        <SidebarBody email={email} isStaff={isStaff} isSuperAdmin={isSuperAdmin} />
       </aside>
       <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b bg-card/80 px-4 py-3 backdrop-blur lg:hidden">
         <Brand />
@@ -238,7 +259,12 @@ export function AppShell({
       </header>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-64 p-0">
-          <SidebarBody email={email} isStaff={isStaff} onNavigate={() => setOpen(false)} />
+          <SidebarBody
+            email={email}
+            isStaff={isStaff}
+            isSuperAdmin={isSuperAdmin}
+            onNavigate={() => setOpen(false)}
+          />
         </SheetContent>
       </Sheet>
       <main className="lg:pl-[200px]">
