@@ -161,7 +161,7 @@ export function ReviewWorkflowCard({ scan, review }: { scan: Scan; review: Analy
         <div className="space-y-3">
           <Button variant="outline" asChild className="min-h-[48px] w-full text-base sm:w-auto">
             <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
-              Send Report to Google
+              Open Google Maps to report
             </a>
           </Button>
           <Button

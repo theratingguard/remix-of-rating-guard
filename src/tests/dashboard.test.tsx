@@ -30,7 +30,7 @@ vi.mock("@tanstack/react-query", () => ({
               },
             ]
           : queryKey[0] === "dashboard-review-actions"
-            ? { reportedReviews: 0, reportEvents: 0, removed: 0 }
+            ? { reportEvents: 0, removed: 0 }
             : [],
     isLoading: false,
     isPending: false,

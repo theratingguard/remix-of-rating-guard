@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { RestrictedReportSummary } from "@/components/restricted-report-summary";
 import { reportAccessQuery } from "@/lib/report-access";
 import { supabase } from "@/integrations/supabase/client";
-import { REVIEW_WORKFLOW_STATUSES, reviewWorkflowMetrics } from "@/lib/review-workflow";
+import { reviewWorkflowMetrics } from "@/lib/review-workflow";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -26,12 +26,7 @@ function Dashboard() {
     queryKey: ["dashboard-review-actions"],
     enabled: access.data === "super_admin",
     queryFn: async () => {
-      const [reportedReviews, reports, removed] = await Promise.all([
-        supabase
-          .from("review_actions")
-          .select("id", { count: "exact", head: true })
-          .in("status", [...REVIEW_WORKFLOW_STATUSES])
-          .throwOnError(),
+      const [reports, removed] = await Promise.all([
         supabase
           .from("audit_log")
           .select("id", { count: "exact", head: true })
@@ -44,7 +39,6 @@ function Dashboard() {
           .throwOnError(),
       ]);
       return {
-        reportedReviews: reportedReviews.count ?? 0,
         reportEvents: reports.count ?? 0,
         removed: removed.count ?? 0,
       };
@@ -60,9 +54,7 @@ function Dashboard() {
   if (actionsQuery.error)
     return <p role="alert">Could not load report totals: {actionsQuery.error.message}</p>;
 
-  const metrics = reviewWorkflowMetrics(
-    actionsQuery.data ?? { reportedReviews: 0, reportEvents: 0, removed: 0 },
-  );
+  const metrics = reviewWorkflowMetrics(actionsQuery.data ?? { reportEvents: 0, removed: 0 });
   const cards = [
     { label: "Total Scans", value: scansQueryResult.data?.length ?? 0 },
     { label: "Total Reports Sent", value: metrics.totalReportsSent },
@@ -99,8 +91,8 @@ function Dashboard() {
         ))}
       </section>
       <p className="mt-4 text-sm text-muted-foreground">
-        Reports and removals are counted from review workflow statuses confirmed by a user. Google
-        submissions and removal decisions are not verified automatically.
+        Report totals count staff-confirmed manual submissions recorded in the activity log.
+        Rating Guard does not submit reports to Google or verify Google's moderation decisions.
       </p>
     </>
   );

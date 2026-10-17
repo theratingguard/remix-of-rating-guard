@@ -18,12 +18,8 @@ export const REVIEW_WORKFLOW_LABELS: Record<ReviewWorkflowStatus, string> = {
   REMOVED: "Removed",
 };
 
-export function reviewWorkflowMetrics(counts: {
-  reportedReviews: number;
-  reportEvents: number;
-  removed: number;
-}) {
-  const totalReportsSent = Math.max(counts.reportedReviews, counts.reportEvents);
+export function reviewWorkflowMetrics(counts: { reportEvents: number; removed: number }) {
+  const totalReportsSent = counts.reportEvents;
   const totalRemoved = counts.removed;
   return {
     totalReportsSent,
