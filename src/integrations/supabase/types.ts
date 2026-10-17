@@ -214,6 +214,125 @@ export type Database = {
         };
         Relationships: [];
       };
+      communication_log: {
+        Row: {
+          id: string;
+          review_tracking_id: string;
+          staff_id: string;
+          log_type: "call" | "whatsapp" | "email";
+          direction: "outbound" | "inbound";
+          contact_person: string | null;
+          contact_number: string | null;
+          contact_email: string | null;
+          summary: string;
+          outcome: "no_answer" | "agreed" | "refused" | "considering";
+          follow_up_at: string | null;
+          duration_seconds: number | null;
+          email_subject: string | null;
+          email_body: string | null;
+          verified_by: string | null;
+          verified_at: string | null;
+          investigation_flag: boolean;
+          investigation_note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          review_tracking_id: string;
+          staff_id: string;
+          log_type: "call" | "whatsapp" | "email";
+          direction: "outbound" | "inbound";
+          contact_person?: string | null;
+          contact_number?: string | null;
+          contact_email?: string | null;
+          summary: string;
+          outcome: "no_answer" | "agreed" | "refused" | "considering";
+          follow_up_at?: string | null;
+          duration_seconds?: number | null;
+          email_subject?: string | null;
+          email_body?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          verified_by?: string | null;
+          verified_at?: string | null;
+          investigation_flag?: boolean;
+          investigation_note?: string | null;
+        };
+        Relationships: [];
+      };
+      communication_evidence: {
+        Row: {
+          id: string;
+          communication_log_id: string;
+          staff_id: string;
+          evidence_type: "screenshot" | "photo" | "audio" | "pdf" | "video" | "document";
+          file_url: string;
+          file_name: string;
+          uploaded_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          communication_log_id: string;
+          staff_id: string;
+          evidence_type: "screenshot" | "photo" | "audio" | "pdf" | "video" | "document";
+          file_url: string;
+          file_name: string;
+          uploaded_by: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      call_log: {
+        Row: {
+          id: string;
+          review_tracking_id: string;
+          staff_id: string;
+          phone_number: string;
+          duration_seconds: number | null;
+          outcome: "no_answer" | "agreed" | "refused" | "considering";
+          notes: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          review_tracking_id: string;
+          staff_id: string;
+          phone_number: string;
+          duration_seconds?: number | null;
+          outcome: "no_answer" | "agreed" | "refused" | "considering";
+          notes: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      email_log: {
+        Row: {
+          id: string;
+          review_tracking_id: string;
+          staff_id: string;
+          to_email: string;
+          subject: string;
+          body: string;
+          sent_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          review_tracking_id: string;
+          staff_id: string;
+          to_email: string;
+          subject: string;
+          body: string;
+          sent_at: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       staff_wallet_ledger: {
         Row: {
           id: string;
@@ -1879,6 +1998,8 @@ export type Database = {
         };
         Returns: boolean;
       };
+      can_review_staff_activity: { Args: { _staff_id: string }; Returns: boolean };
+      client_review_outcomes: { Args: Record<string, never>; Returns: Json };
     };
     Enums: {
       app_role: "admin" | "user";

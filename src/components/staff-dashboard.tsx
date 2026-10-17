@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import {
 } from "@/lib/staff-dashboard.functions";
 import { analyzeStaffReply, updateMyStaffLiveStatus } from "@/lib/staff-case.functions";
 import { getStaffPerformanceMetrics, getStaffWalletSummary } from "@/lib/staff-dashboard-metrics";
+import { getInactiveReviews } from "@/lib/evidence-tracking";
 
 const dashboardKey = ["staff-dashboard"];
 const activeStatuses = new Set(["open", "accepted", "in_progress", "rework"]);
@@ -773,6 +774,37 @@ function AdminChat({ data, refresh }: { data: StaffDashboardData; refresh: () =>
 }
 
 function Alerts({ data }: { data: StaffDashboardData }) {
+  const pendingCases = data.cases.filter(
+    (task) => !["approved", "rejected", "completed", "closed"].includes(task.status),
+  );
+  const caseIds = pendingCases.map((task) => task.id);
+  const inactivity = useQuery({
+    queryKey: ["staff-inactivity", caseIds],
+    enabled: caseIds.length > 0,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+      if (authError) throw new Error(`Could not verify your session: ${authError.message}`);
+      if (!auth.user) throw new Error("Sign in to view inactivity alerts.");
+      const [communications, events] = await Promise.all([
+        supabase
+          .from("communication_log")
+          .select("review_tracking_id,created_at")
+          .eq("staff_id", auth.user.id)
+          .in("review_tracking_id", caseIds)
+          .throwOnError(),
+        supabase
+          .from("staff_case_events")
+          .select("case_id,created_at")
+          .in("case_id", caseIds)
+          .throwOnError(),
+      ]);
+      return [...communications.data, ...events.data].map((item) => ({
+        caseId: "review_tracking_id" in item ? item.review_tracking_id : item.case_id,
+        createdAt: item.created_at,
+      }));
+    },
+  });
   const now = Date.now();
   const inactivityDays = 7;
   const latestAssignment = data.cases.reduce<string | null>(
@@ -823,6 +855,10 @@ function Alerts({ data }: { data: StaffDashboardData }) {
       });
     return items;
   });
+  if (inactivity.error)
+    return <p role="alert">Could not load seven-day activity alerts: {inactivity.error.message}</p>;
+  const inactiveCases = getInactiveReviews(data.cases, inactivity.data ?? [], now);
+  const localHour = new Date().getHours();
   if (noRecentAssignment) {
     alerts.push({
       id: "no-recent-task",
@@ -846,8 +882,36 @@ function Alerts({ data }: { data: StaffDashboardData }) {
     <div className="space-y-5">
       <PageHeader
         title="Alerts"
-        subtitle="Notification feed: new tasks, deadlines, rework and staff notes."
+        subtitle="Seven-day inactivity alerts, task deadlines, rework and staff notes."
       />
+      {inactivity.isPending ? (
+        <p>Checking review activity…</p>
+      ) : (
+        <>
+          <section className="surface space-y-2 border-risk-high/50 p-4">
+            <h2 className="font-semibold">Daily digest · 9:00 AM local time</h2>
+            <p className="text-sm text-muted-foreground">
+              {localHour >= 9
+                ? `${inactiveCases.length} pending review${inactiveCases.length === 1 ? "" : "s"} with no activity for seven days.`
+                : "The daily digest is available at 9:00 AM local time; urgent alerts are shown below immediately."}
+            </p>
+          </section>
+          {inactiveCases.map((task) => (
+            <article
+              className="surface flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-risk-high p-4"
+              key={`inactive-${task.id}`}
+            >
+              <div>
+                <p className="font-semibold text-risk-high">No activity since 7 days</p>
+                <p className="mt-1 text-sm">{task.business_name}</p>
+              </div>
+              <Link className="text-sm text-primary underline" to="/staff/timeline">
+                Open review timeline
+              </Link>
+            </article>
+          ))}
+        </>
+      )}
       <h2 className="font-semibold">Notification feed</h2>
       {alerts.map((alert) => (
         <article className="surface flex flex-wrap justify-between gap-3 p-4" key={alert.id}>

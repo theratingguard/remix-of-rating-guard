@@ -20,11 +20,14 @@ export const Route = createFileRoute("/_authenticated")({
     const isStaff = Boolean(staff) && accessLevel !== "super_admin";
     const isSuperAdmin = accessLevel === "super_admin";
     const role = data.user.app_metadata["role"];
+    const isClient = role === "client";
     if (location.pathname === "/dashboard") {
       if (isSuperAdmin) throw redirect({ to: "/admin/staff", replace: true });
       if (isStaff) throw redirect({ to: "/staff/today", replace: true });
-      if (role === "client") throw redirect({ to: "/client/outcomes", replace: true });
+      if (isClient) throw redirect({ to: "/client/outcomes", replace: true });
     }
+    if (isClient && location.pathname !== "/client/outcomes")
+      throw redirect({ to: "/client/outcomes", replace: true });
     let pendingStaffCount = 0;
     if (isSuperAdmin) {
       const { count, error: pendingError } = await supabase
@@ -57,6 +60,10 @@ export const Route = createFileRoute("/_authenticated")({
       "/staff/quality",
       "/staff/wallet",
       "/staff/communication",
+      "/staff/activity",
+      "/staff/evidence",
+      "/staff/timeline",
+      "/staff/lead-activity",
       "/staff/alerts",
       "/staff/profile",
       "/staff/cases",
@@ -75,6 +82,7 @@ export const Route = createFileRoute("/_authenticated")({
       user: data.user,
       isStaff,
       isSuperAdmin,
+      isClient,
       pendingStaffCount,
       staffStatus: staff?.status ?? null,
       rejectReason: staff?.reject_reason_custom ?? staff?.reject_reason ?? null,
@@ -85,8 +93,16 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function Layout() {
-  const { user, isStaff, isSuperAdmin, pendingStaffCount, staffStatus, rejectReason, staffNotice } =
-    Route.useRouteContext();
+  const {
+    user,
+    isStaff,
+    isSuperAdmin,
+    isClient,
+    pendingStaffCount,
+    staffStatus,
+    rejectReason,
+    staffNotice,
+  } = Route.useRouteContext();
   if (isStaff && staffStatus !== "active" && staffStatus !== "approved") {
     return (
       <StaffApprovalScreen
@@ -101,6 +117,7 @@ function Layout() {
       email={user.email ?? "admin"}
       isStaff={isStaff}
       isSuperAdmin={isSuperAdmin}
+      isClient={isClient}
       staffPendingCount={pendingStaffCount}
     >
       <Outlet />

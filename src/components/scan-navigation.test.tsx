@@ -97,10 +97,10 @@ describe("scan-to-report navigation", () => {
     mocks.analyze.mockResolvedValue({ ok: true, scanId: "scan-123", reviews: 5 });
     render(<ScanPage />);
 
-    fireEvent.change(screen.getByLabelText("Google Maps or Business URL"), {
+    fireEvent.change(screen.getByLabelText("Paste URL"), {
       target: { value: "https://www.google.com/maps/place/Test+Business" },
     });
-    fireEvent.submit(screen.getByLabelText("Google Maps or Business URL").closest("form")!);
+    fireEvent.submit(screen.getByLabelText("Paste URL").closest("form")!);
 
     await waitFor(() => {
       expect(mocks.navigate).toHaveBeenCalledWith({
@@ -118,10 +118,10 @@ describe("scan-to-report navigation", () => {
     });
     render(<ScanPage />);
 
-    fireEvent.change(screen.getByLabelText("Google Maps or Business URL"), {
+    fireEvent.change(screen.getByLabelText("Paste URL"), {
       target: { value: "https://www.google.com/maps/place/Missing+Business" },
     });
-    fireEvent.submit(screen.getByLabelText("Google Maps or Business URL").closest("form")!);
+    fireEvent.submit(screen.getByLabelText("Paste URL").closest("form")!);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Business not found on Google.");
     expect(mocks.navigate).not.toHaveBeenCalled();
@@ -137,10 +137,10 @@ describe("scan-to-report navigation", () => {
     });
     render(<ScanPage />);
 
-    fireEvent.change(screen.getByLabelText("Google Maps or Business URL"), {
+    fireEvent.change(screen.getByLabelText("Paste URL"), {
       target: { value: "https://www.google.com/maps/place/Test+Business" },
     });
-    fireEvent.submit(screen.getByLabelText("Google Maps or Business URL").closest("form")!);
+    fireEvent.submit(screen.getByLabelText("Paste URL").closest("form")!);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Review analysis is unavailable.");
     expect(mocks.navigate).not.toHaveBeenCalled();

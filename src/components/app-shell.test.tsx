@@ -28,9 +28,13 @@ const staffLinks = [
   ["My Tasks", "/staff/tasks"],
   ["Status Board", "/staff/status-board"],
   ["Performance", "/staff/performance"],
-  ["Quality / Rework", "/staff/quality"],
-  ["Incentive (Wallet)", "/staff/wallet"],
+  ["Quality", "/staff/quality"],
+  ["Incentive", "/staff/wallet"],
   ["Communication", "/staff/communication"],
+  ["My Activity", "/staff/activity"],
+  ["Evidence Vault", "/staff/evidence"],
+  ["Timeline", "/staff/timeline"],
+  ["Team Review", "/staff/lead-activity"],
   ["Alerts", "/staff/alerts"],
   ["Profile", "/staff/profile"],
 ];
@@ -46,6 +50,7 @@ const adminLinks = [
   ["Storage Manager", "/storage"],
   ["Settings", "/settings"],
   ["Staff Approvals", "/admin/staff"],
+  ["Staff Activity", "/admin/staff-activity"],
 ];
 
 afterEach(cleanup);
@@ -53,7 +58,13 @@ afterEach(cleanup);
 describe("AppShell role navigation", () => {
   it("renders only the staff navigation for staff", () => {
     render(
-      <AppShell email="staff@example.com" isStaff isSuperAdmin={false} staffPendingCount={3}>
+      <AppShell
+        email="staff@example.com"
+        isStaff
+        isSuperAdmin={false}
+        isClient={false}
+        staffPendingCount={3}
+      >
         <div>Page content</div>
       </AppShell>,
     );
@@ -72,7 +83,13 @@ describe("AppShell role navigation", () => {
 
   it("renders only the admin navigation for superadmins", () => {
     render(
-      <AppShell email="admin@example.com" isStaff={false} isSuperAdmin staffPendingCount={3}>
+      <AppShell
+        email="admin@example.com"
+        isStaff={false}
+        isSuperAdmin
+        isClient={false}
+        staffPendingCount={3}
+      >
         <div>Page content</div>
       </AppShell>,
     );
@@ -90,7 +107,13 @@ describe("AppShell role navigation", () => {
 
   it("does not expose admin navigation to users without an admin or staff role", () => {
     render(
-      <AppShell email="user@example.com" isStaff={false} isSuperAdmin={false} staffPendingCount={0}>
+      <AppShell
+        email="user@example.com"
+        isStaff={false}
+        isSuperAdmin={false}
+        isClient={false}
+        staffPendingCount={0}
+      >
         <div>Page content</div>
       </AppShell>,
     );
@@ -98,5 +121,27 @@ describe("AppShell role navigation", () => {
     expect(screen.getByRole("navigation", { name: "Main navigation" })).toBeEmptyDOMElement();
     expect(screen.queryByText("Upgrade plan")).not.toBeInTheDocument();
     expect(screen.queryByText("Settings")).not.toBeInTheDocument();
+  });
+
+  it("shows only progress navigation to client accounts", () => {
+    render(
+      <AppShell
+        email="client@example.com"
+        isStaff={false}
+        isSuperAdmin={false}
+        isClient
+        staffPendingCount={0}
+      >
+        <div>Page content</div>
+      </AppShell>,
+    );
+
+    const navigation = within(screen.getByRole("navigation", { name: "Main navigation" }));
+    expect(navigation.getByRole("link", { name: "Review Outcomes" })).toHaveAttribute(
+      "href",
+      "/client/outcomes",
+    );
+    expect(navigation.queryByText("Evidence Vault")).not.toBeInTheDocument();
+    expect(navigation.queryByText("Staff Activity")).not.toBeInTheDocument();
   });
 });

@@ -20,6 +20,10 @@ import {
   CircleDollarSign,
   ClipboardList,
   UserRound,
+  Activity,
+  FolderLock,
+  GitCommitHorizontal,
+  ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -37,6 +41,7 @@ const adminNav = [
   { to: "/storage", label: "Storage Manager", Icon: HardDrive },
   { to: "/settings", label: "Settings", Icon: Settings },
   { to: "/admin/staff", label: "Staff Approvals", Icon: Users },
+  { to: "/admin/staff-activity", label: "Staff Activity", Icon: Activity },
 ] as const;
 
 const staffNav = [
@@ -47,9 +52,15 @@ const staffNav = [
   { to: "/staff/quality", label: "Quality", Icon: CircleHelp },
   { to: "/staff/wallet", label: "Incentive", Icon: CircleDollarSign },
   { to: "/staff/communication", label: "Communication", Icon: Users },
+  { to: "/staff/activity", label: "My Activity", Icon: Activity },
+  { to: "/staff/evidence", label: "Evidence Vault", Icon: FolderLock },
+  { to: "/staff/timeline", label: "Timeline", Icon: GitCommitHorizontal },
+  { to: "/staff/lead-activity", label: "Team Review", Icon: ShieldCheck },
   { to: "/staff/alerts", label: "Alerts", Icon: Star },
   { to: "/staff/profile", label: "Profile", Icon: UserRound },
 ] as const;
+
+const clientNav = [{ to: "/client/outcomes", label: "Review Outcomes", Icon: Activity }] as const;
 
 function Brand() {
   return (
@@ -67,12 +78,16 @@ function Brand() {
 
 function SidebarBody({
   email,
+  isStaff,
   isSuperAdmin,
+  isClient,
   staffPendingCount,
   onNavigate,
 }: {
   email: string;
+  isStaff: boolean;
   isSuperAdmin: boolean;
+  isClient: boolean;
   staffPendingCount: number;
   onNavigate?: () => void;
 }) {
@@ -93,7 +108,7 @@ function SidebarBody({
     <div className="flex h-full flex-col gap-6 p-4">
       <Brand />
       <nav className="flex flex-col gap-1" aria-label="Main navigation">
-        {(isSuperAdmin ? adminNav : staffNav).map((item) => {
+        {(isSuperAdmin ? adminNav : isClient ? clientNav : isStaff ? staffNav : []).map((item) => {
           const { to, label, Icon } = item;
           const linkClass =
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
@@ -199,13 +214,16 @@ function SidebarBody({
 
 export function AppShell({
   email,
+  isStaff,
   isSuperAdmin,
+  isClient,
   staffPendingCount,
   children,
 }: {
   email: string;
   isStaff: boolean;
   isSuperAdmin: boolean;
+  isClient: boolean;
   staffPendingCount: number;
   children: ReactNode;
 }) {
@@ -215,7 +233,9 @@ export function AppShell({
       <aside className="no-print fixed inset-y-0 left-0 hidden w-[200px] border-r bg-sidebar backdrop-blur-xl lg:block">
         <SidebarBody
           email={email}
+          isStaff={isStaff}
           isSuperAdmin={isSuperAdmin}
+          isClient={isClient}
           staffPendingCount={staffPendingCount}
         />
       </aside>
@@ -238,7 +258,9 @@ export function AppShell({
         <SheetContent side="left" className="w-64 p-0">
           <SidebarBody
             email={email}
+            isStaff={isStaff}
             isSuperAdmin={isSuperAdmin}
+            isClient={isClient}
             staffPendingCount={staffPendingCount}
             onNavigate={() => setOpen(false)}
           />

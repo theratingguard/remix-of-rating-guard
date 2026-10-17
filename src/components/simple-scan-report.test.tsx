@@ -135,7 +135,7 @@ describe("Simple scan report", () => {
     expect(screen.getAllByText("The Hudson")).toHaveLength(1);
     expect(screen.getByText(/3\.1.*123 fetched/)).toBeInTheDocument();
     expect(screen.getByText("REVIEWS")).toBeInTheDocument();
-    expect(screen.getByText("A review to assess")).toBeInTheDocument();
+    expect(screen.getAllByText("A review to assess")).toHaveLength(2);
     expect(screen.getByText("No supported signal found")).toBeInTheDocument();
     expect(screen.getByText("No report recommended")).toBeInTheDocument();
     expect(screen.getByText("Submission status: Not prepared — not submitted")).toBeInTheDocument();
