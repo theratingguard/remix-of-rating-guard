@@ -36,6 +36,7 @@ const adminNav = [
   { to: "/reports", label: "Reports", Icon: FileText },
   { to: "/storage", label: "Storage Manager", Icon: HardDrive },
   { to: "/settings", label: "Settings", Icon: Settings },
+  { to: "/admin/staff", label: "Staff Approvals", Icon: Users },
 ] as const;
 
 const staffNav = [
@@ -43,8 +44,8 @@ const staffNav = [
   { to: "/staff/tasks", label: "My Tasks", Icon: ClipboardList },
   { to: "/staff/status-board", label: "Status Board", Icon: ListChecks },
   { to: "/staff/performance", label: "Performance", Icon: FileText },
-  { to: "/staff/quality", label: "Quality / Rework", Icon: CircleHelp },
-  { to: "/staff/wallet", label: "Incentive (Wallet)", Icon: CircleDollarSign },
+  { to: "/staff/quality", label: "Quality", Icon: CircleHelp },
+  { to: "/staff/wallet", label: "Incentive", Icon: CircleDollarSign },
   { to: "/staff/communication", label: "Communication", Icon: Users },
   { to: "/staff/alerts", label: "Alerts", Icon: Star },
   { to: "/staff/profile", label: "Profile", Icon: UserRound },
@@ -66,13 +67,11 @@ function Brand() {
 
 function SidebarBody({
   email,
-  isStaff,
   isSuperAdmin,
   staffPendingCount,
   onNavigate,
 }: {
   email: string;
-  isStaff: boolean;
   isSuperAdmin: boolean;
   staffPendingCount: number;
   onNavigate?: () => void;
@@ -94,7 +93,7 @@ function SidebarBody({
     <div className="flex h-full flex-col gap-6 p-4">
       <Brand />
       <nav className="flex flex-col gap-1" aria-label="Main navigation">
-        {(isSuperAdmin ? adminNav : isStaff ? staffNav : []).map((item) => {
+        {(isSuperAdmin ? adminNav : staffNav).map((item) => {
           const { to, label, Icon } = item;
           const linkClass =
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
@@ -126,27 +125,14 @@ function SidebarBody({
               activeProps={activeProps}
             >
               <Icon className="h-4 w-4 shrink-0" /> {label}
+              {label === "Staff Approvals" && staffPendingCount > 0 && (
+                <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">
+                  {staffPendingCount}
+                </span>
+              )}
             </Link>
           );
         })}
-        {isSuperAdmin && (
-          <Link
-            to="/admin/staff"
-            onClick={onNavigate}
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-            activeProps={{
-              className:
-                "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
-            }}
-          >
-            <Users className="h-4 w-4 shrink-0" /> Staff Approvals
-            {staffPendingCount > 0 && (
-              <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">
-                {staffPendingCount}
-              </span>
-            )}
-          </Link>
-        )}
       </nav>
       {!isSuperAdmin ? (
         <div className="mt-auto border-t pt-4">
@@ -213,7 +199,6 @@ function SidebarBody({
 
 export function AppShell({
   email,
-  isStaff,
   isSuperAdmin,
   staffPendingCount,
   children,
@@ -230,7 +215,6 @@ export function AppShell({
       <aside className="no-print fixed inset-y-0 left-0 hidden w-[200px] border-r bg-sidebar backdrop-blur-xl lg:block">
         <SidebarBody
           email={email}
-          isStaff={isStaff}
           isSuperAdmin={isSuperAdmin}
           staffPendingCount={staffPendingCount}
         />
@@ -254,7 +238,6 @@ export function AppShell({
         <SheetContent side="left" className="w-64 p-0">
           <SidebarBody
             email={email}
-            isStaff={isStaff}
             isSuperAdmin={isSuperAdmin}
             staffPendingCount={staffPendingCount}
             onNavigate={() => setOpen(false)}
