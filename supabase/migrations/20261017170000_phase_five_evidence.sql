@@ -249,7 +249,9 @@ as $$
         where ra.review_id = c.review_id and ra.status = 'REMOVED'
       ) as removed
     from public.staff_cases c
-    where auth.uid() is not null and c.client_user_id = auth.uid()
+    where auth.uid() is not null
+      and auth.jwt() -> 'app_metadata' ->> 'role' = 'client'
+      and c.client_user_id = auth.uid()
   ),
   counts as (
     select
