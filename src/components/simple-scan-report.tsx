@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { reportAccessQuery } from "@/lib/report-access";
 import { Button } from "@/components/ui/button";
 import { RemovalSubmissionForm } from "@/components/removal-workflow";
 import { ExtensionLauncher } from "@/components/extension-launcher";
+import { ReviewWorkflowCard } from "@/components/review-workflow-card";
 
 export function SimpleScanReport({ scanId }: { scanId: string }) {
   const access = useQuery(reportAccessQuery());
@@ -291,155 +292,162 @@ export function SimpleScanReport({ scanId }: { scanId: string }) {
                       ? "No supported request — not submitted"
                       : "Not prepared — not submitted";
                 return (
-                  <tr className="border-b last:border-0" key={review.id}>
-                    <td className="p-3">{index + 1}</td>
-                    <td className="max-w-[24rem] truncate p-3" title={review.text ?? ""}>
-                      {review.text || "No review text"}
-                    </td>
-                    <td className="p-3">
-                      <span
-                        className={`rounded px-2 py-1 text-xs font-semibold ${assessment.style}`}
-                      >
-                        {assessment.label}
-                      </span>
-                      <p className="mt-1">
-                        Policy:{" "}
-                        {legal?.violates_policy ? legal.policy_type : (analysis?.category ?? "—")}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {analysis
-                          ? singleReviewMode
-                            ? "Preliminary policy screening"
-                            : `${analysis.confidence}% analysis confidence`
-                          : "Analysis unavailable"}
-                        {analysis?.model ? ` · ${analysis.model}` : ""}
-                      </p>
-                    </td>
-                    <td className="max-w-[22rem] p-3">
-                      <p>
-                        {analysis?.evidence ||
-                          analysis?.signals?.join("; ") ||
-                          "No quoted evidence returned."}
-                      </p>
-                      {analysis?.reason && (
-                        <p className="mt-1 text-xs text-muted-foreground">{analysis.reason}</p>
-                      )}
-                      {ruleScore ? (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          Rules: {ruleScore.checksAssessed}/{ruleScore.checksRun} assessed ·{" "}
-                          {ruleScore.checksFlagged} signal(s)
+                  <Fragment key={review.id}>
+                    <tr className="border-b last:border-0">
+                      <td className="p-3">{index + 1}</td>
+                      <td className="max-w-[24rem] truncate p-3" title={review.text ?? ""}>
+                        {review.text || "No review text"}
+                      </td>
+                      <td className="p-3">
+                        <span
+                          className={`rounded px-2 py-1 text-xs font-semibold ${assessment.style}`}
+                        >
+                          {assessment.label}
+                        </span>
+                        <p className="mt-1">
+                          Policy:{" "}
+                          {legal?.violates_policy ? legal.policy_type : (analysis?.category ?? "—")}
                         </p>
-                      ) : (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          Rules diagnostics unavailable.
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {analysis
+                            ? singleReviewMode
+                              ? "Preliminary policy screening"
+                              : `${analysis.confidence}% analysis confidence`
+                            : "Analysis unavailable"}
+                          {analysis?.model ? ` · ${analysis.model}` : ""}
                         </p>
-                      )}
-                    </td>
-                    {!singleReviewMode && (
-                      <td className={`whitespace-nowrap p-3 font-semibold ${scoreColor}`}>
-                        {score == null ? (
-                          <span
-                            title={
-                              legal?.violates_policy
-                                ? "At least 30 comparable, recorded outcomes are required before showing a cohort percentage."
-                                : "No supported policy concern or comparable outcome estimate is available."
-                            }
-                          >
-                            {legal?.violates_policy ? "Not estimable" : "Not estimated"}
-                            {legal?.prediction ? ` · n=${legal.prediction.sample_size}` : ""}
-                          </span>
+                      </td>
+                      <td className="max-w-[22rem] p-3">
+                        <p>
+                          {analysis?.evidence ||
+                            analysis?.signals?.join("; ") ||
+                            "No quoted evidence returned."}
+                        </p>
+                        {analysis?.reason && (
+                          <p className="mt-1 text-xs text-muted-foreground">{analysis.reason}</p>
+                        )}
+                        {ruleScore ? (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            Rules: {ruleScore.checksAssessed}/{ruleScore.checksRun} assessed ·{" "}
+                            {ruleScore.checksFlagged} signal(s)
+                          </p>
                         ) : (
-                          <span title="Historical cohort rate from manually recorded outcomes; not an individually calibrated or guaranteed probability.">
-                            {score}% cohort estimate · n={legal?.prediction?.sample_size}
-                          </span>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            Rules diagnostics unavailable.
+                          </p>
                         )}
                       </td>
-                    )}
-                    <td className="p-3">
-                      {legal?.removal_request_text ? (
-                        <div className="flex flex-wrap gap-2">
+                      {!singleReviewMode && (
+                        <td className={`whitespace-nowrap p-3 font-semibold ${scoreColor}`}>
+                          {score == null ? (
+                            <span
+                              title={
+                                legal?.violates_policy
+                                  ? "At least 30 comparable, recorded outcomes are required before showing a cohort percentage."
+                                  : "No supported policy concern or comparable outcome estimate is available."
+                              }
+                            >
+                              {legal?.violates_policy ? "Not estimable" : "Not estimated"}
+                              {legal?.prediction ? ` · n=${legal.prediction.sample_size}` : ""}
+                            </span>
+                          ) : (
+                            <span title="Historical cohort rate from manually recorded outcomes; not an individually calibrated or guaranteed probability.">
+                              {score}% cohort estimate · n={legal?.prediction?.sample_size}
+                            </span>
+                          )}
+                        </td>
+                      )}
+                      <td className="p-3">
+                        {legal?.removal_request_text ? (
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void copyReport(legal.removal_request_text)}
+                            >
+                              Copy report
+                            </Button>
+                            <Button size="sm" variant="outline" asChild>
+                              <a
+                                href={review.review_uri ?? scan.maps_uri ?? scan.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Open in Google Maps
+                              </a>
+                            </Button>
+                            <Button size="sm" variant="outline" asChild>
+                              <a
+                                href="https://support.google.com/business/troubleshooter/2690762"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Open Google report form
+                              </a>
+                            </Button>
+                          </div>
+                        ) : legal ? (
+                          <span className="text-muted-foreground">No supported report</span>
+                        ) : !canPrepareReport ? (
+                          <span className="text-muted-foreground">
+                            {needsReview
+                              ? "Verify evidence before preparing a report"
+                              : "No report recommended"}
+                          </span>
+                        ) : (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => void copyReport(legal.removal_request_text)}
+                            disabled={busyReviewId !== null || !features.data?.legal_expert_enabled}
+                            onClick={() => void prepareReport(review.id)}
                           >
-                            Copy report
+                            {busyReviewId === review.id ? "Preparing…" : "Prepare report"}
                           </Button>
-                          <Button size="sm" variant="outline" asChild>
-                            <a
-                              href={review.review_uri ?? scan.maps_uri ?? scan.source_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              Open in Google Maps
-                            </a>
-                          </Button>
-                          <Button size="sm" variant="outline" asChild>
-                            <a
-                              href="https://support.google.com/business/troubleshooter/2690762"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              Open Google report form
-                            </a>
-                          </Button>
-                        </div>
-                      ) : legal ? (
-                        <span className="text-muted-foreground">No supported report</span>
-                      ) : !canPrepareReport ? (
-                        <span className="text-muted-foreground">
-                          {needsReview
-                            ? "Verify evidence before preparing a report"
-                            : "No report recommended"}
-                        </span>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busyReviewId !== null || !features.data?.legal_expert_enabled}
-                          onClick={() => void prepareReport(review.id)}
-                        >
-                          {busyReviewId === review.id ? "Preparing…" : "Prepare report"}
-                        </Button>
-                      )}
-                      {legal?.removal_request_text &&
-                        features.data?.appeal_tracking_enabled &&
-                        !outcome && (
-                          <details className="mt-2">
-                            <summary className="cursor-pointer text-xs">
-                              Record actual submission
-                            </summary>
-                            <RemovalSubmissionForm scan={scan} review={review} legal={legal} />
-                          </details>
                         )}
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Submission status: {submissionStatus}
-                      </p>
-                      {legal?.removal_request_text && (
-                        <>
-                          <details className="mt-2">
-                            <summary className="cursor-pointer text-xs">
-                              View policy evidence and report text
-                            </summary>
-                            <div className="mt-2 space-y-2 rounded border p-3 text-xs">
-                              <p>
-                                Policy angle: {legal.policy_type} — {legal.policy_section}
-                              </p>
-                              <p>Evidence quote: {legal.evidence_quote || "No verified quote"}</p>
-                              <p>{legal.reasoning}</p>
-                              <textarea
-                                aria-label={`Report text for ${review.author}`}
-                                readOnly
-                                value={legal.removal_request_text}
-                                rows={10}
-                                className="w-full rounded border bg-transparent p-2"
-                              />
-                            </div>
-                          </details>
-                        </>
-                      )}
-                    </td>
-                  </tr>
+                        {legal?.removal_request_text &&
+                          features.data?.appeal_tracking_enabled &&
+                          !outcome && (
+                            <details className="mt-2">
+                              <summary className="cursor-pointer text-xs">
+                                Record actual submission
+                              </summary>
+                              <RemovalSubmissionForm scan={scan} review={review} legal={legal} />
+                            </details>
+                          )}
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Submission status: {submissionStatus}
+                        </p>
+                        {legal?.removal_request_text && (
+                          <>
+                            <details className="mt-2">
+                              <summary className="cursor-pointer text-xs">
+                                View policy evidence and report text
+                              </summary>
+                              <div className="mt-2 space-y-2 rounded border p-3 text-xs">
+                                <p>
+                                  Policy angle: {legal.policy_type} — {legal.policy_section}
+                                </p>
+                                <p>Evidence quote: {legal.evidence_quote || "No verified quote"}</p>
+                                <p>{legal.reasoning}</p>
+                                <textarea
+                                  aria-label={`Report text for ${review.author}`}
+                                  readOnly
+                                  value={legal.removal_request_text}
+                                  rows={10}
+                                  className="w-full rounded border bg-transparent p-2"
+                                />
+                              </div>
+                            </details>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border-b p-3" colSpan={singleReviewMode ? 5 : 6}>
+                        <ReviewWorkflowCard scan={scan} review={review} />
+                      </td>
+                    </tr>
+                  </Fragment>
                 );
               })}
             </tbody>

@@ -7,6 +7,12 @@ export const ACTION_STATUSES = [
   "USER_ACTION_PENDING",
   "RESOLVED",
   "NOT_ACTIONABLE",
+  "REPORTED",
+  "REPLIED",
+  "RESCANNING",
+  "INVESTIGATING",
+  "REPORTED_AGAIN",
+  "REMOVED",
 ] as const;
 export type ActionStatus = (typeof ACTION_STATUSES)[number];
 
@@ -18,6 +24,12 @@ export const ACTION_LABEL: Record<ActionStatus, string> = {
   USER_ACTION_PENDING: "User action pending",
   RESOLVED: "Resolved",
   NOT_ACTIONABLE: "Not actionable",
+  REPORTED: "Reported",
+  REPLIED: "Replied",
+  RESCANNING: "Rescanning",
+  INVESTIGATING: "Investigating",
+  REPORTED_AGAIN: "Reported Again",
+  REMOVED: "Removed",
 };
 
 /** Explainable next step derived from the stored category, signals and confidence. */
