@@ -26,6 +26,27 @@ export const REGIONS = [
 
 export type Region = (typeof REGIONS)[number];
 
+export function getCountryFromUrl(url: string) {
+  if (!url.trim()) return { name: "Unknown", flag: "🌐" };
+
+  let hostname: string;
+  try {
+    hostname = new URL(
+      /^[a-z][a-z\d+.-]*:\/\//i.test(url) ? url : `https://${url}`,
+    ).hostname.toLowerCase();
+  } catch {
+    return { name: "Unknown", flag: "🌐" };
+  }
+
+  if (hostname.endsWith(".co.in") || hostname.endsWith(".in")) return { name: "India", flag: "🇮🇳" };
+  if (hostname.endsWith(".co.uk") || hostname.endsWith(".uk")) return { name: "UK", flag: "🇬🇧" };
+  if (hostname.endsWith(".com.au") || hostname.endsWith(".au"))
+    return { name: "Australia", flag: "🇦🇺" };
+  if (hostname.endsWith(".ca")) return { name: "Canada", flag: "🇨🇦" };
+  if (hostname.endsWith(".ae")) return { name: "UAE", flag: "🇦🇪" };
+  return { name: "USA", flag: "🇺🇸" };
+}
+
 export const REGION_OPTIONS: { value: Region; label: string }[] = [
   { value: "US", label: "United States" },
   { value: "UK", label: "United Kingdom" },

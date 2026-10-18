@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   countryCodeFromAddress,
+  getCountryFromUrl,
   getRegionalStrategy,
   isRegion,
   regionForCountryCode,
@@ -49,6 +50,23 @@ describe("regional routing", () => {
     expect(countryCodeFromAddress("Albany, NY, USA")).toBe("US");
     expect(countryCodeFromAddress("Delhi, India")).toBe("IN");
     expect(countryCodeFromAddress("Paris, France")).toBeNull();
+  });
+
+  it("detects the country from a Google Maps URL suffix", () => {
+    expect(getCountryFromUrl("https://maps.google.co.in/maps")).toEqual({
+      name: "India",
+      flag: "🇮🇳",
+    });
+    expect(getCountryFromUrl("maps.google.co.uk")).toEqual({ name: "UK", flag: "🇬🇧" });
+    expect(getCountryFromUrl("https://maps.google.com.au/maps")).toEqual({
+      name: "Australia",
+      flag: "🇦🇺",
+    });
+    expect(getCountryFromUrl("https://maps.google.ca/maps")).toEqual({
+      name: "Canada",
+      flag: "🇨🇦",
+    });
+    expect(getCountryFromUrl("")).toEqual({ name: "Unknown", flag: "🌐" });
   });
 
   it("records whether Google, its formatted address, or manual fallback supplied the country", () => {
