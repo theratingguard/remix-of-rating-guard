@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ExternalLink, RefreshCw, Search } from "lucide-react";
 import type { DashboardScanRow } from "@/lib/data";
 import { scanRisk } from "@/lib/data";
-import { countryCodeFromAddress, COUNTRY_NAME_BY_CODE } from "@/lib/regional-routing";
+import { countryCodeFromAddress, getCountryFromUrl } from "@/lib/regional-routing";
 import { ScansCsvExportButton } from "@/components/scans-csv-export-button";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/app-shell";
@@ -22,13 +22,14 @@ function countryCode(scan: DashboardScanRow) {
   return countryCodeFromAddress(scan.address);
 }
 
-function countryLabel(code: string | null, address: string | null) {
-  if (code === "IN") return "India";
-  if (code === "PK") return "Pakistan";
-  if (code === "US") return "USA";
-  if (code === "GB") return "UK";
-  if (code && COUNTRY_NAME_BY_CODE[code]) return COUNTRY_NAME_BY_CODE[code];
-  return address?.split(",").at(-1)?.trim() || code || "Unknown";
+function reviewerProfileUrl(value: string | null) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
 }
 
 export function ScannedUrlsTable({
@@ -311,13 +312,14 @@ export function ScannedUrlsTable({
         )}
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1120px] text-left text-xs">
+        <table className="w-full min-w-[1320px] text-left text-xs">
           <thead className="bg-muted/50 text-[13px] font-bold tracking-wide text-muted-foreground">
             <tr>
               {[
                 "#",
                 "Business name",
                 "Country",
+                "Reviewer Details",
                 "Google review URL",
                 "Rating",
                 "Reviews",
@@ -355,6 +357,8 @@ export function ScannedUrlsTable({
                       ? "text-risk-normal"
                       : "text-muted-foreground";
               const flagged = scan.high_count + scan.medium_count;
+              const country = getCountryFromUrl(scan.source_url);
+              const reviewers = scan.reviews ?? [];
               return (
                 <tr key={scan.id} className="h-10 border-t align-middle hover:bg-muted/30">
                   <td className="px-2 py-2 text-muted-foreground">{first + index}</td>
@@ -371,7 +375,44 @@ export function ScannedUrlsTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-2 py-2">{countryLabel(countryCode(scan), scan.address)}</td>
+                  <td className="whitespace-nowrap px-2 py-2">
+                    <span title={country.name}>
+                      <span aria-hidden="true">{country.flag}</span> {country.name}
+                    </span>
+                  </td>
+                  <td className="max-w-52 px-2 py-2">
+                    {reviewers.length ? (
+                      <ul
+                        className="space-y-0.5"
+                        title={reviewers.map((reviewer) => reviewer.author).join(", ")}
+                      >
+                        {reviewers.slice(0, 2).map((reviewer, reviewerIndex) => {
+                          const profileUrl = reviewerProfileUrl(reviewer.author_uri);
+                          return (
+                            <li key={`${reviewer.author}-${reviewerIndex}`} className="truncate">
+                              {profileUrl ? (
+                                <a
+                                  className="text-brand hover:underline"
+                                  href={profileUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  {reviewer.author}
+                                </a>
+                              ) : (
+                                reviewer.author
+                              )}
+                            </li>
+                          );
+                        })}
+                        {reviewers.length > 2 && (
+                          <li className="text-muted-foreground">+ more reviewers</li>
+                        )}
+                      </ul>
+                    ) : (
+                      <span className="text-muted-foreground">No reviewer details</span>
+                    )}
+                  </td>
                   <td className="max-w-48 px-2 py-2">
                     <a
                       className="block truncate text-brand hover:underline"
@@ -415,7 +456,7 @@ export function ScannedUrlsTable({
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={12} className="px-4 py-10 text-center text-muted-foreground">
                   No scans match these filters.
                 </td>
               </tr>

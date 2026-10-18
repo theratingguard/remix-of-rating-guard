@@ -117,7 +117,12 @@ export type DashboardScanRow = Pick<
   | "completed_at"
   | "created_at"
   | "error"
-> & { reports: Pick<Report, "report_number"> | null };
+> & {
+  reports: Pick<Report, "report_number"> | null;
+  reviews?: DashboardReviewer[];
+};
+
+export type DashboardReviewer = Pick<Tables<"reviews">, "author" | "author_uri">;
 
 export const dashboardScansQuery = () =>
   queryOptions({
@@ -128,11 +133,12 @@ export const dashboardScansQuery = () =>
         const { data, error } = await supabase
           .from("scans")
           .select(
-            "id,is_seed,business_name,source_url,address,region,status,rating,reviews_retrieved,high_count,medium_count,normal_count,requires_review_count,started_at,completed_at,created_at,error,reports!reports_scan_id_fkey(report_number)",
+            "id,is_seed,business_name,source_url,address,region,status,rating,reviews_retrieved,high_count,medium_count,normal_count,requires_review_count,started_at,completed_at,created_at,error,reports!reports_scan_id_fkey(report_number),reviews!reviews_scan_id_fkey(author,author_uri)",
           )
           .order("created_at", { ascending: false })
           .order("id")
-          .range(offset, offset + 99);
+          .range(offset, offset + 99)
+          .limit(3, { referencedTable: "reviews" });
         if (error) throw error;
         scans.push(...data);
         if (data.length < 100) return scans;
@@ -148,40 +154,52 @@ export const scanQuery = (id: string) =>
   queryOptions({
     queryKey: ["scan", id],
     queryFn: async () => {
-      const [s, r, rep] = await Promise.all([
+      const [s, rep] = await Promise.all([
         supabase.from("scans").select("*").eq("id", id).maybeSingle(),
-        supabase
+        supabase.from("reports").select("*").eq("scan_id", id).maybeSingle(),
+      ]);
+      if (s.error) throw s.error;
+      if (rep.error) throw rep.error;
+      const order: Record<string, number> = { high: 0, medium: 1, requires_review: 2, normal: 3 };
+      const rawReviews = [];
+      for (let offset = 0; ; offset += 250) {
+        const { data, error } = await supabase
           .from("reviews")
           .select(
             "id, author, rating, published_at, relative_time, text, review_uri, user_selected, review_url, review_analyses!review_analyses_review_id_fkey(risk, category, signals, reason, evidence, confidence, model, verification)",
           )
-          .eq("scan_id", id),
-        supabase.from("reports").select("*").eq("scan_id", id).maybeSingle(),
-      ]);
-      if (s.error) throw s.error;
-      if (r.error) throw r.error;
-      if (rep.error) throw rep.error;
-      const order: Record<string, number> = { high: 0, medium: 1, requires_review: 2, normal: 3 };
-      const rawReviews = r.data ?? [];
-      const reviews: AnalyzedReview[] = rawReviews.map(({ review_analyses, ...rest }) => {
-        const a = Array.isArray(review_analyses) ? review_analyses[0] : review_analyses;
-        const history = rawReviews
-          .filter((item) => item.id !== rest.id)
-          .map((item) => ({
+          .eq("scan_id", id)
+          .order("id")
+          .range(offset, offset + 249);
+        if (error) throw error;
+        rawReviews.push(...data);
+        if (data.length < 250) break;
+      }
+      const canRecheckHistory = rawReviews.length <= 500;
+      const reviewHistory = canRecheckHistory
+        ? rawReviews.map((item) => ({
+            id: item.id,
             text: item.text ?? "",
             rating: item.rating,
             ...(item.published_at ? { publishedAt: item.published_at } : {}),
             ...(item.author ? { reviewerName: item.author } : {}),
             ...(s.data?.business_name ? { businessName: s.data.business_name } : {}),
             platform: "Google",
-          }));
-        const microRuleRecheck = runMicroRules({
-          text: rest.text ?? "",
-          rating: rest.rating,
-          ...(rest.published_at ? { reviewDate: rest.published_at } : {}),
-          ...(s.data?.business_name ? { businessName: s.data.business_name } : {}),
-          history,
-        });
+          }))
+        : [];
+      const reviews: AnalyzedReview[] = rawReviews.map(({ review_analyses, ...rest }) => {
+        const a = Array.isArray(review_analyses) ? review_analyses[0] : review_analyses;
+        const microRuleRecheck = canRecheckHistory
+          ? runMicroRules({
+              text: rest.text ?? "",
+              rating: rest.rating,
+              ...(rest.published_at ? { reviewDate: rest.published_at } : {}),
+              ...(s.data?.business_name ? { businessName: s.data.business_name } : {}),
+              history: reviewHistory
+                .filter((item) => item.id !== rest.id)
+                .map(({ id: _id, ...item }) => item),
+            })
+          : undefined;
         return {
           ...rest,
           analysis: a
@@ -189,7 +207,7 @@ export const scanQuery = (id: string) =>
                 ...a,
                 risk: normalizeRisk(a.risk),
                 microRuleScore: readPersistedRuleScore(a.verification),
-                microRuleRecheck,
+                ...(microRuleRecheck ? { microRuleRecheck } : {}),
               }
             : null,
         };
@@ -199,7 +217,12 @@ export const scanQuery = (id: string) =>
       for (const review of reviews)
         review.legal = legal?.reviews.find((item) => item.review_id === review.id);
       reviews.sort((a, b) => (order[riskOf(a)] ?? 9) - (order[riskOf(b)] ?? 9));
-      return { scan: s.data, reviews, report: rep.data };
+      return {
+        scan: s.data,
+        reviews,
+        report: rep.data,
+        microRuleRecheckDeferred: !canRecheckHistory,
+      };
     },
   });
 

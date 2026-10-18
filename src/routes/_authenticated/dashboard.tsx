@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Plus } from "lucide-react";
-import { scansQuery } from "@/lib/data";
+import { dashboardScansQuery } from "@/lib/data";
 import { PageHeader } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { RestrictedReportSummary } from "@/components/restricted-report-summary";
 import { reportAccessQuery } from "@/lib/report-access";
 import { supabase } from "@/integrations/supabase/client";
 import { reviewWorkflowMetrics } from "@/lib/review-workflow";
+import { ScannedUrlsTable } from "@/components/scanned-urls-table";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -21,7 +23,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const access = useQuery(reportAccessQuery());
-  const scansQueryResult = useQuery(scansQuery());
+  const scansQueryResult = useQuery(dashboardScansQuery());
+  const [risk, setRisk] = useState<"all" | "high" | "medium" | "normal" | "requires_review">("all");
   const actionsQuery = useQuery({
     queryKey: ["dashboard-review-actions"],
     enabled: access.data === "super_admin",
@@ -90,9 +93,20 @@ function Dashboard() {
           </article>
         ))}
       </section>
+      {scansQueryResult.data && (
+        <ScannedUrlsTable
+          scans={scansQueryResult.data}
+          search=""
+          location=""
+          risk={risk}
+          onRiskFilterChange={setRisk}
+          onRefresh={() => void scansQueryResult.refetch()}
+          isRefreshing={scansQueryResult.isFetching}
+        />
+      )}
       <p className="mt-4 text-sm text-muted-foreground">
-        Report totals count staff-confirmed manual submissions recorded in the activity log.
-        Rating Guard does not submit reports to Google or verify Google's moderation decisions.
+        Report totals count staff-confirmed manual submissions recorded in the activity log. Rating
+        Guard does not submit reports to Google or verify Google's moderation decisions.
       </p>
     </>
   );

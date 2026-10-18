@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ScanRow } from "@/lib/data";
+import type { DashboardReviewer, ScanRow } from "@/lib/data";
+import { getCountryFromUrl } from "@/lib/regional-routing";
 import { ScannedUrlsTable } from "./scanned-urls-table";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -31,8 +32,8 @@ function scan(
   id: string,
   name: string,
   risk: "high" | "medium" | "normal",
-  overrides: Partial<ScanRow> = {},
-): ScanRow {
+  overrides: Partial<ScanRow> & { reviews?: DashboardReviewer[] } = {},
+): ScanRow & { reviews: DashboardReviewer[] } {
   return {
     id,
     business_name: name,
@@ -47,12 +48,71 @@ function scan(
     requires_review_count: 0,
     created_at: "2026-10-12T10:00:00.000Z",
     reports: null,
+    reviews: [],
     region: "OTHER",
     ...overrides,
-  } as ScanRow;
+  } as ScanRow & { reviews: DashboardReviewer[] };
 }
 
 describe("scanned URL table", () => {
+  it("detects a country and flag from the URL top-level domain", () => {
+    expect(getCountryFromUrl("")).toEqual({ name: "Unknown", flag: "🌐" });
+    expect(getCountryFromUrl("https://maps.google.co.in/maps")).toEqual({
+      name: "India",
+      flag: "🇮🇳",
+    });
+    expect(getCountryFromUrl("maps.google.co.uk")).toEqual({ name: "UK", flag: "🇬🇧" });
+    expect(getCountryFromUrl("https://maps.google.com.au/maps")).toEqual({
+      name: "Australia",
+      flag: "🇦🇺",
+    });
+    expect(getCountryFromUrl("https://maps.google.ca/maps")).toEqual({
+      name: "Canada",
+      flag: "🇨🇦",
+    });
+    expect(getCountryFromUrl("https://maps.google.ae/maps")).toEqual({
+      name: "UAE",
+      flag: "🇦🇪",
+    });
+    expect(getCountryFromUrl("https://maps.google.com/maps")).toEqual({
+      name: "USA",
+      flag: "🇺🇸",
+    });
+  });
+
+  it("shows the URL country and linked reviewer details", () => {
+    render(
+      <ScannedUrlsTable
+        scans={[
+          scan("country-reviewers", "Test Cafe", "normal", {
+            source_url: "https://maps.google.co.in/maps/place/test",
+            reviews: [
+              { author: "Reviewer One", author_uri: "https://www.google.com/maps/contrib/one" },
+              { author: "Reviewer Two", author_uri: null },
+              { author: "Reviewer Three", author_uri: "https://www.google.com/maps/contrib/three" },
+            ],
+          }),
+        ]}
+        search=""
+        location=""
+        risk="all"
+        onRiskFilterChange={vi.fn()}
+        onRefresh={vi.fn()}
+        isRefreshing={false}
+      />,
+    );
+
+    expect(screen.getByRole("columnheader", { name: "Country" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Reviewer Details" })).toBeInTheDocument();
+    expect(screen.getAllByRole("row")[1]).toHaveTextContent("🇮🇳 India");
+    expect(screen.getByRole("link", { name: "Reviewer One" })).toHaveAttribute(
+      "href",
+      "https://www.google.com/maps/contrib/one",
+    );
+    expect(screen.getByText("Reviewer Two")).toBeInTheDocument();
+    expect(screen.getByText("+ more reviewers")).toBeInTheDocument();
+  });
+
   it("filters scan rows by search and risk, paginates, and links to each report", () => {
     const scans = [
       scan("1", "High Risk Cafe", "high"),
@@ -168,7 +228,11 @@ describe("scanned URL table", () => {
     const scans = [
       scan("1", "Alpha Cafe", "normal"),
       scan("2", "Zulu Hotel", "normal"),
-      scan("3", "Beta France Hotel", "normal", { region: "FR", address: "Paris, France" }),
+      scan("3", "Beta Canada Hotel", "normal", {
+        source_url: "https://maps.google.ca/maps/place/test",
+        region: "CA",
+        address: "Toronto, Canada",
+      }),
     ];
     render(
       <ScannedUrlsTable
@@ -182,7 +246,7 @@ describe("scanned URL table", () => {
       />,
     );
     expect(screen.getAllByRole("row")[1]).toHaveTextContent("Alpha Cafe");
-    expect(screen.getByText("France")).toBeInTheDocument();
+    expect(screen.getAllByRole("row")[2]).toHaveTextContent("🇨🇦 Canada");
     expect(screen.getAllByRole("row")[1]).toHaveClass("h-10");
     expect(screen.getByRole("columnheader", { name: "Business name" })).toHaveClass("font-bold");
     fireEvent.change(screen.getByRole("combobox", { name: "Sort businesses" }), {

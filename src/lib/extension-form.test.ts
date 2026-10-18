@@ -43,6 +43,25 @@ describe("Google Maps extension helper", () => {
     expect(dom.window.document.getElementById("submit")?.textContent).toBe("Submit");
   });
 
+  it("supports the maps.google.com review host", async () => {
+    const { dom, sendMessage } = await runFor(
+      "https://maps.google.com/maps/reviews/data=review-id",
+      `<main>Example Cafe Buy my product at spam.example</main>`,
+    );
+    expect(sendMessage).toHaveBeenCalledWith({ type: "prepared" });
+    expect(
+      dom.window.document.querySelector('[aria-label="Verified request draft"]'),
+    ).not.toBeNull();
+  });
+
+  it("does not run on unrelated Google Maps pages", async () => {
+    const { sendMessage } = await runFor(
+      "https://www.google.com/maps/place/cafe",
+      "<main>Cafe</main>",
+    );
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
   it("does not reveal a draft if the exact source evidence is absent", async () => {
     const { dom } = await runFor(
       "https://www.google.com/maps/reviews/data=review-id",

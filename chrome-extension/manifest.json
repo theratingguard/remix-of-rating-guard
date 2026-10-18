@@ -24,8 +24,8 @@
     },
     {
       "matches": [
-        "https://www.google.com/maps/reviews/*",
-        "https://maps.google.com/maps/reviews/*"
+        "https://www.google.com/maps/*",
+        "https://maps.google.com/*"
       ],
       "js": ["form-filler.js"]
     }

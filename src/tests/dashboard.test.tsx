@@ -11,7 +11,7 @@ vi.mock("@tanstack/react-query", () => ({
     data:
       queryKey[0] === "access"
         ? "super_admin"
-        : queryKey[0] === "scans"
+        : queryKey[0] === "dashboard-scans"
           ? [
               {
                 id: "scan-123",
@@ -33,14 +33,19 @@ vi.mock("@tanstack/react-query", () => ({
             ? { reportEvents: 0, removed: 0 }
             : [],
     isLoading: false,
+    isFetching: false,
     isPending: false,
+    refetch: vi.fn(),
   }),
 }));
 vi.mock("@/lib/data", () => ({
-  scansQuery: () => ({ queryKey: ["scans"] }),
+  dashboardScansQuery: () => ({ queryKey: ["dashboard-scans"] }),
   scanRisk: vi.fn(),
   fmtDate: vi.fn(),
   riskyCount: vi.fn(),
+}));
+vi.mock("@/components/scanned-urls-table", () => ({
+  ScannedUrlsTable: () => <section>All scanned URLs</section>,
 }));
 vi.mock("@/components/restricted-report-summary", () => ({
   RestrictedReportSummary: () => null,
@@ -71,4 +76,5 @@ it("renders only the requested four scan and report metrics", () => {
     expect(screen.getByText(label)).toBeInTheDocument();
   expect(screen.queryByText("Risk overview")).not.toBeInTheDocument();
   expect(screen.queryByText("Recent scans")).not.toBeInTheDocument();
+  expect(screen.getByText("All scanned URLs")).toBeInTheDocument();
 });

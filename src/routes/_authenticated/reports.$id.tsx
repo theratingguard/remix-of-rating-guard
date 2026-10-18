@@ -378,6 +378,12 @@ function ReportDetail() {
         </section>
         <RatingAnalysis scan={scan} reviews={reviews} />
         <RemovalSummary metadata={report.report_data} total={reviews.length} />
+        {data.microRuleRecheckDeferred && (
+          <p className="border-t py-4 text-xs text-muted-foreground" role="status">
+            Retrospective rules rechecks were skipped for this large review set to keep report
+            loading responsive. Saved review analyses and their original verdicts are unchanged.
+          </p>
+        )}
         {ruleRechecks.length > 0 && (
           <section className="border-t py-6">
             <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">

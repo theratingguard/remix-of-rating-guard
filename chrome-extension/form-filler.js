@@ -1,5 +1,5 @@
 (() => {
-  if (!/^https:\/\/(www\.)?google\.com\/maps\/reviews\//.test(location.href)) return;
+  if (!/^https:\/\/(?:www|maps)\.google\.com\/maps\/reviews\//.test(location.href)) return;
 
   chrome.runtime
     .sendMessage({ type: "prepared" })
