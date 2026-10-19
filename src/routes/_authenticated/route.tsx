@@ -24,10 +24,24 @@ export const Route = createFileRoute("/_authenticated")({
     if (location.pathname === "/dashboard") {
       if (isSuperAdmin) throw redirect({ to: "/admin/staff", replace: true });
       if (isStaff) throw redirect({ to: "/staff/today", replace: true });
-      if (isClient) throw redirect({ to: "/client/outcomes", replace: true });
+      if (isClient) throw redirect({ to: "/client/dashboard", replace: true });
     }
-    if (isClient && location.pathname !== "/client/outcomes")
-      throw redirect({ to: "/client/outcomes", replace: true });
+    const clientPaths = [
+      "/client/dashboard",
+      "/client/scan",
+      "/client/reports",
+      "/client/settings",
+    ];
+    if (isClient && !clientPaths.includes(location.pathname))
+      throw redirect({ to: "/client/dashboard", replace: true });
+    if (
+      !isClient &&
+      (location.pathname === "/client" || location.pathname.startsWith("/client/"))
+    ) {
+      if (isSuperAdmin) throw redirect({ to: "/admin/staff", replace: true });
+      if (isStaff) throw redirect({ to: "/staff/today", replace: true });
+      throw redirect({ to: "/dashboard", replace: true });
+    }
     let pendingStaffCount = 0;
     if (isSuperAdmin) {
       const { count, error: pendingError } = await supabase
@@ -112,6 +126,7 @@ function Layout() {
       />
     );
   }
+  if (isClient) return <Outlet />;
   return (
     <AppShell
       email={user.email ?? "admin"}

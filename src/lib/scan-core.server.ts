@@ -1006,10 +1006,11 @@ export async function submitScanCore(
   supabase: ScanClient,
   userId: string,
   data: { url: string; region?: Region | undefined },
+  isClient = false,
 ): Promise<StageResponse> {
   if (process.env["MULTI_WORKER_ENABLED"] !== "true") return scanFetchCore(supabase, userId, data);
   const { submitWorkerScan } = await import("./queue/pipeline.server");
-  return submitWorkerScan(supabase, userId, data.url, data.region);
+  return submitWorkerScan(supabase, userId, data.url, data.region, isClient);
 }
 
 async function fail(

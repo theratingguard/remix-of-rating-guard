@@ -2000,6 +2000,11 @@ export type Database = {
       };
       can_review_staff_activity: { Args: { _staff_id: string }; Returns: boolean };
       client_review_outcomes: { Args: Record<string, never>; Returns: Json };
+      client_dashboard_summary: { Args: Record<string, never>; Returns: Json };
+      client_report_page: {
+        Args: { _search?: string | null; _limit?: number; _offset?: number };
+        Returns: Json;
+      };
     };
     Enums: {
       app_role: "admin" | "user";

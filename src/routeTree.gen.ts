@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResponsibleUseRouteImport } from './routes/responsible-use'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AuthenticatedClientRouteRouteImport } from './routes/_authenticated/client/route'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedHomepagePreviewRouteImport } from './routes/_authenticated/homepage-preview'
@@ -36,7 +37,11 @@ import { Route as AuthenticatedAdminCasesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminInvestigatorsRouteImport } from './routes/_authenticated/admin.investigators'
 import { Route as AuthenticatedAdminStaffRouteImport } from './routes/_authenticated/admin.staff'
 import { Route as AuthenticatedAdminStaffActivityRouteImport } from './routes/_authenticated/admin.staff-activity'
+import { Route as AuthenticatedClientDashboardRouteImport } from './routes/_authenticated/client/dashboard'
 import { Route as AuthenticatedClientOutcomesRouteImport } from './routes/_authenticated/client.outcomes'
+import { Route as AuthenticatedClientReportsRouteImport } from './routes/_authenticated/client/reports'
+import { Route as AuthenticatedClientScanRouteImport } from './routes/_authenticated/client/scan'
+import { Route as AuthenticatedClientSettingsRouteImport } from './routes/_authenticated/client/settings'
 import { Route as AuthenticatedInvestigatorCasesRouteImport } from './routes/_authenticated/investigator.cases'
 import { Route as AuthenticatedInvestigatorLoginRouteImport } from './routes/_authenticated/investigator.login'
 import { Route as AuthenticatedInvestigatorProfileRouteImport } from './routes/_authenticated/investigator.profile'
@@ -112,6 +117,12 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedClientRouteRoute =
+  AuthenticatedClientRouteRouteImport.update({
+    id: '/client',
+    path: '/client',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -214,11 +225,34 @@ const AuthenticatedAdminStaffActivityRoute =
     path: '/admin/staff-activity',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedClientDashboardRoute =
+  AuthenticatedClientDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedClientRouteRoute,
+  } as any)
 const AuthenticatedClientOutcomesRoute =
   AuthenticatedClientOutcomesRouteImport.update({
-    id: '/client/outcomes',
-    path: '/client/outcomes',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/outcomes',
+    path: '/outcomes',
+    getParentRoute: () => AuthenticatedClientRouteRoute,
+  } as any)
+const AuthenticatedClientReportsRoute =
+  AuthenticatedClientReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedClientRouteRoute,
+  } as any)
+const AuthenticatedClientScanRoute = AuthenticatedClientScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
+  getParentRoute: () => AuthenticatedClientRouteRoute,
+} as any)
+const AuthenticatedClientSettingsRoute =
+  AuthenticatedClientSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedClientRouteRoute,
   } as any)
 const AuthenticatedInvestigatorCasesRoute =
   AuthenticatedInvestigatorCasesRouteImport.update({
@@ -424,6 +458,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/responsible-use': typeof ResponsibleUseRoute
   '/terms': typeof TermsRoute
+  '/client': typeof AuthenticatedClientRouteRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
@@ -443,7 +478,11 @@ export interface FileRoutesByFullPath {
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
+  '/client/dashboard': typeof AuthenticatedClientDashboardRoute
   '/client/outcomes': typeof AuthenticatedClientOutcomesRoute
+  '/client/reports': typeof AuthenticatedClientReportsRoute
+  '/client/scan': typeof AuthenticatedClientScanRoute
+  '/client/settings': typeof AuthenticatedClientSettingsRoute
   '/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
   '/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
   '/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
@@ -488,6 +527,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/responsible-use': typeof ResponsibleUseRoute
   '/terms': typeof TermsRoute
+  '/client': typeof AuthenticatedClientRouteRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
@@ -507,7 +547,11 @@ export interface FileRoutesByTo {
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
+  '/client/dashboard': typeof AuthenticatedClientDashboardRoute
   '/client/outcomes': typeof AuthenticatedClientOutcomesRoute
+  '/client/reports': typeof AuthenticatedClientReportsRoute
+  '/client/scan': typeof AuthenticatedClientScanRoute
+  '/client/settings': typeof AuthenticatedClientSettingsRoute
   '/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
   '/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
   '/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
@@ -554,6 +598,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/responsible-use': typeof ResponsibleUseRoute
   '/terms': typeof TermsRoute
+  '/_authenticated/client': typeof AuthenticatedClientRouteRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
@@ -573,7 +618,11 @@ export interface FileRoutesById {
   '/_authenticated/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/_authenticated/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/_authenticated/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
+  '/_authenticated/client/dashboard': typeof AuthenticatedClientDashboardRoute
   '/_authenticated/client/outcomes': typeof AuthenticatedClientOutcomesRoute
+  '/_authenticated/client/reports': typeof AuthenticatedClientReportsRoute
+  '/_authenticated/client/scan': typeof AuthenticatedClientScanRoute
+  '/_authenticated/client/settings': typeof AuthenticatedClientSettingsRoute
   '/_authenticated/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
   '/_authenticated/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
   '/_authenticated/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
@@ -620,6 +669,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/responsible-use'
     | '/terms'
+    | '/client'
     | '/dashboard'
     | '/history'
     | '/homepage-preview'
@@ -639,7 +689,11 @@ export interface FileRouteTypes {
     | '/admin/investigators'
     | '/admin/staff'
     | '/admin/staff-activity'
+    | '/client/dashboard'
     | '/client/outcomes'
+    | '/client/reports'
+    | '/client/scan'
+    | '/client/settings'
     | '/investigator/cases'
     | '/investigator/login'
     | '/investigator/profile'
@@ -684,6 +738,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/responsible-use'
     | '/terms'
+    | '/client'
     | '/dashboard'
     | '/history'
     | '/homepage-preview'
@@ -703,7 +758,11 @@ export interface FileRouteTypes {
     | '/admin/investigators'
     | '/admin/staff'
     | '/admin/staff-activity'
+    | '/client/dashboard'
     | '/client/outcomes'
+    | '/client/reports'
+    | '/client/scan'
+    | '/client/settings'
     | '/investigator/cases'
     | '/investigator/login'
     | '/investigator/profile'
@@ -749,6 +808,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/responsible-use'
     | '/terms'
+    | '/_authenticated/client'
     | '/_authenticated/dashboard'
     | '/_authenticated/history'
     | '/_authenticated/homepage-preview'
@@ -768,7 +828,11 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/investigators'
     | '/_authenticated/admin/staff'
     | '/_authenticated/admin/staff-activity'
+    | '/_authenticated/client/dashboard'
     | '/_authenticated/client/outcomes'
+    | '/_authenticated/client/reports'
+    | '/_authenticated/client/scan'
+    | '/_authenticated/client/settings'
     | '/_authenticated/investigator/cases'
     | '/_authenticated/investigator/login'
     | '/_authenticated/investigator/profile'
@@ -888,6 +952,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/client': {
+      id: '/_authenticated/client'
+      path: '/client'
+      fullPath: '/client'
+      preLoaderRoute: typeof AuthenticatedClientRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
@@ -1022,12 +1093,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminStaffActivityRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/client/dashboard': {
+      id: '/_authenticated/client/dashboard'
+      path: '/dashboard'
+      fullPath: '/client/dashboard'
+      preLoaderRoute: typeof AuthenticatedClientDashboardRouteImport
+      parentRoute: typeof AuthenticatedClientRouteRoute
+    }
     '/_authenticated/client/outcomes': {
       id: '/_authenticated/client/outcomes'
-      path: '/client/outcomes'
+      path: '/outcomes'
       fullPath: '/client/outcomes'
       preLoaderRoute: typeof AuthenticatedClientOutcomesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedClientRouteRoute
+    }
+    '/_authenticated/client/reports': {
+      id: '/_authenticated/client/reports'
+      path: '/reports'
+      fullPath: '/client/reports'
+      preLoaderRoute: typeof AuthenticatedClientReportsRouteImport
+      parentRoute: typeof AuthenticatedClientRouteRoute
+    }
+    '/_authenticated/client/scan': {
+      id: '/_authenticated/client/scan'
+      path: '/scan'
+      fullPath: '/client/scan'
+      preLoaderRoute: typeof AuthenticatedClientScanRouteImport
+      parentRoute: typeof AuthenticatedClientRouteRoute
+    }
+    '/_authenticated/client/settings': {
+      id: '/_authenticated/client/settings'
+      path: '/settings'
+      fullPath: '/client/settings'
+      preLoaderRoute: typeof AuthenticatedClientSettingsRouteImport
+      parentRoute: typeof AuthenticatedClientRouteRoute
     }
     '/_authenticated/investigator/cases': {
       id: '/_authenticated/investigator/cases'
@@ -1277,6 +1376,28 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedClientRouteRouteChildren {
+  AuthenticatedClientDashboardRoute: typeof AuthenticatedClientDashboardRoute
+  AuthenticatedClientOutcomesRoute: typeof AuthenticatedClientOutcomesRoute
+  AuthenticatedClientReportsRoute: typeof AuthenticatedClientReportsRoute
+  AuthenticatedClientScanRoute: typeof AuthenticatedClientScanRoute
+  AuthenticatedClientSettingsRoute: typeof AuthenticatedClientSettingsRoute
+}
+
+const AuthenticatedClientRouteRouteChildren: AuthenticatedClientRouteRouteChildren =
+  {
+    AuthenticatedClientDashboardRoute: AuthenticatedClientDashboardRoute,
+    AuthenticatedClientOutcomesRoute: AuthenticatedClientOutcomesRoute,
+    AuthenticatedClientReportsRoute: AuthenticatedClientReportsRoute,
+    AuthenticatedClientScanRoute: AuthenticatedClientScanRoute,
+    AuthenticatedClientSettingsRoute: AuthenticatedClientSettingsRoute,
+  }
+
+const AuthenticatedClientRouteRouteWithChildren =
+  AuthenticatedClientRouteRoute._addFileChildren(
+    AuthenticatedClientRouteRouteChildren,
+  )
+
 interface AuthenticatedAdminInvestigatorsRouteChildren {
   AuthenticatedAdminInvestigatorsIdRoute: typeof AuthenticatedAdminInvestigatorsIdRoute
 }
@@ -1307,6 +1428,7 @@ const AuthenticatedAdminStaffRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedClientRouteRoute: typeof AuthenticatedClientRouteRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedHomepagePreviewRoute: typeof AuthenticatedHomepagePreviewRoute
@@ -1323,7 +1445,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminInvestigatorsRoute: typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   AuthenticatedAdminStaffRoute: typeof AuthenticatedAdminStaffRouteWithChildren
   AuthenticatedAdminStaffActivityRoute: typeof AuthenticatedAdminStaffActivityRoute
-  AuthenticatedClientOutcomesRoute: typeof AuthenticatedClientOutcomesRoute
   AuthenticatedInvestigatorCasesRoute: typeof AuthenticatedInvestigatorCasesRoute
   AuthenticatedInvestigatorLoginRoute: typeof AuthenticatedInvestigatorLoginRoute
   AuthenticatedInvestigatorProfileRoute: typeof AuthenticatedInvestigatorProfileRoute
@@ -1348,6 +1469,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedClientRouteRoute: AuthenticatedClientRouteRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedHomepagePreviewRoute: AuthenticatedHomepagePreviewRoute,
@@ -1365,7 +1487,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedAdminInvestigatorsRouteWithChildren,
   AuthenticatedAdminStaffRoute: AuthenticatedAdminStaffRouteWithChildren,
   AuthenticatedAdminStaffActivityRoute: AuthenticatedAdminStaffActivityRoute,
-  AuthenticatedClientOutcomesRoute: AuthenticatedClientOutcomesRoute,
   AuthenticatedInvestigatorCasesRoute: AuthenticatedInvestigatorCasesRoute,
   AuthenticatedInvestigatorLoginRoute: AuthenticatedInvestigatorLoginRoute,
   AuthenticatedInvestigatorProfileRoute: AuthenticatedInvestigatorProfileRoute,

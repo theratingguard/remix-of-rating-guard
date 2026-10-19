@@ -149,9 +149,15 @@ export const scanFetch = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data, context }): Promise<StageResponse> =>
-    submitScanCore(context.supabase, context.userId, data),
-  );
+  .handler(async ({ data, context }): Promise<StageResponse> => {
+    const appMetadata = context.claims["app_metadata"];
+    const isClient =
+      typeof appMetadata === "object" &&
+      appMetadata !== null &&
+      "role" in appMetadata &&
+      appMetadata["role"] === "client";
+    return submitScanCore(context.supabase, context.userId, data, isClient);
+  });
 
 /** Stage 2: analyze review signals, classify risk, prepare report. */
 export const scanAnalyze = createServerFn({ method: "POST" })

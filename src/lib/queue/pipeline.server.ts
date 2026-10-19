@@ -28,12 +28,13 @@ export async function submitWorkerScan(
   userId: string,
   url: string,
   region?: Region,
+  isClient = false,
 ): Promise<StageResponse> {
   if (!validGoogleUrl(url))
     return { ok: false, code: "INVALID_URL", message: "Use an official Google Maps business URL." };
   try {
-    if ((await db.rpc("report_access_level").throwOnError()).data !== "super_admin")
-      throw new Error("Access Denied: detailed scan queue is Super Admin only.");
+    if (!isClient && (await db.rpc("report_access_level").throwOnError()).data !== "super_admin")
+      throw new Error("Access Denied: detailed scan queue is restricted.");
     if ((await queueRedis().ping()) !== "PONG") throw new Error("Redis did not respond.");
     const id = (
       await db.rpc("enqueue_worker_scan", { _url: url, _region: region ?? null }).throwOnError()
