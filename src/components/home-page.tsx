@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
+  AlertTriangle,
   BadgeCheck,
   BarChart3,
   Building2,
@@ -38,6 +39,14 @@ import {
 } from "@/components/ui/dialog";
 import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
 
+const SCAN_STAGES = [
+  "Review received",
+  "Scanning context",
+  "Risk signal found",
+  "Evidence highlighted",
+  "Policy-aligned action",
+];
+
 function Reveal({
   children,
   delay = 0,
@@ -71,6 +80,126 @@ function Reveal({
       className={`transition-all duration-700 motion-reduce:transition-none ${on ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"} ${className}`}
     >
       {children}
+    </div>
+  );
+}
+
+function HeroScanCard() {
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setStage((current) => (current + 1) % SCAN_STAGES.length);
+    }, 1600);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="relative mx-auto w-full max-w-lg">
+      <div
+        aria-hidden="true"
+        className="absolute -inset-8 rounded-[2.5rem] bg-emerald-400/15 blur-3xl"
+      />
+      <div className="absolute -inset-px rounded-[2rem] bg-gradient-to-br from-emerald-300/50 via-emerald-400/10 to-teal-200/30 opacity-80 blur-sm" />
+      <div className="relative overflow-hidden rounded-[2rem] border border-white/20 bg-[#0b1712]/80 p-5 shadow-[0_24px_90px_rgba(16,185,129,0.16)] backdrop-blur-2xl sm:p-7">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-emerald-300/[0.09] to-transparent"
+        />
+        <div className="relative flex items-center gap-3">
+          <div className="grid size-10 place-items-center rounded-xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-300">
+            <ScanSearch className="size-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Example Reviewer</p>
+            <div className="mt-1 flex items-center gap-0.5 text-amber-300">
+              {Array.from({ length: 5 }, (_, i) => (
+                <Star
+                  key={i}
+                  aria-hidden="true"
+                  className={`size-3.5 ${i === 0 ? "fill-current" : "opacity-30"}`}
+                />
+              ))}
+              <span className="ml-1.5 text-[10px] text-slate-400">Example review</span>
+            </div>
+          </div>
+          <span className="ml-auto rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-300">
+            Live scan demo
+          </span>
+        </div>
+
+        <div className="relative mt-5 overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-4">
+          <div className="absolute inset-x-0 top-0 h-px animate-sweep bg-gradient-to-r from-transparent via-emerald-300 to-transparent motion-reduce:animate-none" />
+          <p className="text-sm leading-relaxed text-slate-200">
+            Terrible place.{" "}
+            <span
+              className={`rounded px-1 transition-colors duration-500 ${
+                stage >= 2 ? "bg-amber-300/15 text-amber-100 ring-1 ring-amber-300/20" : ""
+              }`}
+            >
+              Go to BestCleaners.com instead...
+            </span>
+          </p>
+          <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+            <AlertTriangle
+              className={`size-3.5 transition-colors ${
+                stage >= 2 ? "text-amber-300" : "text-slate-500"
+              }`}
+            />
+            Illustrative policy signal — not a final decision
+          </div>
+        </div>
+
+        <ol aria-label="Example scan progress" className="mt-5 space-y-2.5">
+          {SCAN_STAGES.map((step, index) => {
+            const complete = index < stage;
+            const current = index === stage;
+            return (
+              <li
+                key={step}
+                aria-current={current ? "step" : undefined}
+                className={`flex min-h-7 items-center gap-2.5 text-xs transition-all duration-500 ${
+                  current ? "text-white" : complete ? "text-emerald-200/80" : "text-slate-500"
+                }`}
+              >
+                <span
+                  className={`grid size-5 shrink-0 place-items-center rounded-full border transition-all duration-500 ${
+                    complete
+                      ? "border-emerald-300/40 bg-emerald-300/15 text-emerald-300"
+                      : current
+                        ? "animate-pulse border-emerald-300/60 bg-emerald-300/20 text-emerald-200"
+                        : "border-white/10 bg-white/[0.03] text-slate-600"
+                  }`}
+                >
+                  {index === 2 ? (
+                    <AlertTriangle className="size-3" />
+                  ) : complete ? (
+                    <Check className="size-3" />
+                  ) : (
+                    <span className="size-1 rounded-full bg-current" />
+                  )}
+                </span>
+                <span>{step}</span>
+                {current && (
+                  <span className="ml-auto flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300">
+                    <span className="size-1.5 animate-pulse rounded-full bg-emerald-300" />
+                    In progress
+                  </span>
+                )}
+                {index === 2 && stage >= 2 && (
+                  <span className="ml-auto rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
+                    Potential signal
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        <p className="mt-5 border-t border-white/10 pt-4 text-[11px] leading-relaxed text-slate-400">
+          Example only. A negative review is not automatically a policy violation; Google makes the
+          final decision.
+        </p>
+      </div>
     </div>
   );
 }
@@ -201,7 +330,9 @@ function SectionHead({ eyebrow, title, body }: { eyebrow: string; title: string;
   return (
     <Reveal className="mx-auto max-w-2xl text-center">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{eyebrow}</p>
-      <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">{title}</h2>
+      <h2 className="mt-3 text-3xl font-bold tracking-tight drop-shadow-[0_0_18px_rgba(16,185,129,0.12)] md:text-4xl">
+        {title}
+      </h2>
       {body && <p className="mt-4 text-muted-foreground md:text-lg">{body}</p>}
     </Reveal>
   );
@@ -235,13 +366,13 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07110d]/90 text-white backdrop-blur-xl">
         <nav
           aria-label="Main navigation"
-          className="mx-auto flex min-h-16 max-w-7xl items-center gap-3 px-4 sm:px-6"
+          className="mx-auto flex min-h-16 max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-6"
         >
           <a href="#top" className="flex shrink-0 items-center gap-2.5 font-semibold">
             <span className="grid size-9 place-items-center rounded-xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-300">
               <ShieldCheck className="size-5" />
             </span>
-            <span className="font-display text-sm sm:text-base">
+            <span className="hidden font-display text-sm min-[360px]:inline sm:text-base">
               The Rating <span className="text-emerald-300">Guard</span>
             </span>
           </a>
@@ -256,9 +387,23 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
               FAQ
             </a>
           </div>
-          <Button asChild size="sm" className="ml-auto shrink-0 md:ml-0">
-            <Link to="/contact">Book a Call</Link>
-          </Button>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 md:ml-0 sm:gap-2">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-white/20 px-2 text-[10px] sm:px-3 sm:text-xs"
+            >
+              <Link to="/contact">Join as a Reseller</Link>
+            </Button>
+            <Button
+              asChild
+              size="sm"
+              className="px-2 text-[10px] shadow-[0_0_18px_rgba(16,185,129,0.16)] transition-shadow hover:shadow-[0_0_28px_rgba(16,185,129,0.3)] sm:px-3 sm:text-xs"
+            >
+              <Link to="/auth">User Login</Link>
+            </Button>
+          </div>
         </nav>
       </header>
 
@@ -274,10 +419,10 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
                 <ShieldCheck className="size-3.5" />
                 Review intelligence, grounded in evidence
               </p>
-              <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
+              <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight drop-shadow-[0_0_26px_rgba(52,211,153,0.14)] sm:text-5xl lg:text-6xl xl:text-7xl">
                 {heroTitleParts.length > 1 ? `${heroTitleParts[0]}.` : heroTitle}
                 {heroTitleParts.length > 1 && (
-                  <span className="mt-1 block bg-gradient-to-r from-emerald-200 via-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                  <span className="mt-1 block bg-gradient-to-r from-emerald-200 via-emerald-400 to-teal-300 bg-clip-text text-transparent drop-shadow-[0_0_26px_rgba(52,211,153,0.2)]">
                     {heroTitleParts.slice(1).join(". ")}
                   </span>
                 )}
@@ -286,7 +431,11 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
                 {heroSubtitle}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Button asChild size="lg">
+                <Button
+                  asChild
+                  size="lg"
+                  className="shadow-[0_0_24px_rgba(16,185,129,0.22)] transition-shadow hover:shadow-[0_0_34px_rgba(16,185,129,0.38)]"
+                >
                   <Link to="/contact">
                     Book a Call <ArrowRight className="ml-2 size-4" />
                   </Link>
@@ -304,61 +453,45 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
                 No removal promises. Google makes the final decision on every report.
               </p>
             </Reveal>
-            <Reveal delay={150} className="relative mx-auto w-full max-w-lg">
-              <div
-                aria-hidden
-                className="absolute inset-10 rounded-full bg-emerald-400/10 blur-3xl"
-              />
-              <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-2xl backdrop-blur-sm sm:p-7">
-                <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-10 place-items-center rounded-xl bg-emerald-300/10 text-emerald-300">
-                      <ScanSearch className="size-5" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold">Review assessment</p>
-                      <p className="text-xs text-slate-400">Illustrative preview</p>
-                    </div>
-                  </div>
-                  <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-emerald-200">
-                    Evidence first
-                  </span>
-                </div>
-                <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span className="flex text-amber-300" aria-label="1 out of 5 stars">
-                      <Star className="size-3.5 fill-current" />
-                    </span>
-                    Example public review
-                  </div>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-200">
-                    “Terrible place. Go to another business and use this discount code.”
-                  </p>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {[
-                    ["Context reviewed", "Potential promotion signal"],
-                    ["Evidence", "Exact review text highlighted"],
-                    ["Next step", "Human review before action"],
-                  ].map(([label, value], i) => (
-                    <div key={label} className="flex items-start gap-3">
-                      <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-emerald-300/10 text-emerald-300">
-                        <Check className="size-3.5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs text-slate-400">{label}</p>
-                        <p className="mt-0.5 text-sm font-medium text-slate-100">{value}</p>
-                      </div>
-                      <span className="pt-1 text-[10px] text-slate-500">0{i + 1}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-5 border-t border-white/10 pt-4 text-xs leading-relaxed text-slate-400">
-                  Example only. A negative opinion alone is not evidence of a policy violation.
-                </p>
-              </div>
+            <Reveal delay={150}>
+              <HeroScanCard />
             </Reveal>
           </div>
+        </section>
+
+        <section
+          aria-label="Ways to work with Rating Guard"
+          className="mx-auto grid max-w-7xl gap-3 px-4 py-6 sm:px-6 sm:py-8 md:grid-cols-3"
+        >
+          {[
+            {
+              icon: CircleDollarSign,
+              title: "Join as a Reseller",
+              detail: "Sell white-label review removal services and earn high commissions.",
+            },
+            {
+              icon: Eye,
+              title: "Track your own GMB Business",
+              detail: "Monitor your Google reviews and protect your reputation in real-time.",
+            },
+            {
+              icon: BadgeCheck,
+              title: "Join as a Staff",
+              detail: "Be part of the AI-powered reputation engine.",
+            },
+          ].map(({ icon: Icon, title, detail }, index) => (
+            <Reveal key={title} delay={index * 110}>
+              <article className="group flex h-full gap-3 rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-emerald-500/[0.07] to-card p-4 shadow-[0_8px_30px_rgba(16,185,129,0.04)] transition duration-300 hover:-translate-y-1 hover:border-emerald-400/35 hover:shadow-[0_12px_38px_rgba(16,185,129,0.12)] sm:p-5">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-primary/15 bg-primary/10 text-primary transition duration-300 group-hover:shadow-[0_0_18px_rgba(16,185,129,0.25)]">
+                  <Icon className="size-5" />
+                </span>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  <span className="font-semibold text-foreground">{title}</span>
+                  <span className="mt-1 block">{detail}</span>
+                </p>
+              </article>
+            </Reveal>
+          ))}
         </section>
 
         <section aria-label="Our principles" className="border-b border-card-border bg-card/50">
