@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
 import { StaffApprovalScreen } from "@/components/staff-dashboard";
+import { GlobalHeaderControls } from "@/components/global-header-controls";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -140,14 +141,29 @@ function Layout() {
   } = Route.useRouteContext();
   if (isStaff && staffStatus !== "active" && staffStatus !== "approved") {
     return (
-      <StaffApprovalScreen
-        status={staffStatus ?? "pending"}
-        rejectReason={rejectReason}
-        notice={staffNotice}
-      />
+      <div>
+        <header className="flex h-14 items-center justify-end border-b bg-card/80 px-4 sm:px-6">
+          <GlobalHeaderControls userId={user.id} isSuperAdmin={false} isClient={false} />
+        </header>
+        <StaffApprovalScreen
+          status={staffStatus ?? "pending"}
+          rejectReason={rejectReason}
+          notice={staffNotice}
+        />
+      </div>
     );
   }
-  if (isClient || isReseller) return <Outlet />;
+  if (isClient) return <Outlet />;
+  if (isReseller) {
+    return (
+      <div>
+        <header className="flex h-14 items-center justify-end border-b bg-card/80 px-4 sm:px-6">
+          <GlobalHeaderControls userId={user.id} isSuperAdmin={false} isClient={false} />
+        </header>
+        <Outlet />
+      </div>
+    );
+  }
   return (
     <AppShell
       email={user.email ?? "admin"}

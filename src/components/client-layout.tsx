@@ -1,7 +1,6 @@
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Bell,
   LayoutDashboard,
   LogOut,
   ScanLine,
@@ -13,6 +12,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
+import { GlobalHeaderControls } from "@/components/global-header-controls";
 
 const clientNavigation = [
   { to: "/client/dashboard", label: "Dashboard", Icon: LayoutDashboard },
@@ -91,18 +91,7 @@ export function ClientLayout({
           </Link>
           <div className="hidden text-sm text-muted-foreground lg:block">Client workspace</div>
           <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-4">
-            <Link
-              to="/chat"
-              aria-label="Unread chat messages"
-              className="relative rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <Bell className="size-5" />
-              {(unreadChats.data ?? 0) > 0 && (
-                <span className="absolute -mt-8 ml-3 grid size-4 place-items-center rounded-full bg-emerald-600 text-[9px] font-bold text-white">
-                  {unreadChats.data}
-                </span>
-              )}
-            </Link>
+            <GlobalHeaderControls userId={userId} isSuperAdmin={false} isClient />
             <Link
               to="/client/settings"
               className="hidden max-w-56 truncate text-sm text-muted-foreground hover:text-foreground sm:block"
