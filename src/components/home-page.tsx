@@ -98,7 +98,7 @@ function HeroScanCard() {
         />
         <div className="relative flex items-center gap-3">
           <div className="grid size-10 place-items-center rounded-xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-300">
-            <ScanSearch className="size-5" />
+            <ScanSearch className="icon-3d size-5" />
           </div>
           <div>
             <p className="text-sm font-semibold text-white">Example Reviewer</p>
@@ -107,7 +107,7 @@ function HeroScanCard() {
                 <Star
                   key={i}
                   aria-hidden="true"
-                  className={`size-3.5 ${i === 0 ? "fill-current" : "opacity-30"}`}
+                  className={`size-3.5 drop-shadow-[0_0_8px_rgba(251,191,36,0.55)] ${i === 0 ? "fill-current" : "opacity-30"}`}
                 />
               ))}
               <span className="ml-1.5 text-[10px] text-slate-400">Example review</span>
@@ -222,7 +222,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
       : c.heroSubtitle;
   const heroTitleParts = heroTitle.split(". ");
   return (
-    <div className="min-h-screen scroll-smooth overflow-x-clip bg-background text-foreground">
+    <div className="home-premium min-h-screen scroll-smooth overflow-x-clip bg-[#0B1120] text-foreground">
       {preview && (
         <div className="bg-risk-medium/20 py-2 text-center text-sm font-medium">
           Draft preview — not yet published
@@ -234,7 +234,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
         </div>
       )}
 
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07110d]/90 text-white backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0B1120]/90 text-white backdrop-blur-xl">
         <nav
           aria-label="Main navigation"
           className="mx-auto flex min-h-16 max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-6"
@@ -279,7 +279,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
       </header>
 
       <main id="top">
-        <section className="relative isolate overflow-hidden bg-[#07110d] text-white">
+        <section className="relative isolate overflow-hidden bg-[#0B1120] text-white">
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
             <div className="absolute -right-32 -top-48 size-[38rem] rounded-full bg-emerald-500/10 blur-[130px]" />
             <div className="absolute -bottom-64 left-1/4 size-[36rem] rounded-full bg-teal-500/10 blur-[140px]" />
@@ -365,7 +365,10 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
           ))}
         </section>
 
-        <section aria-label="Our principles" className="border-b border-card-border bg-card/50">
+        <section
+          aria-label="Our principles"
+          className="border-b border-card-border bg-[#0B1120]/90"
+        >
           <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-4 py-6 text-xs font-medium text-muted-foreground sm:px-6 sm:text-sm md:grid-cols-4">
             {[
               [BadgeCheck, "Evidence-based"],
@@ -391,7 +394,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
             body="Choose the path that fits you. Each next step uses the appropriate existing application or contact flow."
           />
           <div className="mt-10 grid gap-5 md:grid-cols-3">
-            <Reveal className="group rounded-3xl border border-card-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/40 sm:p-8">
+            <Reveal className="home-glass-card group rounded-3xl border border-emerald-400/20 bg-slate-950/45 p-6 transition hover:-translate-y-1 hover:border-emerald-300/60 sm:p-8">
               <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                 <CircleDollarSign className="size-6" />
               </span>
@@ -408,7 +411,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
             </Reveal>
             <Reveal
               delay={100}
-              className="group rounded-3xl border border-card-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/40 sm:p-8"
+              className="home-glass-card group rounded-3xl border border-emerald-400/20 bg-slate-950/45 p-6 transition hover:-translate-y-1 hover:border-emerald-300/60 sm:p-8"
             >
               <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                 <BriefcaseBusiness className="size-6" />
@@ -426,7 +429,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
             </Reveal>
             <Reveal
               delay={200}
-              className="group rounded-3xl border border-card-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/40 sm:p-8"
+              className="home-glass-card group rounded-3xl border border-emerald-400/20 bg-slate-950/45 p-6 transition hover:-translate-y-1 hover:border-emerald-300/60 sm:p-8"
             >
               <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                 <BadgeCheck className="size-6" />
@@ -454,8 +457,8 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
               title="Evidence over empty promises."
               body="Review management should be clear about what can be assessed—and who controls the outcome."
             />
-            <div className="mx-auto mt-10 max-w-4xl overflow-hidden rounded-2xl border border-card-border bg-card">
-              <div className="grid grid-cols-[1fr_1fr] bg-muted/50 sm:grid-cols-[1.15fr_1fr_1fr]">
+            <div className="home-glass-card mx-auto mt-10 max-w-4xl overflow-hidden rounded-2xl border border-emerald-400/20 bg-slate-950/45">
+              <div className="grid grid-cols-[1fr_1fr] bg-slate-900/70 sm:grid-cols-[1.15fr_1fr_1fr]">
                 <div className="hidden p-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:block">
                   What matters
                 </div>
@@ -765,7 +768,10 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
                     Send report
                   </span>
                 </div>
-                <Button asChild className="mt-6">
+                <Button
+                  asChild
+                  className="mt-6 shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-shadow hover:shadow-[0_0_30px_rgba(16,185,129,0.36)]"
+                >
                   <Link to="/auth">Explore Reporting</Link>
                 </Button>
               </Reveal>
@@ -847,7 +853,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
         </section>
       </main>
 
-      <footer className="border-t border-card-border bg-card/60">
+      <footer className="border-t border-card-border bg-[#080F1D]/90">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 md:grid-cols-4">
           <div>
             <div className="font-bold">The Rating Guard</div>

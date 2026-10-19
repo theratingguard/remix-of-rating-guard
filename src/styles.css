@@ -360,3 +360,57 @@
     color: black;
   }
 }
+
+.home-premium {
+  --background: #0b1120;
+  --foreground: #f8fafc;
+  --card: rgb(15 28 47 / 78%);
+  --card-foreground: #f8fafc;
+  --popover: #101c2f;
+  --popover-foreground: #f8fafc;
+  --primary: #10b981;
+  --primary-foreground: #04130f;
+  --secondary: #0e1b2d;
+  --secondary-foreground: #f8fafc;
+  --muted: #132238;
+  --muted-foreground: #aab8cb;
+  --accent: rgb(16 185 129 / 16%);
+  --accent-foreground: #6ee7b7;
+  --border: rgb(148 163 184 / 18%);
+  --input: rgb(148 163 184 / 24%);
+  --ring: #10b981;
+  --brand: #10b981;
+  --brand-soft: rgb(16 185 129 / 15%);
+  --sidebar: #0a1423;
+  --sidebar-foreground: #dbe5f2;
+  --sidebar-primary: #10b981;
+  --sidebar-primary-foreground: #04130f;
+  --sidebar-accent: rgb(16 185 129 / 13%);
+  --sidebar-accent-foreground: #6ee7b7;
+  --sidebar-border: rgb(148 163 184 / 16%);
+  --card-border: rgb(16 185 129 / 22%);
+  background-color: #0b1120;
+  color: #f8fafc;
+}
+
+.home-premium .surface,
+.home-premium .home-glass-card {
+  border-color: rgb(16 185 129 / 22%);
+  background:
+    linear-gradient(145deg, rgb(16 185 129 / 5%), transparent 48%),
+    linear-gradient(160deg, rgb(15 28 47 / 88%), rgb(9 17 32 / 82%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 5%),
+    0 0 0 1px rgb(16 185 129 / 5%),
+    0 18px 42px -28px rgb(16 185 129 / 42%);
+  backdrop-filter: blur(18px);
+}
+
+.home-premium .surface:hover,
+.home-premium .home-glass-card:hover {
+  border-color: rgb(110 231 183 / 48%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 7%),
+    0 0 0 1px rgb(16 185 129 / 12%),
+    0 18px 44px -24px rgb(16 185 129 / 48%);
+}
