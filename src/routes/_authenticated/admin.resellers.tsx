@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/admin/resellers")({
   component: AdminResellersPage,
 });
 
-function AdminResellersPage() {
+export function AdminResellersPage() {
   const queryClient = useQueryClient();
   const profilesQuery = useQuery({
     queryKey: ["admin", "reseller-profiles"],

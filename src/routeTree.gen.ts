@@ -38,6 +38,7 @@ import { Route as AuthenticatedAdminAssignRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminCaseAssignmentRouteImport } from './routes/_authenticated/admin.case-assignment'
 import { Route as AuthenticatedAdminCasesRouteImport } from './routes/_authenticated/admin.cases'
 import { Route as AuthenticatedAdminInvestigatorsRouteImport } from './routes/_authenticated/admin.investigators'
+import { Route as AuthenticatedAdminResellerRouteImport } from './routes/_authenticated/admin.reseller'
 import { Route as AuthenticatedAdminResellersRouteImport } from './routes/_authenticated/admin.resellers'
 import { Route as AuthenticatedAdminStaffRouteImport } from './routes/_authenticated/admin.staff'
 import { Route as AuthenticatedAdminStaffActivityRouteImport } from './routes/_authenticated/admin.staff-activity'
@@ -231,6 +232,12 @@ const AuthenticatedAdminInvestigatorsRoute =
   AuthenticatedAdminInvestigatorsRouteImport.update({
     id: '/admin/investigators',
     path: '/admin/investigators',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminResellerRoute =
+  AuthenticatedAdminResellerRouteImport.update({
+    id: '/admin/reseller',
+    path: '/admin/reseller',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminResellersRoute =
@@ -504,6 +511,7 @@ export interface FileRoutesByFullPath {
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/admin/cases': typeof AuthenticatedAdminCasesRoute
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  '/admin/reseller': typeof AuthenticatedAdminResellerRoute
   '/admin/resellers': typeof AuthenticatedAdminResellersRoute
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
@@ -577,6 +585,7 @@ export interface FileRoutesByTo {
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/admin/cases': typeof AuthenticatedAdminCasesRoute
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  '/admin/reseller': typeof AuthenticatedAdminResellerRoute
   '/admin/resellers': typeof AuthenticatedAdminResellersRoute
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
@@ -652,6 +661,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/_authenticated/admin/cases': typeof AuthenticatedAdminCasesRoute
   '/_authenticated/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  '/_authenticated/admin/reseller': typeof AuthenticatedAdminResellerRoute
   '/_authenticated/admin/resellers': typeof AuthenticatedAdminResellersRoute
   '/_authenticated/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/_authenticated/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
@@ -727,6 +737,7 @@ export interface FileRouteTypes {
     | '/admin/case-assignment'
     | '/admin/cases'
     | '/admin/investigators'
+    | '/admin/reseller'
     | '/admin/resellers'
     | '/admin/staff'
     | '/admin/staff-activity'
@@ -800,6 +811,7 @@ export interface FileRouteTypes {
     | '/admin/case-assignment'
     | '/admin/cases'
     | '/admin/investigators'
+    | '/admin/reseller'
     | '/admin/resellers'
     | '/admin/staff'
     | '/admin/staff-activity'
@@ -874,6 +886,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/case-assignment'
     | '/_authenticated/admin/cases'
     | '/_authenticated/admin/investigators'
+    | '/_authenticated/admin/reseller'
     | '/_authenticated/admin/resellers'
     | '/_authenticated/admin/staff'
     | '/_authenticated/admin/staff-activity'
@@ -1148,6 +1161,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/investigators'
       fullPath: '/admin/investigators'
       preLoaderRoute: typeof AuthenticatedAdminInvestigatorsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/reseller': {
+      id: '/_authenticated/admin/reseller'
+      path: '/admin/reseller'
+      fullPath: '/admin/reseller'
+      preLoaderRoute: typeof AuthenticatedAdminResellerRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/resellers': {
@@ -1523,6 +1543,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminCaseAssignmentRoute: typeof AuthenticatedAdminCaseAssignmentRoute
   AuthenticatedAdminCasesRoute: typeof AuthenticatedAdminCasesRoute
   AuthenticatedAdminInvestigatorsRoute: typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  AuthenticatedAdminResellerRoute: typeof AuthenticatedAdminResellerRoute
   AuthenticatedAdminResellersRoute: typeof AuthenticatedAdminResellersRoute
   AuthenticatedAdminStaffRoute: typeof AuthenticatedAdminStaffRouteWithChildren
   AuthenticatedAdminStaffActivityRoute: typeof AuthenticatedAdminStaffActivityRoute
@@ -1568,6 +1589,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminCasesRoute: AuthenticatedAdminCasesRoute,
   AuthenticatedAdminInvestigatorsRoute:
     AuthenticatedAdminInvestigatorsRouteWithChildren,
+  AuthenticatedAdminResellerRoute: AuthenticatedAdminResellerRoute,
   AuthenticatedAdminResellersRoute: AuthenticatedAdminResellersRoute,
   AuthenticatedAdminStaffRoute: AuthenticatedAdminStaffRouteWithChildren,
   AuthenticatedAdminStaffActivityRoute: AuthenticatedAdminStaffActivityRoute,
