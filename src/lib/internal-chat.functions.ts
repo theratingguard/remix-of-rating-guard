@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { generateInternalChatReply } from "@/lib/internal-chat-ai.server";
 
 const messageInput = z.object({ messageId: z.string().uuid() });
 const editMessageInput = z.object({
@@ -55,33 +56,7 @@ export const requestInternalChatAutoReply = createServerFn({ method: "POST" })
     if (existingError) throw new Error("Could not check for an existing AI reply.");
     if (existing) return { generated: true as const, messageId: existing.id };
 
-    const baseUrl = (
-      process.env["OLLAMA_URL"] ??
-      process.env["OLLAMA_BASE_URL"] ??
-      "http://127.0.0.1:11434"
-    ).replace(/\/+$/, "");
-    const model = process.env["OLLAMA_MODEL"] ?? "llama3.2:3b";
-    const response = await fetch(`${baseUrl}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(15_000),
-      body: JSON.stringify({
-        model,
-        stream: false,
-        options: { num_ctx: 2048, num_predict: 220, temperature: 0.4 },
-        prompt: [
-          "You are Rating Guard's AI support assistant replying on behalf of the Superadmin.",
-          "Be helpful, warm, polite, concise, and truthful. Do not claim to be a human.",
-          "Reply in the same language and writing style as the user.",
-          `User message: ${JSON.stringify(incoming.message)}`,
-          "AI reply:",
-        ].join("\n"),
-      }),
-    });
-    if (!response.ok) throw new Error("The AI assistant is temporarily unavailable.");
-    const payload: unknown = await response.json();
-    const generated = z.object({ response: z.string().trim().min(1).max(4000) }).parse(payload);
-    const reply = generated.response;
+    const reply = await generateInternalChatReply(incoming.message);
 
     const { data: inserted, error: insertError } = await supabaseAdmin
       .from("internal_messages")

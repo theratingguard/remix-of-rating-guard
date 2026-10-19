@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Check,
+  ArrowLeft,
   LoaderCircle,
   LockKeyhole,
   MessageCircle,
@@ -51,6 +52,7 @@ export function InternalChat({
   const removeMessage = useServerFn(removeInternalChatMessage);
   const requestAiReply = useServerFn(requestInternalChatAutoReply);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showMobileContacts, setShowMobileContacts] = useState(false);
   const [superAdminId, setSuperAdminId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -269,15 +271,31 @@ export function InternalChat({
       onCopy={(event) => event.preventDefault()}
       onContextMenu={(event) => event.preventDefault()}
       onDragStart={(event) => event.preventDefault()}
-      className="mx-auto flex h-[calc(100svh-8rem)] min-h-[520px] max-w-7xl select-none overflow-hidden rounded-2xl border bg-card shadow-sm [-webkit-user-drag:none]"
+      className="relative mx-auto flex h-[calc(100svh-8rem)] min-h-[520px] max-w-7xl select-none overflow-hidden rounded-2xl border bg-card shadow-sm [-webkit-user-drag:none]"
     >
       {isSuperAdmin && (
-        <aside className="flex w-72 shrink-0 flex-col border-r sm:w-80">
-          <div className="border-b p-4">
-            <h1 className="font-display text-lg font-bold">Chats</h1>
-            <p className="text-xs text-muted-foreground">
-              Private conversations with account holders
-            </p>
+        <aside
+          className={
+            showMobileContacts
+              ? "absolute inset-0 z-20 flex w-full shrink-0 flex-col border-r bg-card md:relative md:inset-auto md:z-auto md:w-72 lg:w-80"
+              : "hidden shrink-0 flex-col border-r md:flex md:w-72 lg:w-80"
+          }
+        >
+          <div className="flex items-start justify-between gap-3 border-b p-4">
+            <div>
+              <h1 className="font-display text-lg font-bold">Chats</h1>
+              <p className="text-xs text-muted-foreground">
+                Private conversations with account holders
+              </p>
+            </div>
+            <button
+              type="button"
+              className="rounded-md p-2 text-muted-foreground hover:bg-muted md:hidden"
+              aria-label="Back to conversation"
+              onClick={() => setShowMobileContacts(false)}
+            >
+              <ArrowLeft className="size-4" />
+            </button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {contactsQuery.isPending && (
@@ -294,7 +312,10 @@ export function InternalChat({
               <button
                 key={contact.user_id}
                 type="button"
-                onClick={() => setSelectedId(contact.user_id)}
+                onClick={() => {
+                  setSelectedId(contact.user_id);
+                  setShowMobileContacts(false);
+                }}
                 className={`flex w-full items-center gap-3 border-b px-4 py-3 text-left hover:bg-muted/60 ${selectedId === contact.user_id ? "bg-muted" : ""}`}
               >
                 <Avatar name={contact.display_name} url={null} size={40} />
@@ -342,8 +363,20 @@ export function InternalChat({
         </aside>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col bg-[linear-gradient(135deg,hsl(var(--muted)/.35),transparent)]">
+      <div
+        className={`min-w-0 flex-1 flex-col bg-[linear-gradient(135deg,hsl(var(--muted)/.35),transparent)] ${showMobileContacts && isSuperAdmin ? "hidden md:flex" : "flex"}`}
+      >
         <header className="flex min-h-16 items-center gap-3 border-b bg-card px-4 py-3">
+          {isSuperAdmin && (
+            <button
+              type="button"
+              className="shrink-0 rounded-md p-2 text-muted-foreground hover:bg-muted md:hidden"
+              aria-label="Show conversations"
+              onClick={() => setShowMobileContacts(true)}
+            >
+              <MessageCircle className="size-5" />
+            </button>
+          )}
           {isSuperAdmin && activeContact ? (
             <>
               <Avatar name={activeContact.display_name} url={null} size={38} />
