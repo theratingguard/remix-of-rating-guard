@@ -144,7 +144,58 @@ describe("ai orchestrator", () => {
           .filter(([, init]) => !!init?.body)
           .map(([, init]) => JSON.parse(String(init?.body)).model),
       ).toEqual(["llama3.2:3b", "llama3.1:8b"]);
-      expect(timeoutSpy).toHaveBeenCalledWith(60_000);
+      const ollamaTimeouts = timeoutSpy.mock.calls.map(([timeout]) => timeout);
+      expect(ollamaTimeouts[0]).toBe(15_000);
+      expect(ollamaTimeouts[1]).toBeLessThanOrEqual(15_000);
+    } finally {
+      timeoutSpy.mockRestore();
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("caps the total Ollama budget at 15 seconds and falls back to GPT on timeout", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      if (String(input).endsWith("/api/tags")) return Response.json({ models: [] });
+      throw new DOMException("The operation timed out.", "TimeoutError");
+    });
+    const gpt = {
+      analyze: vi.fn(async () => ({
+        violates: false,
+        policy: "none",
+        confidence: 75,
+        evidence: "",
+        source: "gpt" as const,
+      })),
+    };
+    vi.stubEnv("OLLAMA_URL", "http://ollama-test:11434");
+    vi.stubEnv("OLLAMA_TIMEOUT_MS", "60000");
+    vi.stubGlobal("fetch", fetchMock);
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
+
+    try {
+      const result = await analyzeReview(
+        { text: "A detailed account of a normal visit." },
+        {
+          rules: () => ({
+            violates: false,
+            policy: "none",
+            confidence: 0,
+            evidence: "No rule match",
+          }),
+          gpt,
+          track: vi.fn(async () => undefined),
+        },
+      );
+
+      expect(result.source).toBe("gpt");
+      const modelTimeouts = timeoutSpy.mock.calls
+        .map(([timeout]) => timeout)
+        .filter((timeout) => timeout > 1_000);
+      expect(modelTimeouts[0]).toBe(15_000);
+      expect(modelTimeouts[1]).toBeLessThanOrEqual(15_000);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(gpt.analyze).toHaveBeenCalledOnce();
     } finally {
       timeoutSpy.mockRestore();
       vi.unstubAllGlobals();

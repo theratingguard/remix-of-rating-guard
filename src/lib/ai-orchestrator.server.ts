@@ -53,7 +53,7 @@ const ollamaTimeoutMs = () => {
     console.warn("[ai-orchestrator] Invalid OLLAMA_TIMEOUT_MS; using 60000ms.");
     return 60_000;
   }
-  return timeoutMs;
+  return Math.min(timeoutMs, 15_000);
 };
 
 let ollamaAvailability: { checkedAt: number; available: boolean } | undefined;
@@ -117,18 +117,19 @@ async function analyzeWithOllamaModel(
 async function analyzeWithOllama(review: RulesReview): Promise<LayerResult> {
   const model = process.env["OLLAMA_MODEL"] ?? "llama3.2:3b";
   const fallbackModel = process.env["OLLAMA_FALLBACK_MODEL"] ?? "llama3.1:8b";
-  const timeoutMs = ollamaTimeoutMs();
+  const deadline = Date.now() + ollamaTimeoutMs();
   let result: LayerResult;
 
   try {
-    result = await analyzeWithOllamaModel(review, model, timeoutMs);
+    result = await analyzeWithOllamaModel(review, model, Math.max(1, deadline - Date.now()));
   } catch (error) {
-    if (fallbackModel === model) throw error;
+    const remainingMs = deadline - Date.now();
+    if (fallbackModel === model || remainingMs <= 0) throw error;
     console.warn(
       "[ai-orchestrator] Primary Ollama model failed; trying the fallback model.",
       error instanceof Error ? error.message : "Unknown Ollama error",
     );
-    return analyzeWithOllamaModel(review, fallbackModel, timeoutMs);
+    return analyzeWithOllamaModel(review, fallbackModel, remainingMs);
   }
 
   if (result.confidence < 60)
