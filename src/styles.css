@@ -389,6 +389,7 @@
   --sidebar-accent-foreground: #6ee7b7;
   --sidebar-border: rgb(148 163 184 / 16%);
   --card-border: rgb(16 185 129 / 22%);
+  --gradient-aqua: linear-gradient(135deg, #10b981, #10b981);
   background-color: #0b1120;
   color: #f8fafc;
 }
