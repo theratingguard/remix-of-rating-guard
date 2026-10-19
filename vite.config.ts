@@ -13,5 +13,14 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: ["log", "info", "debug"],
+        drop_debugger: true,
+      },
+    },
+  },
   resolve: { tsconfigPaths: true },
 });
