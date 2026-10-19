@@ -37,6 +37,7 @@ import { Route as AuthenticatedTaskManagerRouteImport } from './routes/_authenti
 import { Route as AuthenticatedTeamLeaderRouteImport } from './routes/_authenticated/team-leader'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiScanWorkerRouteImport } from './routes/api/scan-worker'
+import { Route as ResellerRegisterRouteImport } from './routes/reseller.register'
 import { Route as StaffRegisterRouteImport } from './routes/staff.register'
 import { Route as AuthenticatedAdminAssignRouteImport } from './routes/_authenticated/admin.assign'
 import { Route as AuthenticatedAdminCaseAssignmentRouteImport } from './routes/_authenticated/admin.case-assignment'
@@ -44,6 +45,7 @@ import { Route as AuthenticatedAdminCasesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminInvestigatorsRouteImport } from './routes/_authenticated/admin.investigators'
 import { Route as AuthenticatedAdminResellerRouteImport } from './routes/_authenticated/admin.reseller'
 import { Route as AuthenticatedAdminResellersRouteImport } from './routes/_authenticated/admin.resellers'
+import { Route as AuthenticatedAdminSeoAutomationRouteImport } from './routes/_authenticated/admin.seo-automation'
 import { Route as AuthenticatedAdminStaffRouteImport } from './routes/_authenticated/admin.staff'
 import { Route as AuthenticatedAdminStaffActivityRouteImport } from './routes/_authenticated/admin.staff-activity'
 import { Route as AuthenticatedAdminTaskManagerRouteImport } from './routes/_authenticated/admin.task-manager'
@@ -233,6 +235,11 @@ const ApiScanWorkerRoute = ApiScanWorkerRouteImport.update({
   path: '/api/scan-worker',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResellerRegisterRoute = ResellerRegisterRouteImport.update({
+  id: '/reseller/register',
+  path: '/reseller/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaffRegisterRoute = StaffRegisterRouteImport.update({
   id: '/staff/register',
   path: '/staff/register',
@@ -271,6 +278,12 @@ const AuthenticatedAdminResellersRoute =
   AuthenticatedAdminResellersRouteImport.update({
     id: '/admin/resellers',
     path: '/admin/resellers',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminSeoAutomationRoute =
+  AuthenticatedAdminSeoAutomationRouteImport.update({
+    id: '/admin/seo-automation',
+    path: '/admin/seo-automation',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminStaffRoute = AuthenticatedAdminStaffRouteImport.update({
@@ -549,6 +562,7 @@ export interface FileRoutesByFullPath {
   '/team-leader': typeof AuthenticatedTeamLeaderRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
+  '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
@@ -556,6 +570,7 @@ export interface FileRoutesByFullPath {
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/admin/reseller': typeof AuthenticatedAdminResellerRoute
   '/admin/resellers': typeof AuthenticatedAdminResellersRoute
+  '/admin/seo-automation': typeof AuthenticatedAdminSeoAutomationRoute
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
   '/admin/task-manager': typeof AuthenticatedAdminTaskManagerRoute
@@ -629,6 +644,7 @@ export interface FileRoutesByTo {
   '/team-leader': typeof AuthenticatedTeamLeaderRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
+  '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
@@ -636,6 +652,7 @@ export interface FileRoutesByTo {
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/admin/reseller': typeof AuthenticatedAdminResellerRoute
   '/admin/resellers': typeof AuthenticatedAdminResellersRoute
+  '/admin/seo-automation': typeof AuthenticatedAdminSeoAutomationRoute
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
   '/admin/task-manager': typeof AuthenticatedAdminTaskManagerRoute
@@ -711,6 +728,7 @@ export interface FileRoutesById {
   '/_authenticated/team-leader': typeof AuthenticatedTeamLeaderRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
+  '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
   '/_authenticated/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/_authenticated/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
@@ -718,6 +736,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/_authenticated/admin/reseller': typeof AuthenticatedAdminResellerRoute
   '/_authenticated/admin/resellers': typeof AuthenticatedAdminResellersRoute
+  '/_authenticated/admin/seo-automation': typeof AuthenticatedAdminSeoAutomationRoute
   '/_authenticated/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/_authenticated/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
   '/_authenticated/admin/task-manager': typeof AuthenticatedAdminTaskManagerRoute
@@ -793,6 +812,7 @@ export interface FileRouteTypes {
     | '/team-leader'
     | '/api/health'
     | '/api/scan-worker'
+    | '/reseller/register'
     | '/staff/register'
     | '/admin/assign'
     | '/admin/case-assignment'
@@ -800,6 +820,7 @@ export interface FileRouteTypes {
     | '/admin/investigators'
     | '/admin/reseller'
     | '/admin/resellers'
+    | '/admin/seo-automation'
     | '/admin/staff'
     | '/admin/staff-activity'
     | '/admin/task-manager'
@@ -873,6 +894,7 @@ export interface FileRouteTypes {
     | '/team-leader'
     | '/api/health'
     | '/api/scan-worker'
+    | '/reseller/register'
     | '/staff/register'
     | '/admin/assign'
     | '/admin/case-assignment'
@@ -880,6 +902,7 @@ export interface FileRouteTypes {
     | '/admin/investigators'
     | '/admin/reseller'
     | '/admin/resellers'
+    | '/admin/seo-automation'
     | '/admin/staff'
     | '/admin/staff-activity'
     | '/admin/task-manager'
@@ -954,6 +977,7 @@ export interface FileRouteTypes {
     | '/_authenticated/team-leader'
     | '/api/health'
     | '/api/scan-worker'
+    | '/reseller/register'
     | '/staff/register'
     | '/_authenticated/admin/assign'
     | '/_authenticated/admin/case-assignment'
@@ -961,6 +985,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/investigators'
     | '/_authenticated/admin/reseller'
     | '/_authenticated/admin/resellers'
+    | '/_authenticated/admin/seo-automation'
     | '/_authenticated/admin/staff'
     | '/_authenticated/admin/staff-activity'
     | '/_authenticated/admin/task-manager'
@@ -1020,6 +1045,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiScanWorkerRoute: typeof ApiScanWorkerRoute
+  ResellerRegisterRoute: typeof ResellerRegisterRoute
   StaffRegisterRoute: typeof StaffRegisterRoute
   ApiExtensionReportRoute: typeof ApiExtensionReportRouteWithChildren
   ApiExtensionStatusRoute: typeof ApiExtensionStatusRoute
@@ -1232,6 +1258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiScanWorkerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reseller/register': {
+      id: '/reseller/register'
+      path: '/reseller/register'
+      fullPath: '/reseller/register'
+      preLoaderRoute: typeof ResellerRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff/register': {
       id: '/staff/register'
       path: '/staff/register'
@@ -1279,6 +1312,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/resellers'
       fullPath: '/admin/resellers'
       preLoaderRoute: typeof AuthenticatedAdminResellersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/seo-automation': {
+      id: '/_authenticated/admin/seo-automation'
+      path: '/admin/seo-automation'
+      fullPath: '/admin/seo-automation'
+      preLoaderRoute: typeof AuthenticatedAdminSeoAutomationRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/staff': {
@@ -1666,6 +1706,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminInvestigatorsRoute: typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   AuthenticatedAdminResellerRoute: typeof AuthenticatedAdminResellerRoute
   AuthenticatedAdminResellersRoute: typeof AuthenticatedAdminResellersRoute
+  AuthenticatedAdminSeoAutomationRoute: typeof AuthenticatedAdminSeoAutomationRoute
   AuthenticatedAdminStaffRoute: typeof AuthenticatedAdminStaffRouteWithChildren
   AuthenticatedAdminStaffActivityRoute: typeof AuthenticatedAdminStaffActivityRoute
   AuthenticatedAdminTaskManagerRoute: typeof AuthenticatedAdminTaskManagerRoute
@@ -1717,6 +1758,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedAdminInvestigatorsRouteWithChildren,
   AuthenticatedAdminResellerRoute: AuthenticatedAdminResellerRoute,
   AuthenticatedAdminResellersRoute: AuthenticatedAdminResellersRoute,
+  AuthenticatedAdminSeoAutomationRoute: AuthenticatedAdminSeoAutomationRoute,
   AuthenticatedAdminStaffRoute: AuthenticatedAdminStaffRouteWithChildren,
   AuthenticatedAdminStaffActivityRoute: AuthenticatedAdminStaffActivityRoute,
   AuthenticatedAdminTaskManagerRoute: AuthenticatedAdminTaskManagerRoute,
@@ -1772,6 +1814,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiScanWorkerRoute: ApiScanWorkerRoute,
+  ResellerRegisterRoute: ResellerRegisterRoute,
   StaffRegisterRoute: StaffRegisterRoute,
   ApiExtensionReportRoute: ApiExtensionReportRouteWithChildren,
   ApiExtensionStatusRoute: ApiExtensionStatusRoute,

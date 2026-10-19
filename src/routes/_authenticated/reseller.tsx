@@ -13,20 +13,28 @@ import type { Tables } from "@/integrations/supabase/types";
 type ResellerProfile = Tables<"reseller_profiles">;
 type Commission = Pick<
   Tables<"reseller_commissions">,
-  "id" | "referred_user_id" | "amount_paise" | "status" | "created_at"
+  | "id"
+  | "referred_user_id"
+  | "review_removal_order_id"
+  | "amount_cents"
+  | "status"
+  | "hold_until"
+  | "created_at"
 >;
+type Membership = Tables<"reseller_memberships">;
 
 export const Route = createFileRoute("/_authenticated/reseller")({
   component: ResellerDashboard,
 });
 
-function formatRupees(paise: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(paise / 100);
+function formatUsd(cents: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
 function ResellerDashboard() {
   const queryClient = useQueryClient();
   const [mobile, setMobile] = useState("");
+  const [payoutBusy, setPayoutBusy] = useState(false);
   const profileQuery = useQuery({
     queryKey: ["reseller-profile"],
     queryFn: async () => {
@@ -40,11 +48,39 @@ function ResellerDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reseller_commissions")
-        .select("id,referred_user_id,amount_paise,status,created_at")
+        .select(
+          "id,referred_user_id,review_removal_order_id,amount_cents,status,hold_until,created_at",
+        )
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
       return data as Commission[];
+    },
+    refetchInterval: 30_000,
+  });
+  const membershipQuery = useQuery({
+    queryKey: ["reseller-memberships"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reseller_memberships")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data as Membership[];
+    },
+    refetchInterval: 30_000,
+  });
+  const payoutQuery = useQuery({
+    queryKey: ["reseller-payouts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payout_requests")
+        .select("id,amount_cents,status,requested_at")
+        .order("requested_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data;
     },
     refetchInterval: 30_000,
   });
@@ -92,11 +128,42 @@ function ResellerDashboard() {
   }
 
   const referrals = commissionQuery.data ?? [];
-  const credited = referrals.reduce(
-    (total, referral) =>
-      total + (["approved", "paid"].includes(referral.status) ? referral.amount_paise : 0),
+  const referredAccounts = new Set(
+    referrals
+      .filter((item) => item.review_removal_order_id === null)
+      .map((item) => item.referred_user_id),
+  );
+  const earnedCents = referrals.reduce(
+    (total, item) => total + (item.review_removal_order_id ? item.amount_cents : 0),
     0,
   );
+  const availableCents = referrals.reduce(
+    (total, item) => total + (item.status === "available" ? item.amount_cents : 0),
+    0,
+  );
+  const activeMembership = (membershipQuery.data ?? []).find(
+    (membership) => membership.status === "active",
+  );
+
+  async function requestPayout() {
+    if (payoutBusy) return;
+    setPayoutBusy(true);
+    try {
+      const { error } = await supabase.rpc("request_reseller_payout");
+      if (error) throw error;
+      toast.success("Payout request submitted.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["reseller-commissions"] }),
+        queryClient.invalidateQueries({ queryKey: ["reseller-payouts"] }),
+      ]);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Payout request could not be submitted.",
+      );
+    } finally {
+      setPayoutBusy(false);
+    }
+  }
 
   if (profileQuery.isPending) {
     return (
@@ -136,7 +203,7 @@ function ResellerDashboard() {
         </Button>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Card className="hover:translate-y-0">
           <CardContent className="flex items-center gap-4 p-5">
             <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -144,7 +211,7 @@ function ResellerDashboard() {
             </span>
             <div>
               <p className="text-sm text-muted-foreground">Referred accounts</p>
-              <p className="mt-1 text-2xl font-bold">{commissionQuery.data?.length ?? 0}</p>
+              <p className="mt-1 text-2xl font-bold">{referredAccounts.size}</p>
             </div>
           </CardContent>
         </Card>
@@ -154,12 +221,70 @@ function ResellerDashboard() {
               <Wallet className="size-5" />
             </span>
             <div>
-              <p className="text-sm text-muted-foreground">Approved / paid commission</p>
-              <p className="mt-1 text-2xl font-bold">{formatRupees(credited)}</p>
+              <p className="text-sm text-muted-foreground">Recorded removal commissions</p>
+              <p className="mt-1 text-2xl font-bold">{formatUsd(earnedCents)}</p>
             </div>
           </CardContent>
         </Card>
+        <Card className="hover:translate-y-0">
+          <CardContent className="flex items-center justify-between gap-4 p-5">
+            <div>
+              <p className="text-sm text-muted-foreground">Available after 14-day hold</p>
+              <p className="mt-1 text-2xl font-bold">{formatUsd(availableCents)}</p>
+            </div>
+            <Button
+              size="sm"
+              disabled={!activeMembership || payoutBusy || availableCents <= 0}
+              onClick={() => void requestPayout()}
+            >
+              {payoutBusy ? "Requesting…" : "Request payout"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card className="hover:translate-y-0">
+        <CardContent className="p-5 sm:p-7">
+          <h2 className="font-semibold">Membership status</h2>
+          {membershipQuery.error ? (
+            <p role="alert" className="mt-2 text-sm text-destructive">
+              Membership could not be loaded.
+            </p>
+          ) : membershipQuery.isPending ? (
+            <LoaderCircle className="mt-3 size-5 animate-spin" />
+          ) : (membershipQuery.data ?? []).length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              No plan application is recorded yet. Contact the Superadmin to select a plan.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2 text-sm">
+              {membershipQuery.data?.map((membership) => (
+                <li
+                  key={membership.id}
+                  className="flex flex-wrap justify-between gap-2 rounded-lg border p-3"
+                >
+                  <span>
+                    {membership.plan_id.toUpperCase()} · {formatUsd(membership.annual_fee_cents)} /
+                    year · {(membership.commission_bps / 100).toFixed(2)}%
+                  </span>
+                  <span className="capitalize">{membership.status.replaceAll("_", " ")}</span>
+                  {membership.payment_reference && (
+                    <span className="w-full text-xs text-muted-foreground">
+                      Payment recorded: {membership.payment_reference}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {profileQuery.data.status !== "approved" && (
+            <p className="mt-3 text-sm text-amber-700">
+              Your reseller account is {profileQuery.data.status}. Membership activation and payouts
+              require Superadmin approval and independently confirmed payment.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
         <Card className="hover:translate-y-0">
@@ -186,9 +311,9 @@ function ResellerDashboard() {
               </Button>
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Referrals are recorded when a client account is created with this code. Commission
-              amounts are set and approved by the Superadmin; no amount is assumed or automatically
-              paid.
+              A commission is calculated only for an eligible referred client after a removal is
+              verified and the client payment is recorded. It remains unavailable for payout during
+              the 14-day holding period.
             </p>
           </CardContent>
         </Card>
@@ -227,7 +352,7 @@ function ResellerDashboard() {
             <div>
               <h2 className="font-semibold">Referral & commission history</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Only your own referral records are visible here.
+                Only your own referral and commission records are visible.
               </p>
             </div>
             {commissionQuery.isFetching && (
@@ -249,10 +374,12 @@ function ResellerDashboard() {
               <table className="w-full min-w-[540px] text-left text-sm">
                 <thead>
                   <tr className="border-b text-xs text-muted-foreground">
-                    <th className="px-3 py-3 font-medium">Joined</th>
+                    <th className="px-3 py-3 font-medium">Recorded</th>
                     <th className="px-3 py-3 font-medium">Account</th>
+                    <th className="px-3 py-3 font-medium">Type</th>
                     <th className="px-3 py-3 font-medium">Commission</th>
                     <th className="px-3 py-3 font-medium">Status</th>
+                    <th className="px-3 py-3 font-medium">Available after</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -264,13 +391,46 @@ function ResellerDashboard() {
                       <td className="px-3 py-3 font-mono text-xs">
                         …{item.referred_user_id.slice(-8)}
                       </td>
-                      <td className="px-3 py-3">{formatRupees(item.amount_paise)}</td>
+                      <td className="px-3 py-3">
+                        {item.review_removal_order_id ? "Verified removal" : "Referral"}
+                      </td>
+                      <td className="px-3 py-3">
+                        {item.review_removal_order_id ? formatUsd(item.amount_cents) : "—"}
+                      </td>
                       <td className="px-3 py-3 capitalize">{item.status}</td>
+                      <td className="px-3 py-3">
+                        {item.hold_until ? new Date(item.hold_until).toLocaleDateString() : "—"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          )}
+        </CardContent>
+      </Card>
+      <Card className="hover:translate-y-0">
+        <CardContent className="p-5 sm:p-7">
+          <h2 className="font-semibold">Payout history</h2>
+          {payoutQuery.error ? (
+            <p role="alert" className="mt-2 text-sm text-destructive">
+              Payout history could not be loaded.
+            </p>
+          ) : payoutQuery.isPending ? (
+            <LoaderCircle className="mt-3 size-5 animate-spin" />
+          ) : (payoutQuery.data ?? []).length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              No payout requests have been submitted.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2 text-sm">
+              {payoutQuery.data?.map((payout) => (
+                <li key={payout.id} className="flex justify-between gap-3 rounded-lg border p-3">
+                  <span>{formatUsd(payout.amount_cents)}</span>
+                  <span className="capitalize">{payout.status}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>

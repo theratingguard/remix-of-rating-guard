@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import type { Scan, Report, AnalyzedReview } from "@/lib/data";
 import { isFlagged } from "@/lib/data";
 import { generateSelectedReport } from "@/lib/review-selection.functions";
@@ -31,6 +32,20 @@ export function ReviewSelection({
   const [busy, setBusy] = useState(false);
   const generate = useServerFn(generateSelectedReport);
   const queryClient = useQueryClient();
+  const [orderBusy, setOrderBusy] = useState(false);
+  const ordersQuery = useQuery({
+    queryKey: ["review-removal-orders", scan.id],
+    enabled: scan.status === "complete" && !scan.is_seed,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("review_removal_orders")
+        .select("id,review_id,status,price_cents,created_at")
+        .eq("scan_id", scan.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
   const metadata = report?.report_data;
   const object =
     metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {};
@@ -70,6 +85,27 @@ export function ReviewSelection({
       toast.error(error instanceof Error ? error.message : "Could not generate selected report.");
     } finally {
       setBusy(false);
+    }
+  }
+  async function requestRemoval() {
+    const alreadyRequested = new Set((ordersQuery.data ?? []).map((order) => order.review_id));
+    const reviewIds = [...selected].filter((id) => !alreadyRequested.has(id));
+    if (orderBusy || reviewIds.length === 0 || reviewIds.length > 50) return;
+    setOrderBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("submit_review_removal_orders", {
+        _scan_id: scan.id,
+        _review_ids: reviewIds,
+      });
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["review-removal-orders", scan.id] });
+      toast.success(`${data} request(s) recorded. No payment was collected.`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Removal requests could not be recorded.",
+      );
+    } finally {
+      setOrderBusy(false);
     }
   }
   if (scan.is_seed || scan.status !== "complete") return null;
@@ -123,6 +159,47 @@ export function ReviewSelection({
             ? "Generating selected requests and PDF..."
             : "Prepare reports for selected reviews"}
         </Button>
+      </div>
+      <div className="mb-5 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <h3 className="font-semibold">Optional review-removal service: $49 per review</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Requesting is free. Payment is due only after an administrator records a verified Google
+          removal and independently confirms that payment was received. Google makes the final
+          decision; Rating Guard does not submit or verify reviews automatically.
+        </p>
+        <Button
+          className="mt-3"
+          disabled={
+            orderBusy ||
+            ordersQuery.isPending ||
+            Boolean(ordersQuery.error) ||
+            selected.size === 0 ||
+            selected.size > 50 ||
+            [...selected].every((id) =>
+              (ordersQuery.data ?? []).some((order) => order.review_id === id),
+            )
+          }
+          onClick={() => void requestRemoval()}
+        >
+          {orderBusy
+            ? "Submitting request…"
+            : `Request removal for selected (${selected.size} × $49)`}
+        </Button>
+        {ordersQuery.error && (
+          <p role="alert" className="mt-2 text-sm text-destructive">
+            Existing removal requests could not be checked, so a new request is disabled.
+          </p>
+        )}
+        {(ordersQuery.data ?? []).length > 0 && (
+          <ul className="mt-3 space-y-1 text-sm">
+            {ordersQuery.data?.map((order) => (
+              <li key={order.id} className="flex flex-wrap justify-between gap-2">
+                <span>Review …{order.review_id.slice(-8)}</span>
+                <span className="capitalize">{order.status.replaceAll("_", " ")}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div className="space-y-3">
         {visible.map((review) => {

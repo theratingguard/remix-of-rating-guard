@@ -10,6 +10,207 @@ export type Database = {
   };
   public: {
     Tables: {
+      seo_worker_runs: {
+        Row: {
+          id: string;
+          status: "running" | "completed" | "failed";
+          started_at: string;
+          finished_at: string | null;
+          tasks_completed: number;
+          audit_pages: number;
+          issue_count: number;
+          error: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          status: "running" | "completed" | "failed";
+          started_at?: string;
+          finished_at?: string | null;
+          tasks_completed?: number;
+          audit_pages?: number;
+          issue_count?: number;
+          error?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: "running" | "completed" | "failed";
+          finished_at?: string | null;
+          tasks_completed?: number;
+          audit_pages?: number;
+          issue_count?: number;
+          error?: string | null;
+        };
+        Relationships: [];
+      };
+      seo_audit_issues: {
+        Row: {
+          id: string;
+          run_id: string | null;
+          page_url: string;
+          issue_type: "page_unreachable" | "missing_title" | "missing_description" | "broken_link";
+          severity: "low" | "medium" | "high";
+          details: Json;
+          status: "open" | "resolved" | "ignored";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          run_id?: string | null;
+          page_url: string;
+          issue_type: "page_unreachable" | "missing_title" | "missing_description" | "broken_link";
+          severity: "low" | "medium" | "high";
+          details?: Json;
+          status?: "open" | "resolved" | "ignored";
+          created_at?: string;
+        };
+        Update: { status?: "open" | "resolved" | "ignored" };
+        Relationships: [];
+      };
+      seo_content_drafts: {
+        Row: {
+          id: string;
+          title: string;
+          target_keyword: string;
+          outline: Json;
+          status: "pending" | "approved" | "rejected";
+          approved_by: string | null;
+          approved_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          target_keyword: string;
+          outline: Json;
+          status?: "pending" | "approved" | "rejected";
+          approved_by?: string | null;
+          approved_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: "pending" | "approved" | "rejected";
+          approved_by?: string | null;
+          approved_at?: string | null;
+        };
+        Relationships: [];
+      };
+      seo_meta_suggestions: {
+        Row: {
+          id: string;
+          page_url: string;
+          current_title: string | null;
+          proposed_title: string;
+          current_description: string | null;
+          proposed_description: string;
+          status: "pending" | "approved" | "rejected";
+          approved_by: string | null;
+          approved_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          page_url: string;
+          current_title?: string | null;
+          proposed_title: string;
+          current_description?: string | null;
+          proposed_description: string;
+          status?: "pending" | "approved" | "rejected";
+          approved_by?: string | null;
+          approved_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: "pending" | "approved" | "rejected";
+          approved_by?: string | null;
+          approved_at?: string | null;
+        };
+        Relationships: [];
+      };
+      seo_link_suggestions: {
+        Row: {
+          id: string;
+          source_url: string;
+          target_url: string;
+          anchor_text: string;
+          rationale: string;
+          status: "pending" | "approved" | "rejected";
+          approved_by: string | null;
+          approved_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          source_url: string;
+          target_url: string;
+          anchor_text: string;
+          rationale: string;
+          status?: "pending" | "approved" | "rejected";
+          approved_by?: string | null;
+          approved_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: "pending" | "approved" | "rejected";
+          approved_by?: string | null;
+          approved_at?: string | null;
+        };
+        Relationships: [];
+      };
+      seo_leads: {
+        Row: {
+          id: string;
+          source: "openstreetmap" | "google_places";
+          source_id: string;
+          business_name: string;
+          rating: number | null;
+          review_count: number | null;
+          category: string | null;
+          address: string | null;
+          website_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          source: "openstreetmap" | "google_places";
+          source_id: string;
+          business_name: string;
+          rating?: number | null;
+          review_count?: number | null;
+          category?: string | null;
+          address?: string | null;
+          website_url?: string | null;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      seo_search_keywords: {
+        Row: {
+          id: string;
+          source: "search_console" | "manual";
+          query: string;
+          page_url: string | null;
+          clicks: number | null;
+          impressions: number | null;
+          ctr: number | null;
+          average_position: number | null;
+          collected_at: string;
+        };
+        Insert: {
+          id?: string;
+          source: "search_console" | "manual";
+          query: string;
+          page_url?: string | null;
+          clicks?: number | null;
+          impressions?: number | null;
+          ctr?: number | null;
+          average_position?: number | null;
+          collected_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       internal_messages: {
         Row: {
           id: string;
@@ -79,6 +280,7 @@ export type Database = {
           user_id: string;
           referral_code: string;
           mobile: string | null;
+          status: "pending" | "approved" | "rejected" | "suspended";
           created_at: string;
           updated_at: string;
         };
@@ -86,10 +288,75 @@ export type Database = {
           user_id: string;
           referral_code?: string;
           mobile?: string | null;
+          status?: "pending" | "approved" | "rejected" | "suspended";
           created_at?: string;
           updated_at?: string;
         };
-        Update: { mobile?: string | null; updated_at?: string };
+        Update: {
+          mobile?: string | null;
+          status?: "pending" | "approved" | "rejected" | "suspended";
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      reseller_plans: {
+        Row: {
+          id: string;
+          name: string;
+          annual_fee_cents: number;
+          commission_bps: number;
+          is_active: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          name: string;
+          annual_fee_cents: number;
+          commission_bps: number;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          name?: string;
+          annual_fee_cents?: number;
+          commission_bps?: number;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      reseller_memberships: {
+        Row: {
+          id: string;
+          reseller_id: string;
+          plan_id: string;
+          commission_bps: number;
+          status: "pending_payment" | "active" | "expired" | "cancelled" | "rejected";
+          annual_fee_cents: number;
+          payment_reference: string | null;
+          paid_at: string | null;
+          starts_at: string | null;
+          ends_at: string | null;
+          approved_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          reseller_id: string;
+          plan_id: string;
+          commission_bps: number;
+          status?: "pending_payment" | "active" | "expired" | "cancelled" | "rejected";
+          annual_fee_cents: number;
+          payment_reference?: string | null;
+          paid_at?: string | null;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          approved_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Record<string, never>;
         Relationships: [];
       };
       reseller_commissions: {
@@ -98,6 +365,11 @@ export type Database = {
           reseller_id: string;
           referred_user_id: string;
           amount_paise: number;
+          review_removal_order_id: string | null;
+          amount_cents: number;
+          commission_bps: number;
+          hold_until: string | null;
+          payout_request_id: string | null;
           status: string;
           created_at: string;
           updated_at: string;
@@ -107,15 +379,124 @@ export type Database = {
           reseller_id: string;
           referred_user_id: string;
           amount_paise?: number;
+          review_removal_order_id?: string | null;
+          amount_cents?: number;
+          commission_bps?: number;
+          hold_until?: string | null;
+          payout_request_id?: string | null;
           status?: string;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           amount_paise?: number;
+          amount_cents?: number;
+          commission_bps?: number;
+          hold_until?: string | null;
+          payout_request_id?: string | null;
           status?: string;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      review_removal_orders: {
+        Row: {
+          id: string;
+          client_id: string;
+          reseller_id: string | null;
+          scan_id: string;
+          review_id: string;
+          price_cents: number;
+          status:
+            | "requested"
+            | "evidence_prepared"
+            | "submitted_to_google"
+            | "removed_verified"
+            | "not_removed"
+            | "payment_due"
+            | "paid";
+          google_reference: string | null;
+          google_decision_at: string | null;
+          payment_reference: string | null;
+          paid_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          reseller_id?: string | null;
+          scan_id: string;
+          review_id: string;
+          price_cents?: number;
+          status?:
+            | "requested"
+            | "evidence_prepared"
+            | "submitted_to_google"
+            | "removed_verified"
+            | "not_removed"
+            | "payment_due"
+            | "paid";
+          google_reference?: string | null;
+          google_decision_at?: string | null;
+          payment_reference?: string | null;
+          paid_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      payout_requests: {
+        Row: {
+          id: string;
+          reseller_id: string;
+          amount_cents: number;
+          status: "requested" | "approved" | "rejected" | "paid";
+          reviewed_by: string | null;
+          payment_reference: string | null;
+          requested_at: string;
+          reviewed_at: string | null;
+          paid_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          reseller_id: string;
+          amount_cents: number;
+          status?: "requested" | "approved" | "rejected" | "paid";
+          reviewed_by?: string | null;
+          payment_reference?: string | null;
+          requested_at?: string;
+          reviewed_at?: string | null;
+          paid_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      audit_logs: {
+        Row: {
+          id: string;
+          actor_id: string | null;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          details: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_id?: string | null;
+          action: string;
+          entity_type: string;
+          entity_id?: string | null;
+          details?: Json;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
         Relationships: [];
       };
       staff: {
@@ -2194,9 +2575,44 @@ export type Database = {
           user_id: string;
           referral_code: string;
           mobile: string | null;
+          status: "pending" | "approved" | "rejected" | "suspended";
           created_at: string;
           updated_at: string;
         }[];
+      };
+      submit_review_removal_orders: {
+        Args: { _scan_id: string; _review_ids: string[] };
+        Returns: number;
+      };
+      admin_update_review_removal_order: {
+        Args: { _order_id: string; _status: string; _google_reference?: string | null };
+        Returns: string;
+      };
+      admin_confirm_review_payment: {
+        Args: { _order_id: string; _payment_reference: string };
+        Returns: string;
+      };
+      request_reseller_payout: { Args: Record<string, never>; Returns: string };
+      admin_review_payout: {
+        Args: { _payout_id: string; _decision: string; _payment_reference?: string | null };
+        Returns: string;
+      };
+      admin_set_reseller_plan: {
+        Args: {
+          _plan_id: string;
+          _annual_fee_cents: number;
+          _commission_bps: number;
+          _is_active: boolean;
+        };
+        Returns: string;
+      };
+      admin_review_reseller: {
+        Args: { _reseller_id: string; _decision: string };
+        Returns: string;
+      };
+      admin_activate_reseller_membership: {
+        Args: { _membership_id: string; _payment_reference: string };
+        Returns: string;
       };
       can_read_report_owner: { Args: { owner_id: string }; Returns: boolean };
       private_report_summaries: {

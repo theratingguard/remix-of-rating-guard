@@ -67,5 +67,13 @@ module.exports = {
       instances: 2,
       max_memory_restart: "384M",
     },
+    {
+      ...base,
+      name: "seo-worker",
+      script: ".worker-dist/seo.worker.js",
+      instances: 1,
+      exec_mode: "fork",
+      max_memory_restart: "256M",
+    },
   ],
 };

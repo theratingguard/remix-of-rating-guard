@@ -26,8 +26,8 @@ function JoinPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const code = referralCode.trim().toUpperCase();
-    if (!/^RG-[A-Z0-9]{10}$/.test(code)) {
-      setError("Enter the valid referral code shared by your reseller.");
+    if (code && !/^RG-[A-Z0-9]{10}$/.test(code)) {
+      setError("Enter a valid reseller referral code or leave the field blank.");
       return;
     }
     setBusy(true);
@@ -39,7 +39,7 @@ function JoinPage() {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth`,
-          data: { account_type: "client", referral_code: code },
+          data: { account_type: "client", ...(code ? { referral_code: code } : {}) },
         },
       });
       if (signupError) throw signupError;
@@ -69,7 +69,7 @@ function JoinPage() {
           </p>
           <h1 className="mt-2 font-display text-3xl font-bold">Create your client account</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Use the reseller referral code you received to join.
+            Create a direct client account, or add a reseller referral code if you have one.
           </p>
         </div>
         <form onSubmit={(event) => void submit(event)} className="space-y-4">
@@ -91,13 +91,12 @@ function JoinPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="join-referral">Reseller referral code</Label>
+            <Label htmlFor="join-referral">Reseller referral code (optional)</Label>
             <div className="relative">
               <Tag className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="join-referral"
-                required
-                minLength={13}
+                minLength={referralCode ? 13 : undefined}
                 maxLength={13}
                 value={referralCode}
                 onChange={(event) => setReferralCode(event.target.value.toUpperCase())}

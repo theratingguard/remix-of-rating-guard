@@ -39,6 +39,23 @@ Production uses Nitro's Node server behind Nginx/systemd. Build with
 `npm run build`, then run `npm start`. Preserve private environment files and
 the previous output before replacing a deployed build.
 
+## SEO automation
+
+Apply `supabase/migrations/20261020043000_seo_automation.sql` before enabling
+the worker. Build worker entrypoints with `npm run build:workers`; PM2 defines a
+single `seo-worker` process that registers a daily 03:00 UTC BullMQ schedule
+using the existing loopback Redis service. Set `PUBLIC_APP_URL` and, optionally,
+`OLLAMA_URL` / `OLLAMA_MODEL`. Ollama must use local loopback; no paid or remote
+AI provider is used. The worker audits at most 20 sitemap pages, stores results,
+and creates up to two content outlines, five metadata suggestions, and five
+internal-link suggestions per UTC day. Suggestions remain pending until a
+superadmin reviews them and are never automatically published or applied.
+
+The Search Console, GA4, Matomo, OpenStreetMap lead search, and Google Places
+connectors are not active in this build; the admin panel reports them as
+unconfigured/disabled rather than implying a connection. The sitemap and
+robots.txt are generated from the public-route allowlist during `npm run build`.
+
 Apply the application baseline only to a validated empty database. Existing
 deployments apply the additive `20261010130000_content_security.sql` migration:
 it preserves existing homepage content, initializes a missing row, restricts

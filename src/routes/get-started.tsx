@@ -9,7 +9,10 @@ import {
 } from "lucide-react";
 
 type PathTarget =
-  { to: "/join"; search: { ref: string } } | { to: "/contact" } | { to: "/staff/register" };
+  | { to: "/join"; search: { ref: string } }
+  | { to: "/reseller/register" }
+  | { to: "/contact" }
+  | { to: "/staff/register" };
 
 type Path = {
   title: string;
@@ -23,18 +26,18 @@ const paths: Path[] = [
   {
     title: "I am a Business Owner",
     description:
-      "Track your Google Business Profile and review insights. New client accounts currently need a reseller referral code.",
-    action: "Continue to client signup",
+      "Track your Google Business Profile and review insights. Join directly or optionally enter a reseller referral code.",
+    action: "Create client account",
     Icon: BriefcaseBusiness,
     target: { to: "/join", search: { ref: "" } },
   },
   {
     title: "I am a Reseller",
     description:
-      "Explore a white-label partnership and discuss referral commissions with our team.",
-    action: "Contact us about partnering",
+      "Apply for a white-label partnership. Plans start at $99/year; activation requires approval and confirmed payment.",
+    action: "View reseller plans",
     Icon: CircleDollarSign,
-    target: { to: "/contact" },
+    target: { to: "/reseller/register" },
   },
   {
     title: "I am a Staff Member",
@@ -74,6 +77,13 @@ function PathCard({ path, index }: { path: Path; index: number }) {
   if (target.to === "/contact") {
     return (
       <Link to="/contact" className={className} style={style}>
+        {content}
+      </Link>
+    );
+  }
+  if (target.to === "/reseller/register") {
+    return (
+      <Link to="/reseller/register" className={className} style={style}>
         {content}
       </Link>
     );

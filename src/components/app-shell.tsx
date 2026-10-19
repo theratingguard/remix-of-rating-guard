@@ -25,6 +25,7 @@ import {
   GitCommitHorizontal,
   ShieldCheck,
   MessageCircle,
+  Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -45,6 +46,7 @@ const adminNav = [
   { to: "/admin/staff", label: "Staff Approvals", Icon: Users },
   { to: "/admin/team-management", label: "Team Management", Icon: Users },
   { to: "/admin/task-manager", label: "Task Manager", Icon: ClipboardList },
+  { to: "/admin/seo-automation", label: "SEO Automation", Icon: Sparkles },
   { to: "/admin/resellers", label: "Resellers", Icon: CircleDollarSign },
   { to: "/admin/staff-activity", label: "Staff Activity", Icon: Activity },
   { to: "/chat", label: "Chats", Icon: MessageCircle },

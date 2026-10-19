@@ -3,9 +3,25 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import type { Scan, AnalyzedReview } from "@/lib/data";
 import { ReviewSelection } from "./review-selection";
 const generate = vi.fn();
+const { submitRemovalOrders } = vi.hoisted(() => ({
+  submitRemovalOrders: vi.fn(async () => ({ data: 1, error: null })),
+}));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => generate }));
 vi.mock("@tanstack/react-query", () => ({
+  useQuery: () => ({ data: [], isPending: false, error: null }),
   useQueryClient: () => ({ invalidateQueries: vi.fn(async () => {}) }),
+}));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          order: async () => ({ data: [], error: null }),
+        }),
+      }),
+    }),
+    rpc: submitRemovalOrders,
+  },
 }));
 vi.mock("@/lib/review-selection.functions", () => ({ generateSelectedReport: {} }));
 vi.mock("@/lib/private-report.functions", () => ({ downloadPrivateReport: {} }));
@@ -73,5 +89,18 @@ describe("Manual review selection UI", () => {
       data: { scanId: scan.id, reviewIds: reviews.slice(0, 2).map((r) => r.id) },
     });
     expect(screen.getByRole("button", { name: "Preview Selected PDF" })).toBeInTheDocument();
+  });
+
+  it("submits selected removal requests at the stated price without charging", async () => {
+    render(<ReviewSelection scan={scan} reviews={reviews} report={null} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select review by Reviewer 1" }));
+    fireEvent.click(screen.getByRole("button", { name: /Request removal for selected/ }));
+    await waitFor(() =>
+      expect(submitRemovalOrders).toHaveBeenCalledWith("submit_review_removal_orders", {
+        _scan_id: scan.id,
+        _review_ids: ["00000000-0000-4000-8000-000000000001"],
+      }),
+    );
+    expect(screen.getByText(/Requesting is free/)).toBeInTheDocument();
   });
 });
