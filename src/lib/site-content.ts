@@ -33,11 +33,11 @@ export type SiteContent = {
 
 export const DEFAULT_CONTENT: SiteContent = {
   announcement: "",
-  heroTitle: "Understand Your Google Reviews. Protect Your Reputation.",
+  heroTitle: "The review you want gone. Start with the evidence.",
   heroSubtitle:
-    "Identify potentially policy-relevant reviews, understand why they need attention, and take evidence-based action aligned with Google's policies.",
-  ctaPrimary: "Get Started",
-  ctaSecondary: "How It Works",
+    "Understand which reviews may raise a policy concern, see the evidence clearly, and decide on a responsible next step. Google makes every final decision.",
+  ctaPrimary: "Book a Call",
+  ctaSecondary: "See the Process",
   trustStatement:
     "We don't use fake reviews, manipulation, spam networks, or risky shortcuts. Our approach is based on evidence, Google policies, and responsible review management.",
   sections: {
@@ -133,9 +133,9 @@ export const DEFAULT_CONTENT: SiteContent = {
     { label: "Contact", href: "/contact" },
   ],
   socialLinks: [],
-  seoTitle: "Rating Guard Remix — Google Review Intelligence & Risk Analysis",
+  seoTitle: "The Rating Guard — Evidence-led Google Review Intelligence",
   seoDescription:
-    "Understand your Google reviews, see the evidence behind potentially policy-relevant content, and take responsible, policy-aligned action.",
+    "Understand potential policy signals in your Google reviews, see the evidence, and make informed decisions. Google makes all final removal decisions.",
 };
 
 export const mergeContent = (c: unknown): SiteContent => {

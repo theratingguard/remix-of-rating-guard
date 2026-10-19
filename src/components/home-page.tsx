@@ -4,17 +4,23 @@ import {
   ArrowRight,
   BadgeCheck,
   BarChart3,
+  Building2,
+  Check,
+  CircleDollarSign,
   Eye,
   FileText,
   Flag,
   Lock,
+  MessageCircle,
   MessageSquareText,
+  Mic,
   ScanSearch,
   Search,
   Send,
   ShieldCheck,
   Sparkles,
   Star,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,11 +29,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { SiteContent } from "@/lib/site-content";
-import shield from "@/assets/icon-shield.png";
-import scanIcon from "@/assets/icon-scan.png";
-import reportIcon from "@/assets/icon-report.png";
-import alertIcon from "@/assets/icon-alert.png";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
 
 function Reveal({
   children,
@@ -66,101 +75,125 @@ function Reveal({
   );
 }
 
-const STAGES = [
-  "Review received",
-  "Scanning context",
-  "Risk signal found",
-  "Evidence highlighted",
-  "Policy-aligned action",
-];
+function AgentBanner() {
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [showContact, setShowContact] = useState(false);
+  const [typed, setTyped] = useState("");
+  const greeting =
+    "Rating Guard helps you understand potential policy signals and see the evidence behind them.";
 
-function HeroVisual() {
-  const [s, setS] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setS((x) => (x + 1) % STAGES.length), 1600);
-    return () => clearInterval(t);
+    setVoiceSupported("speechSynthesis" in window && "SpeechSynthesisUtterance" in window);
+    let index = 0;
+    const timer = window.setInterval(() => {
+      index += 1;
+      setTyped(greeting.slice(0, index));
+      if (index >= greeting.length) window.clearInterval(timer);
+    }, 28);
+    return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(
+    () => () => {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    },
+    [],
+  );
+
+  function toggleVoice() {
+    if (voiceEnabled) {
+      window.speechSynthesis.cancel();
+      setVoiceEnabled(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(greeting);
+    utterance.onend = () => setVoiceEnabled(false);
+    utterance.onerror = () => setVoiceEnabled(false);
+    setVoiceEnabled(true);
+    window.speechSynthesis.speak(utterance);
+  }
+
   return (
-    <div className="relative mx-auto w-full max-w-md" aria-hidden>
-      <div className="absolute -inset-6 rounded-[2rem] bg-primary/15 blur-3xl" />
-      <img
-        src={scanIcon}
-        alt=""
-        width={120}
-        height={120}
-        loading="lazy"
-        className="icon-3d animate-float absolute -left-14 -top-12 z-10 w-28"
-      />
-      <img
-        src={alertIcon}
-        alt=""
-        width={96}
-        height={96}
-        loading="lazy"
-        className="icon-3d animate-float absolute -bottom-10 -right-10 z-10 w-24 [animation-delay:1.5s]"
-      />
-      <img
-        src={reportIcon}
-        alt=""
-        width={90}
-        height={90}
-        loading="lazy"
-        className="icon-3d animate-float absolute -right-12 -top-8 z-10 w-20 [animation-delay:3s]"
-      />
-      <div className="surface neon-outline relative overflow-hidden p-5">
-        {s === 1 && (
-          <div className="pointer-events-none absolute inset-x-0 h-16 animate-[scan_1.6s_ease-in-out] bg-gradient-to-b from-transparent via-primary/15 to-transparent" />
-        )}
-        <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-full bg-secondary font-semibold text-secondary-foreground">
-            J
-          </div>
-          <div>
-            <div className="text-sm font-semibold">Example reviewer</div>
-            <div className="flex text-star">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <Star key={i} className={`size-3.5 ${i < 1 ? "fill-current" : "opacity-30"}`} />
-              ))}
-            </div>
-          </div>
-          <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            Example
-          </span>
-        </div>
-        <p className="mt-4 text-sm leading-relaxed">
-          Terrible place.{" "}
-          <span
-            className={`rounded px-0.5 transition-colors duration-500 ${s >= 3 ? "bg-risk-high/20 text-risk-high" : ""}`}
+    <section className="relative overflow-hidden border-y border-white/10 bg-[#07110d] py-10 text-white sm:py-14 lg:min-h-[50svh] lg:py-16">
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-[8%] top-1/2 size-72 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[90px]" />
+        <div className="absolute right-[5%] top-0 size-80 rounded-full bg-teal-400/10 blur-[110px]" />
+      </div>
+      <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 md:grid-cols-[0.75fr_1.25fr] lg:gap-16">
+        <div className="flex items-center justify-center">
+          <div
+            aria-hidden="true"
+            className="relative grid size-40 place-items-center rounded-full border border-emerald-300/30 bg-gradient-to-br from-emerald-400/20 via-emerald-700/20 to-transparent shadow-[0_0_80px_rgba(16,185,129,0.2)] sm:size-52"
           >
-            Go to BestCleaners.com instead, use code SAVE20
-          </span>{" "}
-          for a discount!
-        </p>
-        <div className="mt-5 space-y-2">
-          {STAGES.map((st, i) => (
-            <div
-              key={st}
-              className={`flex items-center gap-2 text-xs transition-all duration-500 ${i <= s ? "opacity-100" : "opacity-30"}`}
+            <div className="absolute inset-3 rounded-full border border-emerald-300/20" />
+            <div className="absolute inset-7 animate-pulse rounded-full bg-emerald-400/20 blur-2xl" />
+            <Sparkles className="relative size-12 text-emerald-300 sm:size-16" strokeWidth={1.2} />
+          </div>
+        </div>
+        <div>
+          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
+            <span className="size-2 animate-pulse rounded-full bg-emerald-400" />
+            Rating Guard overview
+          </p>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">
+            Clarity before action.
+          </h2>
+          <p
+            aria-live="polite"
+            className="mt-3 min-h-14 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg"
+          >
+            {typed}
+            <span aria-hidden className="ml-0.5 animate-pulse text-emerald-300">
+              |
+            </span>
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant={voiceEnabled ? "default" : "outline"}
+              onClick={toggleVoice}
+              disabled={!voiceSupported}
+              className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+              aria-pressed={voiceEnabled}
+              aria-label={voiceEnabled ? "Stop spoken overview" : "Listen to spoken overview"}
             >
-              <span
-                className={`size-2 rounded-full ${i < s ? "bg-risk-normal" : i === s ? "animate-pulse bg-primary" : "bg-muted-foreground/40"}`}
-              />
-              {st}
-              {i === 2 && i <= s && (
-                <span className="ml-auto rounded-full bg-risk-high/15 px-2 py-0.5 font-semibold text-risk-high">
-                  High · Promotional
-                </span>
-              )}
-              {i === 4 && i <= s && (
-                <span className="ml-auto rounded-full bg-primary/15 px-2 py-0.5 font-semibold text-primary">
-                  Official Google path
-                </span>
-              )}
-            </div>
-          ))}
+              <Mic className="mr-2 size-4" />
+              {voiceEnabled ? "Stop speaking" : voiceSupported ? "Listen" : "Voice unavailable"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowContact(true)}
+              className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+            >
+              <MessageCircle className="mr-2 size-4" />
+              Talk to our team
+            </Button>
+          </div>
+          <p className="mt-3 text-xs text-slate-400">
+            Scripted overview, not a live AI chat. It does not make automated removal decisions.
+          </p>
         </div>
       </div>
-    </div>
+      <Dialog open={showContact} onOpenChange={setShowContact}>
+        <DialogContent className="border-white/10 bg-[#101b16] text-white sm:max-w-md">
+          <DialogHeader>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+              Next step
+            </p>
+            <DialogTitle className="text-xl">Talk through your review.</DialogTitle>
+            <DialogDescription className="text-slate-300">
+              Share the public review link with our team. We’ll explain what can be assessed and
+              what remains Google’s decision.
+            </DialogDescription>
+          </DialogHeader>
+          <Button asChild className="w-full">
+            <a href="/contact">Contact Rating Guard</a>
+          </Button>
+        </DialogContent>
+      </Dialog>
+    </section>
   );
 }
 
@@ -176,6 +209,16 @@ function SectionHead({ eyebrow, title, body }: { eyebrow: string; title: string;
 
 export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) {
   const faq = c.faq.filter((f) => f.visible);
+  const heroTitle =
+    c.heroTitle === "Understand Your Google Reviews. Protect Your Reputation."
+      ? DEFAULT_CONTENT.heroTitle
+      : c.heroTitle;
+  const heroSubtitle =
+    c.heroSubtitle ===
+    "Identify potentially policy-relevant reviews, understand why they need attention, and take evidence-based action aligned with Google's policies."
+      ? DEFAULT_CONTENT.heroSubtitle
+      : c.heroSubtitle;
+  const heroTitleParts = heroTitle.split(". ");
   return (
     <div className="min-h-screen overflow-x-clip bg-background text-foreground">
       {preview && (
@@ -189,95 +232,246 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
         </div>
       )}
 
-      <header className="glass sticky top-0 z-30 border-x-0 border-t-0">
-        <nav className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
-          <a href="#top" className="flex items-center gap-2 font-bold">
-            <img
-              src={shield}
-              alt=""
-              width={36}
-              height={36}
-              loading="lazy"
-              className="icon-3d size-9"
-            />
-            <span className="hidden font-display sm:inline">
-              The Rating <span className="text-gradient">Guard</span>
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07110d]/90 text-white backdrop-blur-xl">
+        <nav
+          aria-label="Main navigation"
+          className="mx-auto flex min-h-16 max-w-7xl items-center gap-3 px-4 sm:px-6"
+        >
+          <a href="#top" className="flex shrink-0 items-center gap-2.5 font-semibold">
+            <span className="grid size-9 place-items-center rounded-xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-300">
+              <ShieldCheck className="size-5" />
+            </span>
+            <span className="font-display text-sm sm:text-base">
+              The Rating <span className="text-emerald-300">Guard</span>
             </span>
           </a>
-          <div className="ml-auto hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <a href="#how" className="hover:text-foreground">
-              How it works
+          <div className="ml-auto hidden items-center gap-7 text-sm text-slate-300 md:flex">
+            <a href="#how" className="transition hover:text-white">
+              Process
             </a>
-            <a href="#reporting" className="hover:text-foreground">
-              Reports
+            <a href="#comparison" className="transition hover:text-white">
+              Approach
             </a>
-            <a href="#faq" className="hover:text-foreground">
+            <a href="#faq" className="transition hover:text-white">
               FAQ
             </a>
           </div>
-          <div className="ml-auto flex items-center gap-2 md:ml-0">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/staff/register">Register as Staff</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link to="/auth">{c.ctaPrimary}</Link>
-            </Button>
-          </div>
+          <Button asChild size="sm" className="ml-auto shrink-0 md:ml-0">
+            <Link to="/contact">Book a Call</Link>
+          </Button>
         </nav>
       </header>
 
       <main id="top">
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:grid-cols-2 md:py-24">
-          <Reveal>
-            <p className="inline-flex items-center gap-2 rounded-full border border-card-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-              <ShieldCheck className="size-3.5 text-risk-normal" /> Policy-aligned review
-              intelligence
-            </p>
-            <h1 className="mt-5 text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
-              {c.heroTitle.split(". ")[0]}.{" "}
-              <span className="text-gradient">{c.heroTitle.split(". ").slice(1).join(". ")}</span>
-            </h1>
-            <p className="mt-5 text-lg text-muted-foreground">{c.heroSubtitle}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <Link to="/auth">
-                  {c.ctaPrimary} <ArrowRight />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <a href="#how">{c.ctaSecondary}</a>
-              </Button>
-              <Button asChild size="lg" variant="secondary">
-                <Link to="/staff/register">Register as Staff</Link>
-              </Button>
-            </div>
-          </Reveal>
-          <Reveal delay={150}>
-            <HeroVisual />
-          </Reveal>
+        <section className="relative isolate overflow-hidden bg-[#07110d] text-white">
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="absolute -right-32 -top-48 size-[38rem] rounded-full bg-emerald-500/10 blur-[130px]" />
+            <div className="absolute -bottom-64 left-1/4 size-[36rem] rounded-full bg-teal-500/10 blur-[140px]" />
+          </div>
+          <div className="mx-auto grid min-h-[calc(88svh-4rem)] max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16 lg:py-24">
+            <Reveal>
+              <p className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/5 px-3 py-1.5 text-xs font-medium text-emerald-200">
+                <ShieldCheck className="size-3.5" />
+                Review intelligence, grounded in evidence
+              </p>
+              <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
+                {heroTitleParts.length > 1 ? `${heroTitleParts[0]}.` : heroTitle}
+                {heroTitleParts.length > 1 && (
+                  <span className="mt-1 block bg-gradient-to-r from-emerald-200 via-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                    {heroTitleParts.slice(1).join(". ")}
+                  </span>
+                )}
+              </h1>
+              <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+                {heroSubtitle}
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button asChild size="lg">
+                  <Link to="/contact">
+                    Book a Call <ArrowRight className="ml-2 size-4" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                >
+                  <a href="#how">{c.ctaSecondary}</a>
+                </Button>
+              </div>
+              <p className="mt-5 text-xs text-slate-400">
+                No removal promises. Google makes the final decision on every report.
+              </p>
+            </Reveal>
+            <Reveal delay={150} className="relative mx-auto w-full max-w-lg">
+              <div
+                aria-hidden
+                className="absolute inset-10 rounded-full bg-emerald-400/10 blur-3xl"
+              />
+              <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-2xl backdrop-blur-sm sm:p-7">
+                <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="grid size-10 place-items-center rounded-xl bg-emerald-300/10 text-emerald-300">
+                      <ScanSearch className="size-5" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold">Review assessment</p>
+                      <p className="text-xs text-slate-400">Illustrative preview</p>
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-emerald-200">
+                    Evidence first
+                  </span>
+                </div>
+                <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className="flex text-amber-300" aria-label="1 out of 5 stars">
+                      <Star className="size-3.5 fill-current" />
+                    </span>
+                    Example public review
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-200">
+                    “Terrible place. Go to another business and use this discount code.”
+                  </p>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {[
+                    ["Context reviewed", "Potential promotion signal"],
+                    ["Evidence", "Exact review text highlighted"],
+                    ["Next step", "Human review before action"],
+                  ].map(([label, value], i) => (
+                    <div key={label} className="flex items-start gap-3">
+                      <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-emerald-300/10 text-emerald-300">
+                        <Check className="size-3.5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-slate-400">{label}</p>
+                        <p className="mt-0.5 text-sm font-medium text-slate-100">{value}</p>
+                      </div>
+                      <span className="pt-1 text-[10px] text-slate-500">0{i + 1}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-5 border-t border-white/10 pt-4 text-xs leading-relaxed text-slate-400">
+                  Example only. A negative opinion alone is not evidence of a policy violation.
+                </p>
+              </div>
+            </Reveal>
+          </div>
         </section>
 
-        <section className="border-y border-card-border bg-card/60">
-          <div className="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-6 text-sm font-medium sm:grid-cols-5">
+        <section aria-label="Our principles" className="border-b border-card-border bg-card/50">
+          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-4 py-6 text-xs font-medium text-muted-foreground sm:px-6 sm:text-sm md:grid-cols-4">
             {[
-              [BadgeCheck, "Evidence-Based"],
-              [ShieldCheck, "Policy-Aligned"],
-              [Sparkles, "AI-Assisted"],
-              [Lock, "Secure"],
-              [Eye, "Transparent"],
-            ].map(([I, t], i) => {
+              [BadgeCheck, "Evidence-based"],
+              [ShieldCheck, "Policy-aware"],
+              [Sparkles, "AI-assisted"],
+              [Eye, "Human-controlled"],
+            ].map(([I, text]) => {
               const Icon = I as typeof BadgeCheck;
               return (
-                <Reveal
-                  key={t as string}
-                  delay={i * 80}
-                  className="flex items-center justify-center gap-2"
-                >
+                <div key={text as string} className="flex items-center justify-center gap-2">
                   <Icon className="size-4 text-primary" />
-                  {t as string}
-                </Reveal>
+                  {text as string}
+                </div>
               );
             })}
+          </div>
+        </section>
+
+        <AgentBanner />
+
+        <section id="paths" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-20">
+          <SectionHead
+            eyebrow="Choose your path"
+            title="Built for the people protecting reputations."
+            body="Whether you advise businesses or manage one yourself, start with a clear view of the evidence."
+          />
+          <div className="mt-10 grid gap-5 md:grid-cols-2">
+            <Reveal className="group rounded-3xl border border-card-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/40 sm:p-8">
+              <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <Building2 className="size-6" />
+              </span>
+              <h3 className="mt-5 text-xl font-semibold">For agencies</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Review evidence, organize client findings, and create clear reports for the
+                businesses you advise.
+              </p>
+              <Button asChild variant="link" className="mt-4 h-auto p-0">
+                <Link to="/contact">
+                  Discuss an agency workflow <ArrowRight className="ml-2 size-4" />
+                </Link>
+              </Button>
+            </Reveal>
+            <Reveal
+              delay={100}
+              className="group rounded-3xl border border-card-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/40 sm:p-8"
+            >
+              <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <Store className="size-6" />
+              </span>
+              <h3 className="mt-5 text-xl font-semibold">For businesses</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Understand the reviews available for your business and decide what, if anything,
+                merits a closer look.
+              </p>
+              <Button asChild variant="link" className="mt-4 h-auto p-0">
+                <Link to="/auth">
+                  Explore your dashboard <ArrowRight className="ml-2 size-4" />
+                </Link>
+              </Button>
+            </Reveal>
+          </div>
+        </section>
+
+        <section
+          id="comparison"
+          className="scroll-mt-24 border-y border-card-border bg-secondary/30 py-16 sm:py-20"
+        >
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <SectionHead
+              eyebrow="A more considered approach"
+              title="Evidence over empty promises."
+              body="Review management should be clear about what can be assessed—and who controls the outcome."
+            />
+            <div className="mx-auto mt-10 max-w-4xl overflow-hidden rounded-2xl border border-card-border bg-card">
+              <div className="grid grid-cols-[1fr_1fr] bg-muted/50 sm:grid-cols-[1.15fr_1fr_1fr]">
+                <div className="hidden p-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:block">
+                  What matters
+                </div>
+                <div className="p-4 text-sm font-semibold text-muted-foreground">
+                  Ad hoc process
+                </div>
+                <div className="border-l border-card-border p-4 text-sm font-semibold text-primary">
+                  Rating Guard
+                </div>
+              </div>
+              {[
+                ["Review context", "Manual review", "Structured analysis"],
+                ["Evidence trail", "Collected separately", "Shown with each finding"],
+                ["Reporting", "Varies by workflow", "Organized scan reports"],
+                ["Final decision", "Always Google", "Always Google"],
+                ["Outcome promises", "Be cautious of guarantees", "No removal guarantees"],
+              ].map(([item, other, ratingGuard]) => (
+                <div
+                  key={item}
+                  className="grid grid-cols-[1fr_1fr] border-t border-card-border sm:grid-cols-[1.15fr_1fr_1fr]"
+                >
+                  <div className="col-span-2 px-4 pt-3 text-xs font-semibold text-foreground sm:col-span-1 sm:py-4 sm:text-sm">
+                    {item}
+                  </div>
+                  <div className="px-4 pb-3 text-sm text-muted-foreground sm:py-4">{other}</div>
+                  <div className="border-l border-card-border px-4 pb-3 text-sm text-foreground sm:py-4">
+                    {ratingGuard}
+                  </div>
+                </div>
+              ))}
+              <p className="border-t border-card-border px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                Comparison describes workflow differences, not guaranteed results. No success-rate
+                claim is made; outcomes depend on Google’s independent review.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -346,17 +540,21 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
         {c.sections.how && (
           <section id="how" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20">
             <SectionHead eyebrow="How it works" title="Five clear steps, from link to action." />
-            <ol className="mt-12 grid gap-4 md:grid-cols-5">
-              {c.steps.map((st, i) => (
-                <Reveal key={i} delay={i * 120}>
-                  <li className="surface h-full list-none p-5">
-                    <span className="font-mono text-sm font-semibold text-primary">
+            <ol className="relative mx-auto mt-12 max-w-3xl before:absolute before:bottom-6 before:left-5 before:top-6 before:w-px before:bg-border sm:before:left-7">
+              {c.steps.slice(0, 5).map((st, i) => (
+                <li key={`${st.title}-${i}`} className="relative pb-5 last:pb-0">
+                  <Reveal delay={i * 90} className="flex gap-4 sm:gap-6">
+                    <span className="relative z-10 grid size-10 shrink-0 place-items-center rounded-full border border-primary/30 bg-background font-mono text-xs font-semibold text-primary sm:size-14 sm:text-sm">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    <h3 className="mt-2 font-semibold">{st.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{st.body}</p>
-                  </li>
-                </Reveal>
+                    <div className="surface min-w-0 flex-1 rounded-2xl p-4 sm:p-6">
+                      <h3 className="font-semibold">{st.title}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                        {st.body}
+                      </p>
+                    </div>
+                  </Reveal>
+                </li>
               ))}
             </ol>
           </section>
@@ -411,7 +609,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
                       "Go to BestCleaners.com instead"
                     </span>,
                   ],
-                  ["Confidence", "92%"],
+                  ["Assessment", "Example signal — human review needed"],
                   [
                     "Suggested action",
                     "Review evidence, then use Google's official reporting path.",
@@ -429,6 +627,29 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
             </div>
           </section>
         )}
+
+        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
+          <Reveal className="flex flex-col gap-6 rounded-3xl border border-primary/20 bg-primary/5 p-6 sm:p-8 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-2xl">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                <CircleDollarSign className="size-4" />
+                Clear scope, no surprise claims
+              </p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight">
+                Get the details before you decide.
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Pricing is not published on this page. Contact our team for current service details
+                and scope; no outcome or review-removal guarantee is offered.
+              </p>
+            </div>
+            <Button asChild className="shrink-0">
+              <Link to="/contact">
+                Ask about pricing <ArrowRight className="ml-2 size-4" />
+              </Link>
+            </Button>
+          </Reveal>
+        </section>
 
         {c.sections.reply && (
           <section className="mx-auto max-w-6xl px-4 py-20">
@@ -592,7 +813,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Button asChild size="lg" variant="secondary">
-                <Link to="/auth">{c.ctaPrimary}</Link>
+                <Link to="/contact">Book a Call</Link>
               </Button>
               <Button
                 asChild
@@ -610,7 +831,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
       <footer className="border-t border-card-border bg-card/60">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 md:grid-cols-4">
           <div>
-            <div className="font-bold">Review Intelligence</div>
+            <div className="font-bold">The Rating Guard</div>
             <p className="mt-2 text-sm text-muted-foreground">{c.footerTagline}</p>
           </div>
           <div>
@@ -659,7 +880,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
           </div>
         </div>
         <p className="border-t border-card-border py-5 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Review Intelligence. Not affiliated with Google.
+          © {new Date().getFullYear()} The Rating Guard. Not affiliated with Google.
         </p>
       </footer>
     </div>

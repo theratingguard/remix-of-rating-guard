@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { CalendarClock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { loadSiteContent } from "@/lib/site-content";
 
 export const Route = createFileRoute("/contact")({
@@ -49,6 +51,16 @@ function Page() {
         >
           {email}
         </a>
+        <p className="mt-5 text-sm text-muted-foreground">
+          To arrange a call, email us with a few suitable times and a short description of what
+          you’d like to discuss.
+        </p>
+        <Button asChild className="mt-4">
+          <a href={`mailto:${email}?subject=${encodeURIComponent("Request a Rating Guard call")}`}>
+            <CalendarClock className="mr-2 size-4" />
+            Request a call
+          </a>
+        </Button>
         <p className="mt-4 text-xs text-muted-foreground">
           This Service is independent and not affiliated with Google. We cannot remove reviews;
           Google makes all policy decisions.
