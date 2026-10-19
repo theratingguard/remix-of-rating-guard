@@ -1,6 +1,8 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
+
+const mockProfile = vi.hoisted(() => ({ language: "en" }));
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to, ...props }: { children: ReactNode; to: string }) => (
@@ -13,7 +15,6 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (() => {
-    const profile = { language: "en" };
     const notifications = {
       items: [
         {
@@ -27,7 +28,7 @@ vi.mock("@tanstack/react-query", () => ({
       errors: [],
     };
     return ({ queryKey }: { queryKey: string[] }) => ({
-      data: queryKey[0] === "profile" ? profile : notifications,
+      data: queryKey[0] === "profile" ? mockProfile : notifications,
       isPending: false,
       error: null,
     });
@@ -36,7 +37,15 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 
 vi.mock("@/lib/profile", () => ({ profileQuery: () => ({ queryKey: ["profile"] }) }));
-vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    from: () => ({
+      update: () => ({
+        eq: async () => ({ error: null }),
+      }),
+    }),
+  },
+}));
 
 import { GlobalHeaderControls } from "./global-header-controls";
 
@@ -49,5 +58,70 @@ describe("GlobalHeaderControls", () => {
     expect(screen.getByRole("button", { name: "Notifications: 1 new" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Language / भाषा" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Chats" })).toHaveAttribute("href", "/chat");
+  });
+
+  it("translates more than half of representative client page copy", async () => {
+    const pageCopy = [
+      "Your overview",
+      "Track review scans, prepared reports, and confirmed outcomes.",
+      "New scan",
+      "Reviews scanned",
+      "1–2 star reviews",
+      "Reports submitted",
+      "Successful removals",
+      "Recent activity",
+      "Your latest business review scans",
+      "Date",
+      "Business",
+      "Action",
+      "Status",
+      "No scans yet",
+      "Start your first scan",
+      "Your documents",
+      "Search business or report",
+      "No matching reports",
+      "Download PDF",
+      "Previous",
+      "Next",
+      "Account preferences",
+      "Basic profile",
+      "Your name and account email",
+      "Save profile",
+      "Change password",
+      "Current password",
+      "New password",
+      "Confirm new password",
+      "Update password",
+      "Fetching reviews",
+      "AI analysis",
+      "Prepare report",
+    ];
+
+    const measureTranslationCoverage = async (
+      language: "hi" | "mr",
+      translatedSentinel: string,
+    ) => {
+      mockProfile.language = language;
+      const { container, unmount } = render(
+        <GlobalHeaderControls userId={`client-${language}`} isSuperAdmin={false} isClient />,
+      );
+      const fixture = document.createElement("section");
+      for (const copy of pageCopy) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = copy;
+        fixture.append(paragraph);
+      }
+      container.append(fixture);
+
+      await waitFor(() => expect(fixture.textContent).toContain(translatedSentinel));
+      const translatedCount = [...fixture.querySelectorAll("p")].filter(
+        (paragraph, index) => paragraph.textContent !== pageCopy[index],
+      ).length;
+      expect(translatedCount / pageCopy.length).toBeGreaterThanOrEqual(0.5);
+      unmount();
+    };
+
+    await measureTranslationCoverage("hi", "आपका अवलोकन");
+    await measureTranslationCoverage("mr", "तुमचा आढावा");
   });
 });
