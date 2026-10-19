@@ -5,23 +5,20 @@ import {
   AlertTriangle,
   BadgeCheck,
   BarChart3,
-  Building2,
+  BriefcaseBusiness,
   Check,
   CircleDollarSign,
   Eye,
   FileText,
   Flag,
   Lock,
-  MessageCircle,
   MessageSquareText,
-  Mic,
   ScanSearch,
   Search,
   Send,
   ShieldCheck,
   Sparkles,
   Star,
-  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,21 +27,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
 
 const SCAN_STAGES = [
   "Review received",
-  "Scanning context",
-  "Risk signal found",
-  "Evidence highlighted",
-  "Policy-aligned action",
+  "Scanning...",
+  "Evidence found",
+  "Report prepared",
+  "Ready for Google review",
 ];
 
 function Reveal({
@@ -146,7 +136,7 @@ function HeroScanCard() {
                 stage >= 2 ? "text-amber-300" : "text-slate-500"
               }`}
             />
-            Illustrative policy signal — not a final decision
+            Potential policy signal — example only
           </div>
         </div>
 
@@ -196,133 +186,11 @@ function HeroScanCard() {
           })}
         </ol>
         <p className="mt-5 border-t border-white/10 pt-4 text-[11px] leading-relaxed text-slate-400">
-          Example only. A negative review is not automatically a policy violation; Google makes the
-          final decision.
+          AI-assisted evidence is prepared for your review. Nothing is sent automatically; Google
+          makes the final decision.
         </p>
       </div>
     </div>
-  );
-}
-
-function AgentBanner() {
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [voiceSupported, setVoiceSupported] = useState(false);
-  const [showContact, setShowContact] = useState(false);
-  const [typed, setTyped] = useState("");
-  const greeting =
-    "Rating Guard helps you understand potential policy signals and see the evidence behind them.";
-
-  useEffect(() => {
-    setVoiceSupported("speechSynthesis" in window && "SpeechSynthesisUtterance" in window);
-    let index = 0;
-    const timer = window.setInterval(() => {
-      index += 1;
-      setTyped(greeting.slice(0, index));
-      if (index >= greeting.length) window.clearInterval(timer);
-    }, 28);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(
-    () => () => {
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-    },
-    [],
-  );
-
-  function toggleVoice() {
-    if (voiceEnabled) {
-      window.speechSynthesis.cancel();
-      setVoiceEnabled(false);
-      return;
-    }
-    const utterance = new SpeechSynthesisUtterance(greeting);
-    utterance.onend = () => setVoiceEnabled(false);
-    utterance.onerror = () => setVoiceEnabled(false);
-    setVoiceEnabled(true);
-    window.speechSynthesis.speak(utterance);
-  }
-
-  return (
-    <section className="relative overflow-hidden border-y border-white/10 bg-[#07110d] py-10 text-white sm:py-14 lg:min-h-[50svh] lg:py-16">
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[8%] top-1/2 size-72 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[90px]" />
-        <div className="absolute right-[5%] top-0 size-80 rounded-full bg-teal-400/10 blur-[110px]" />
-      </div>
-      <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 md:grid-cols-[0.75fr_1.25fr] lg:gap-16">
-        <div className="flex items-center justify-center">
-          <div
-            aria-hidden="true"
-            className="relative grid size-40 place-items-center rounded-full border border-emerald-300/30 bg-gradient-to-br from-emerald-400/20 via-emerald-700/20 to-transparent shadow-[0_0_80px_rgba(16,185,129,0.2)] sm:size-52"
-          >
-            <div className="absolute inset-3 rounded-full border border-emerald-300/20" />
-            <div className="absolute inset-7 animate-pulse rounded-full bg-emerald-400/20 blur-2xl" />
-            <Sparkles className="relative size-12 text-emerald-300 sm:size-16" strokeWidth={1.2} />
-          </div>
-        </div>
-        <div>
-          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
-            <span className="size-2 animate-pulse rounded-full bg-emerald-400" />
-            Rating Guard overview
-          </p>
-          <h2 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">
-            Clarity before action.
-          </h2>
-          <p
-            aria-live="polite"
-            className="mt-3 min-h-14 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg"
-          >
-            {typed}
-            <span aria-hidden className="ml-0.5 animate-pulse text-emerald-300">
-              |
-            </span>
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant={voiceEnabled ? "default" : "outline"}
-              onClick={toggleVoice}
-              disabled={!voiceSupported}
-              className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-              aria-pressed={voiceEnabled}
-              aria-label={voiceEnabled ? "Stop spoken overview" : "Listen to spoken overview"}
-            >
-              <Mic className="mr-2 size-4" />
-              {voiceEnabled ? "Stop speaking" : voiceSupported ? "Listen" : "Voice unavailable"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowContact(true)}
-              className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-            >
-              <MessageCircle className="mr-2 size-4" />
-              Talk to our team
-            </Button>
-          </div>
-          <p className="mt-3 text-xs text-slate-400">
-            Scripted overview, not a live AI chat. It does not make automated removal decisions.
-          </p>
-        </div>
-      </div>
-      <Dialog open={showContact} onOpenChange={setShowContact}>
-        <DialogContent className="border-white/10 bg-[#101b16] text-white sm:max-w-md">
-          <DialogHeader>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
-              Next step
-            </p>
-            <DialogTitle className="text-xl">Talk through your review.</DialogTitle>
-            <DialogDescription className="text-slate-300">
-              Share the public review link with our team. We’ll explain what can be assessed and
-              what remains Google’s decision.
-            </DialogDescription>
-          </DialogHeader>
-          <Button asChild className="w-full">
-            <a href="/contact">Contact Rating Guard</a>
-          </Button>
-        </DialogContent>
-      </Dialog>
-    </section>
   );
 }
 
@@ -341,17 +209,20 @@ function SectionHead({ eyebrow, title, body }: { eyebrow: string; title: string;
 export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) {
   const faq = c.faq.filter((f) => f.visible);
   const heroTitle =
+    c.heroTitle === "The review you want gone. Start with the evidence." ||
     c.heroTitle === "Understand Your Google Reviews. Protect Your Reputation."
       ? DEFAULT_CONTENT.heroTitle
       : c.heroTitle;
   const heroSubtitle =
     c.heroSubtitle ===
-    "Identify potentially policy-relevant reviews, understand why they need attention, and take evidence-based action aligned with Google's policies."
+      "Understand which reviews may raise a policy concern, see the evidence clearly, and decide on a responsible next step. Google makes every final decision." ||
+    c.heroSubtitle ===
+      "Identify potentially policy-relevant reviews, understand why they need attention, and take evidence-based action aligned with Google's policies."
       ? DEFAULT_CONTENT.heroSubtitle
       : c.heroSubtitle;
   const heroTitleParts = heroTitle.split(". ");
   return (
-    <div className="min-h-screen overflow-x-clip bg-background text-foreground">
+    <div className="min-h-screen scroll-smooth overflow-x-clip bg-background text-foreground">
       {preview && (
         <div className="bg-risk-medium/20 py-2 text-center text-sm font-medium">
           Draft preview — not yet published
@@ -394,14 +265,14 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
               size="sm"
               className="border-white/20 px-2 text-[10px] sm:px-3 sm:text-xs"
             >
-              <Link to="/contact">Join as a Reseller</Link>
+              <Link to="/auth">Login</Link>
             </Button>
             <Button
               asChild
               size="sm"
               className="px-2 text-[10px] shadow-[0_0_18px_rgba(16,185,129,0.16)] transition-shadow hover:shadow-[0_0_28px_rgba(16,185,129,0.3)] sm:px-3 sm:text-xs"
             >
-              <Link to="/auth">User Login</Link>
+              <Link to="/get-started">Get Started</Link>
             </Button>
           </div>
         </nav>
@@ -417,7 +288,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
             <Reveal>
               <p className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/5 px-3 py-1.5 text-xs font-medium text-emerald-200">
                 <ShieldCheck className="size-3.5" />
-                Review intelligence, grounded in evidence
+                Evidence-led support for businesses
               </p>
               <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight drop-shadow-[0_0_26px_rgba(52,211,153,0.14)] sm:text-5xl lg:text-6xl xl:text-7xl">
                 {heroTitleParts.length > 1 ? `${heroTitleParts[0]}.` : heroTitle}
@@ -437,7 +308,7 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
                   className="shadow-[0_0_24px_rgba(16,185,129,0.22)] transition-shadow hover:shadow-[0_0_34px_rgba(16,185,129,0.38)]"
                 >
                   <Link to="/contact">
-                    Book a Call <ArrowRight className="ml-2 size-4" />
+                    Contact Us Now <ArrowRight className="ml-2 size-4" />
                   </Link>
                 </Button>
                 <Button
@@ -446,11 +317,11 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
                   variant="outline"
                   className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
                 >
-                  <a href="#how">{c.ctaSecondary}</a>
+                  <a href="#how">See How It Works</a>
                 </Button>
               </div>
               <p className="mt-5 text-xs text-slate-400">
-                No removal promises. Google makes the final decision on every report.
+                Evidence-led review support. Google makes the final decision on every report.
               </p>
             </Reveal>
             <Reveal delay={150}>
@@ -465,19 +336,19 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
         >
           {[
             {
-              icon: CircleDollarSign,
-              title: "Join as a Reseller",
-              detail: "Sell white-label review removal services and earn high commissions.",
+              icon: AlertTriangle,
+              title: "Challenge harmful reviews",
+              detail: "Prepare an evidence-led report for Google's independent review.",
             },
             {
-              icon: Eye,
-              title: "Track your own GMB Business",
-              detail: "Monitor your Google reviews and protect your reputation in real-time.",
+              icon: ShieldCheck,
+              title: "Protect your reputation",
+              detail: "Understand the reviews available for your business and what they say.",
             },
             {
-              icon: BadgeCheck,
-              title: "Join as a Staff",
-              detail: "Be part of the AI-powered reputation engine.",
+              icon: BarChart3,
+              title: "Build trust with feedback",
+              detail: "Use review insights to support better customer experiences.",
             },
           ].map(({ icon: Icon, title, detail }, index) => (
             <Reveal key={title} delay={index * 110}>
@@ -513,27 +384,25 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
           </div>
         </section>
 
-        <AgentBanner />
-
         <section id="paths" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 sm:py-20">
           <SectionHead
-            eyebrow="Choose your path"
-            title="Built for the people protecting reputations."
-            body="Whether you advise businesses or manage one yourself, start with a clear view of the evidence."
+            eyebrow="For teams and businesses"
+            title="One platform. Three ways to get involved."
+            body="Choose the path that fits you. Each next step uses the appropriate existing application or contact flow."
           />
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
             <Reveal className="group rounded-3xl border border-card-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/40 sm:p-8">
               <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-                <Building2 className="size-6" />
+                <CircleDollarSign className="size-6" />
               </span>
-              <h3 className="mt-5 text-xl font-semibold">For agencies</h3>
+              <h3 className="mt-5 text-xl font-semibold">Join as a Reseller</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Review evidence, organize client findings, and create clear reports for the
-                businesses you advise.
+                White-label review intelligence for agencies. Earn commissions on eligible
+                referrals; contact us to discuss partner terms.
               </p>
               <Button asChild variant="link" className="mt-4 h-auto p-0">
                 <Link to="/contact">
-                  Discuss an agency workflow <ArrowRight className="ml-2 size-4" />
+                  Ask about partnering <ArrowRight className="ml-2 size-4" />
                 </Link>
               </Button>
             </Reveal>
@@ -542,16 +411,33 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
               className="group rounded-3xl border border-card-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/40 sm:p-8"
             >
               <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-                <Store className="size-6" />
+                <BriefcaseBusiness className="size-6" />
               </span>
-              <h3 className="mt-5 text-xl font-semibold">For businesses</h3>
+              <h3 className="mt-5 text-xl font-semibold">Business Owner</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Understand the reviews available for your business and decide what, if anything,
-                merits a closer look.
+                Track your Google Business Profile and review insights. New client accounts
+                currently require a reseller referral code.
               </p>
               <Button asChild variant="link" className="mt-4 h-auto p-0">
-                <Link to="/auth">
-                  Explore your dashboard <ArrowRight className="ml-2 size-4" />
+                <Link to="/join" search={{ ref: "" }}>
+                  Create a client account <ArrowRight className="ml-2 size-4" />
+                </Link>
+              </Button>
+            </Reveal>
+            <Reveal
+              delay={200}
+              className="group rounded-3xl border border-card-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/40 sm:p-8"
+            >
+              <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <BadgeCheck className="size-6" />
+              </span>
+              <h3 className="mt-5 text-xl font-semibold">Join as Staff</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Apply to join the review operations team and support evidence-led case handling.
+              </p>
+              <Button asChild variant="link" className="mt-4 h-auto p-0">
+                <Link to="/staff/register">
+                  Start a staff application <ArrowRight className="ml-2 size-4" />
                 </Link>
               </Button>
             </Reveal>
