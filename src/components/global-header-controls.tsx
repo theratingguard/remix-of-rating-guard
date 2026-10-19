@@ -252,8 +252,7 @@ async function loadNotifications(
     requests.push(
       supabase
         .from("staff")
-        .select("id,name,created_at")
-        .eq("status", "pending")
+        .select("id,name,status,created_at")
         .order("created_at", { ascending: false })
         .limit(10)
         .then(({ data, error }) => {
@@ -264,7 +263,7 @@ async function loadNotifications(
           return data.map((staff) => ({
             id: `staff:${staff.id}`,
             title: "New staff registration",
-            description: `${staff.name} is awaiting approval.`,
+            description: `${staff.name} · ${staff.status}`,
             createdAt: staff.created_at,
             target: "/admin/staff" as const,
           }));
