@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) throw redirect({ to: "/auth" });
     const { data: staff, error: staffError } = await supabase
       .from("staff")
-      .select("id,status,reject_reason,reject_reason_custom")
+      .select("id,status,reject_reason,reject_reason_custom,role,manager_id,team_leader_id")
       .eq("id", data.user.id)
       .maybeSingle();
     if (staffError) throw new Error(`Could not determine staff navigation: ${staffError.message}`);
@@ -20,11 +20,16 @@ export const Route = createFileRoute("/_authenticated")({
       throw new Error(`Could not determine navigation access: ${accessError.message}`);
     const isStaff = Boolean(staff) && accessLevel !== "super_admin";
     const isSuperAdmin = accessLevel === "super_admin";
+    const staffRole = (staff?.role ?? "").toLowerCase().replaceAll("_", " ");
+    const isManager = isStaff && staffRole === "manager";
+    const isTeamLeader = isStaff && ["team leader", "team lead", "tl"].includes(staffRole);
     const role = data.user.app_metadata["role"];
     const isClient = role === "client";
     const isReseller = role === "reseller";
     if (location.pathname === "/dashboard") {
       if (isSuperAdmin) throw redirect({ to: "/admin/staff", replace: true });
+      if (isManager) throw redirect({ to: "/manager", replace: true });
+      if (isTeamLeader) throw redirect({ to: "/team-leader", replace: true });
       if (isStaff) throw redirect({ to: "/staff/today", replace: true });
       if (isClient) throw redirect({ to: "/client/dashboard", replace: true });
       if (isReseller) throw redirect({ to: "/reseller", replace: true });
@@ -102,7 +107,21 @@ export const Route = createFileRoute("/_authenticated")({
       "/staff/cases",
       "/chat",
     ];
-    if (isStaff && !staffPaths.includes(location.pathname)) {
+    const managerPaths = ["/manager", "/task-manager", "/staff/wallet", "/chat"];
+    const teamLeaderPaths = [
+      "/team-leader",
+      "/task-manager",
+      "/staff/tasks",
+      "/staff/wallet",
+      "/staff/today",
+      "/chat",
+    ];
+    if (
+      isStaff &&
+      !staffPaths.includes(location.pathname) &&
+      !(isManager && managerPaths.includes(location.pathname)) &&
+      !(isTeamLeader && teamLeaderPaths.includes(location.pathname))
+    ) {
       throw redirect({ to: "/staff/today" });
     }
     if (
@@ -119,6 +138,9 @@ export const Route = createFileRoute("/_authenticated")({
       isClient,
       isReseller,
       pendingStaffCount,
+      staffRole: staff?.role ?? null,
+      isManager,
+      isTeamLeader,
       staffStatus: staff?.status ?? null,
       rejectReason: staff?.reject_reason_custom ?? staff?.reject_reason ?? null,
       staffNotice,
@@ -134,6 +156,7 @@ function Layout() {
     isSuperAdmin,
     isClient,
     isReseller,
+    staffRole,
     pendingStaffCount,
     staffStatus,
     rejectReason,
@@ -171,6 +194,7 @@ function Layout() {
       isStaff={isStaff}
       isSuperAdmin={isSuperAdmin}
       isClient={isClient}
+      staffRole={staffRole}
       staffPendingCount={pendingStaffCount}
     >
       <Outlet />

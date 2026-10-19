@@ -24,6 +24,7 @@ import { Route as AuthenticatedClientRouteRouteImport } from './routes/_authenti
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedHomepagePreviewRouteImport } from './routes/_authenticated/homepage-preview'
+import { Route as AuthenticatedManagerRouteImport } from './routes/_authenticated/manager'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedRemovalCenterRouteImport } from './routes/_authenticated/removal-center'
 import { Route as AuthenticatedRepliesRouteImport } from './routes/_authenticated/replies'
@@ -32,6 +33,8 @@ import { Route as AuthenticatedScanRouteImport } from './routes/_authenticated/s
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStorageRouteImport } from './routes/_authenticated/storage'
 import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
+import { Route as AuthenticatedTaskManagerRouteImport } from './routes/_authenticated/task-manager'
+import { Route as AuthenticatedTeamLeaderRouteImport } from './routes/_authenticated/team-leader'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiScanWorkerRouteImport } from './routes/api/scan-worker'
 import { Route as StaffRegisterRouteImport } from './routes/staff.register'
@@ -43,6 +46,8 @@ import { Route as AuthenticatedAdminResellerRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminResellersRouteImport } from './routes/_authenticated/admin.resellers'
 import { Route as AuthenticatedAdminStaffRouteImport } from './routes/_authenticated/admin.staff'
 import { Route as AuthenticatedAdminStaffActivityRouteImport } from './routes/_authenticated/admin.staff-activity'
+import { Route as AuthenticatedAdminTaskManagerRouteImport } from './routes/_authenticated/admin.task-manager'
+import { Route as AuthenticatedAdminTeamManagementRouteImport } from './routes/_authenticated/admin.team-management'
 import { Route as AuthenticatedClientDashboardRouteImport } from './routes/_authenticated/client/dashboard'
 import { Route as AuthenticatedClientOutcomesRouteImport } from './routes/_authenticated/client.outcomes'
 import { Route as AuthenticatedClientReportsRouteImport } from './routes/_authenticated/client/reports'
@@ -160,6 +165,11 @@ const AuthenticatedHomepagePreviewRoute =
     path: '/homepage-preview',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedManagerRoute = AuthenticatedManagerRouteImport.update({
+  id: '/manager',
+  path: '/manager',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -202,6 +212,17 @@ const AuthenticatedSubmissionsRoute =
     path: '/submissions',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedTaskManagerRoute =
+  AuthenticatedTaskManagerRouteImport.update({
+    id: '/task-manager',
+    path: '/task-manager',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedTeamLeaderRoute = AuthenticatedTeamLeaderRouteImport.update({
+  id: '/team-leader',
+  path: '/team-leader',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -261,6 +282,18 @@ const AuthenticatedAdminStaffActivityRoute =
   AuthenticatedAdminStaffActivityRouteImport.update({
     id: '/admin/staff-activity',
     path: '/admin/staff-activity',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminTaskManagerRoute =
+  AuthenticatedAdminTaskManagerRouteImport.update({
+    id: '/admin/task-manager',
+    path: '/admin/task-manager',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminTeamManagementRoute =
+  AuthenticatedAdminTeamManagementRouteImport.update({
+    id: '/admin/team-management',
+    path: '/admin/team-management',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedClientDashboardRoute =
@@ -503,6 +536,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
+  '/manager': typeof AuthenticatedManagerRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/removal-center': typeof AuthenticatedRemovalCenterRoute
   '/replies': typeof AuthenticatedRepliesRoute
@@ -511,6 +545,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/storage': typeof AuthenticatedStorageRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
+  '/task-manager': typeof AuthenticatedTaskManagerRoute
+  '/team-leader': typeof AuthenticatedTeamLeaderRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/staff/register': typeof StaffRegisterRoute
@@ -522,6 +558,8 @@ export interface FileRoutesByFullPath {
   '/admin/resellers': typeof AuthenticatedAdminResellersRoute
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
+  '/admin/task-manager': typeof AuthenticatedAdminTaskManagerRoute
+  '/admin/team-management': typeof AuthenticatedAdminTeamManagementRoute
   '/client/dashboard': typeof AuthenticatedClientDashboardRoute
   '/client/outcomes': typeof AuthenticatedClientOutcomesRoute
   '/client/reports': typeof AuthenticatedClientReportsRoute
@@ -578,6 +616,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
+  '/manager': typeof AuthenticatedManagerRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/removal-center': typeof AuthenticatedRemovalCenterRoute
   '/replies': typeof AuthenticatedRepliesRoute
@@ -586,6 +625,8 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/storage': typeof AuthenticatedStorageRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
+  '/task-manager': typeof AuthenticatedTaskManagerRoute
+  '/team-leader': typeof AuthenticatedTeamLeaderRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/staff/register': typeof StaffRegisterRoute
@@ -597,6 +638,8 @@ export interface FileRoutesByTo {
   '/admin/resellers': typeof AuthenticatedAdminResellersRoute
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
+  '/admin/task-manager': typeof AuthenticatedAdminTaskManagerRoute
+  '/admin/team-management': typeof AuthenticatedAdminTeamManagementRoute
   '/client/dashboard': typeof AuthenticatedClientDashboardRoute
   '/client/outcomes': typeof AuthenticatedClientOutcomesRoute
   '/client/reports': typeof AuthenticatedClientReportsRoute
@@ -655,6 +698,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
+  '/_authenticated/manager': typeof AuthenticatedManagerRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/removal-center': typeof AuthenticatedRemovalCenterRoute
   '/_authenticated/replies': typeof AuthenticatedRepliesRoute
@@ -663,6 +707,8 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/storage': typeof AuthenticatedStorageRoute
   '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
+  '/_authenticated/task-manager': typeof AuthenticatedTaskManagerRoute
+  '/_authenticated/team-leader': typeof AuthenticatedTeamLeaderRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/staff/register': typeof StaffRegisterRoute
@@ -674,6 +720,8 @@ export interface FileRoutesById {
   '/_authenticated/admin/resellers': typeof AuthenticatedAdminResellersRoute
   '/_authenticated/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/_authenticated/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
+  '/_authenticated/admin/task-manager': typeof AuthenticatedAdminTaskManagerRoute
+  '/_authenticated/admin/team-management': typeof AuthenticatedAdminTeamManagementRoute
   '/_authenticated/client/dashboard': typeof AuthenticatedClientDashboardRoute
   '/_authenticated/client/outcomes': typeof AuthenticatedClientOutcomesRoute
   '/_authenticated/client/reports': typeof AuthenticatedClientReportsRoute
@@ -732,6 +780,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/homepage-preview'
+    | '/manager'
     | '/profile'
     | '/removal-center'
     | '/replies'
@@ -740,6 +789,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/storage'
     | '/submissions'
+    | '/task-manager'
+    | '/team-leader'
     | '/api/health'
     | '/api/scan-worker'
     | '/staff/register'
@@ -751,6 +802,8 @@ export interface FileRouteTypes {
     | '/admin/resellers'
     | '/admin/staff'
     | '/admin/staff-activity'
+    | '/admin/task-manager'
+    | '/admin/team-management'
     | '/client/dashboard'
     | '/client/outcomes'
     | '/client/reports'
@@ -807,6 +860,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/homepage-preview'
+    | '/manager'
     | '/profile'
     | '/removal-center'
     | '/replies'
@@ -815,6 +869,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/storage'
     | '/submissions'
+    | '/task-manager'
+    | '/team-leader'
     | '/api/health'
     | '/api/scan-worker'
     | '/staff/register'
@@ -826,6 +882,8 @@ export interface FileRouteTypes {
     | '/admin/resellers'
     | '/admin/staff'
     | '/admin/staff-activity'
+    | '/admin/task-manager'
+    | '/admin/team-management'
     | '/client/dashboard'
     | '/client/outcomes'
     | '/client/reports'
@@ -883,6 +941,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/history'
     | '/_authenticated/homepage-preview'
+    | '/_authenticated/manager'
     | '/_authenticated/profile'
     | '/_authenticated/removal-center'
     | '/_authenticated/replies'
@@ -891,6 +950,8 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/storage'
     | '/_authenticated/submissions'
+    | '/_authenticated/task-manager'
+    | '/_authenticated/team-leader'
     | '/api/health'
     | '/api/scan-worker'
     | '/staff/register'
@@ -902,6 +963,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/resellers'
     | '/_authenticated/admin/staff'
     | '/_authenticated/admin/staff-activity'
+    | '/_authenticated/admin/task-manager'
+    | '/_authenticated/admin/team-management'
     | '/_authenticated/client/dashboard'
     | '/_authenticated/client/outcomes'
     | '/_authenticated/client/reports'
@@ -1078,6 +1141,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHomepagePreviewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/manager': {
+      id: '/_authenticated/manager'
+      path: '/manager'
+      fullPath: '/manager'
+      preLoaderRoute: typeof AuthenticatedManagerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -1132,6 +1202,20 @@ declare module '@tanstack/react-router' {
       path: '/submissions'
       fullPath: '/submissions'
       preLoaderRoute: typeof AuthenticatedSubmissionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/task-manager': {
+      id: '/_authenticated/task-manager'
+      path: '/task-manager'
+      fullPath: '/task-manager'
+      preLoaderRoute: typeof AuthenticatedTaskManagerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/team-leader': {
+      id: '/_authenticated/team-leader'
+      path: '/team-leader'
+      fullPath: '/team-leader'
+      preLoaderRoute: typeof AuthenticatedTeamLeaderRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/health': {
@@ -1209,6 +1293,20 @@ declare module '@tanstack/react-router' {
       path: '/admin/staff-activity'
       fullPath: '/admin/staff-activity'
       preLoaderRoute: typeof AuthenticatedAdminStaffActivityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/task-manager': {
+      id: '/_authenticated/admin/task-manager'
+      path: '/admin/task-manager'
+      fullPath: '/admin/task-manager'
+      preLoaderRoute: typeof AuthenticatedAdminTaskManagerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/team-management': {
+      id: '/_authenticated/admin/team-management'
+      path: '/admin/team-management'
+      fullPath: '/admin/team-management'
+      preLoaderRoute: typeof AuthenticatedAdminTeamManagementRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/client/dashboard': {
@@ -1551,6 +1649,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedHomepagePreviewRoute: typeof AuthenticatedHomepagePreviewRoute
+  AuthenticatedManagerRoute: typeof AuthenticatedManagerRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedRemovalCenterRoute: typeof AuthenticatedRemovalCenterRoute
   AuthenticatedRepliesRoute: typeof AuthenticatedRepliesRoute
@@ -1559,6 +1658,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStorageRoute: typeof AuthenticatedStorageRoute
   AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
+  AuthenticatedTaskManagerRoute: typeof AuthenticatedTaskManagerRoute
+  AuthenticatedTeamLeaderRoute: typeof AuthenticatedTeamLeaderRoute
   AuthenticatedAdminAssignRoute: typeof AuthenticatedAdminAssignRoute
   AuthenticatedAdminCaseAssignmentRoute: typeof AuthenticatedAdminCaseAssignmentRoute
   AuthenticatedAdminCasesRoute: typeof AuthenticatedAdminCasesRoute
@@ -1567,6 +1668,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminResellersRoute: typeof AuthenticatedAdminResellersRoute
   AuthenticatedAdminStaffRoute: typeof AuthenticatedAdminStaffRouteWithChildren
   AuthenticatedAdminStaffActivityRoute: typeof AuthenticatedAdminStaffActivityRoute
+  AuthenticatedAdminTaskManagerRoute: typeof AuthenticatedAdminTaskManagerRoute
+  AuthenticatedAdminTeamManagementRoute: typeof AuthenticatedAdminTeamManagementRoute
   AuthenticatedInvestigatorCasesRoute: typeof AuthenticatedInvestigatorCasesRoute
   AuthenticatedInvestigatorLoginRoute: typeof AuthenticatedInvestigatorLoginRoute
   AuthenticatedInvestigatorProfileRoute: typeof AuthenticatedInvestigatorProfileRoute
@@ -1596,6 +1699,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedHomepagePreviewRoute: AuthenticatedHomepagePreviewRoute,
+  AuthenticatedManagerRoute: AuthenticatedManagerRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedRemovalCenterRoute: AuthenticatedRemovalCenterRoute,
   AuthenticatedRepliesRoute: AuthenticatedRepliesRoute,
@@ -1604,6 +1708,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStorageRoute: AuthenticatedStorageRoute,
   AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,
+  AuthenticatedTaskManagerRoute: AuthenticatedTaskManagerRoute,
+  AuthenticatedTeamLeaderRoute: AuthenticatedTeamLeaderRoute,
   AuthenticatedAdminAssignRoute: AuthenticatedAdminAssignRoute,
   AuthenticatedAdminCaseAssignmentRoute: AuthenticatedAdminCaseAssignmentRoute,
   AuthenticatedAdminCasesRoute: AuthenticatedAdminCasesRoute,
@@ -1613,6 +1719,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminResellersRoute: AuthenticatedAdminResellersRoute,
   AuthenticatedAdminStaffRoute: AuthenticatedAdminStaffRouteWithChildren,
   AuthenticatedAdminStaffActivityRoute: AuthenticatedAdminStaffActivityRoute,
+  AuthenticatedAdminTaskManagerRoute: AuthenticatedAdminTaskManagerRoute,
+  AuthenticatedAdminTeamManagementRoute: AuthenticatedAdminTeamManagementRoute,
   AuthenticatedInvestigatorCasesRoute: AuthenticatedInvestigatorCasesRoute,
   AuthenticatedInvestigatorLoginRoute: AuthenticatedInvestigatorLoginRoute,
   AuthenticatedInvestigatorProfileRoute: AuthenticatedInvestigatorProfileRoute,

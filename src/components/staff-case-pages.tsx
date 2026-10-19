@@ -514,8 +514,12 @@ export function StaffRegisterPage() {
               id="registration-team-lead"
               maxLength={120}
               value={teamLead}
+              placeholder="Enter the team leader's exact name or user ID"
               onChange={(e) => setTeamLead(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              This routes your pending application to that team leader for review.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="registration-referral">Referred by (optional)</Label>

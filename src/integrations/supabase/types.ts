@@ -129,6 +129,8 @@ export type Database = {
           status: string;
           role: string;
           team_lead: string | null;
+          manager_id: string | null;
+          team_leader_id: string | null;
           skills: string[];
           credits: number;
           live_status: "Available" | "Working" | "Offline";
@@ -158,6 +160,8 @@ export type Database = {
           region_state: string;
           role?: string;
           team_lead?: string | null;
+          manager_id?: string | null;
+          team_leader_id?: string | null;
           skills?: string[];
           credits?: number;
           live_status?: "Available" | "Working" | "Offline";
@@ -187,6 +191,8 @@ export type Database = {
           region_state?: string;
           role?: string;
           team_lead?: string | null;
+          manager_id?: string | null;
+          team_leader_id?: string | null;
           skills?: string[];
           credits?: number;
           live_status?: "Available" | "Working" | "Offline";
@@ -207,6 +213,96 @@ export type Database = {
           timezone?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      teams: {
+        Row: {
+          id: string;
+          manager_id: string;
+          team_leader_id: string;
+          is_active: boolean;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          manager_id: string;
+          team_leader_id: string;
+          is_active?: boolean;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          manager_id?: string;
+          team_leader_id?: string;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      tasks: {
+        Row: {
+          id: string;
+          team_id: string;
+          manager_id: string;
+          team_leader_id: string;
+          assigned_to: string;
+          assigned_role: string;
+          created_by: string;
+          title: string;
+          description: string;
+          deadline_at: string | null;
+          status: string;
+          status_note: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          team_id: string;
+          manager_id: string;
+          team_leader_id: string;
+          assigned_to: string;
+          assigned_role: string;
+          created_by: string;
+          title: string;
+          description?: string;
+          deadline_at?: string | null;
+          status?: string;
+          status_note?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          status_note?: string | null;
+          completed_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      team_task_earnings: {
+        Row: {
+          id: string;
+          task_id: string;
+          staff_id: string;
+          earning_type: string;
+          amount_inr: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          staff_id: string;
+          earning_type: string;
+          amount_inr: number;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
         Relationships: [];
       };
       staff_credits: {
@@ -2138,6 +2234,43 @@ export type Database = {
       client_report_page: {
         Args: { _search?: string | null; _limit?: number; _offset?: number };
         Returns: Json;
+      };
+      team_is_superadmin: { Args: Record<string, never>; Returns: boolean };
+      team_can_manage_member: { Args: { _staff_id: string }; Returns: boolean };
+      team_can_read_task: { Args: { _task_id: string }; Returns: boolean };
+      admin_create_team: {
+        Args: { _manager_id: string; _team_leader_id: string };
+        Returns: string;
+      };
+      admin_assign_staff_to_team: {
+        Args: { _staff_id: string; _team_leader_id: string };
+        Returns: string;
+      };
+      team_leader_pending_staff: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          name: string;
+          email: string;
+          mobile: string;
+          region_city: string;
+          region_state: string;
+          created_at: string;
+        }[];
+      };
+      team_leader_add_staff: { Args: { _staff_id: string }; Returns: string };
+      create_team_tasks: {
+        Args: {
+          _title: string;
+          _description: string;
+          _assignees: string[];
+          _deadline_at?: string | null;
+        };
+        Returns: number;
+      };
+      update_team_task: {
+        Args: { _task_id: string; _status: string; _status_note?: string | null };
+        Returns: string;
       };
     };
     Enums: {

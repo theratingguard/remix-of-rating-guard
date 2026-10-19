@@ -43,6 +43,8 @@ const adminNav = [
   { to: "/storage", label: "Storage Manager", Icon: HardDrive },
   { to: "/settings", label: "Settings", Icon: Settings },
   { to: "/admin/staff", label: "Staff Approvals", Icon: Users },
+  { to: "/admin/team-management", label: "Team Management", Icon: Users },
+  { to: "/admin/task-manager", label: "Task Manager", Icon: ClipboardList },
   { to: "/admin/resellers", label: "Resellers", Icon: CircleDollarSign },
   { to: "/admin/staff-activity", label: "Staff Activity", Icon: Activity },
   { to: "/chat", label: "Chats", Icon: MessageCircle },
@@ -66,6 +68,19 @@ const staffNav = [
 ] as const;
 
 const clientNav = [{ to: "/client/outcomes", label: "Review Outcomes", Icon: Activity }] as const;
+const managerNav = [
+  { to: "/manager", label: "Manager Dashboard", Icon: LayoutDashboard },
+  { to: "/task-manager", label: "Task Manager", Icon: ClipboardList },
+  { to: "/staff/wallet", label: "Earnings", Icon: CircleDollarSign },
+  { to: "/chat", label: "Chats", Icon: MessageCircle },
+] as const;
+const teamLeaderNav = [
+  { to: "/team-leader", label: "Team Leader Dashboard", Icon: LayoutDashboard },
+  { to: "/task-manager", label: "Task Manager", Icon: ClipboardList },
+  { to: "/staff/tasks", label: "My Tasks", Icon: ClipboardList },
+  { to: "/staff/wallet", label: "Earnings", Icon: CircleDollarSign },
+  { to: "/chat", label: "Chats", Icon: MessageCircle },
+] as const;
 
 function Brand() {
   return (
@@ -86,6 +101,7 @@ function SidebarBody({
   isStaff,
   isSuperAdmin,
   isClient,
+  staffRole,
   userId,
   staffPendingCount,
   onNavigate,
@@ -94,6 +110,7 @@ function SidebarBody({
   isStaff: boolean;
   isSuperAdmin: boolean;
   isClient: boolean;
+  staffRole?: string | null;
   userId: string;
   staffPendingCount: number;
   onNavigate?: () => void;
@@ -129,7 +146,21 @@ function SidebarBody({
     <div className="flex h-full flex-col gap-6 p-4">
       <Brand />
       <nav className="flex flex-col gap-1" aria-label="Main navigation">
-        {(isSuperAdmin ? adminNav : isClient ? clientNav : isStaff ? staffNav : []).map((item) => {
+        {(isSuperAdmin
+          ? adminNav
+          : isClient
+            ? clientNav
+            : isStaff && staffRole?.toLowerCase() === "manager"
+              ? managerNav
+              : isStaff &&
+                  ["team leader", "team_leader", "team lead", "tl"].includes(
+                    staffRole?.toLowerCase() ?? "",
+                  )
+                ? teamLeaderNav
+                : isStaff
+                  ? staffNav
+                  : []
+        ).map((item) => {
           const { to, label, Icon } = item;
           const linkClass =
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
@@ -244,6 +275,7 @@ export function AppShell({
   isStaff,
   isSuperAdmin,
   isClient,
+  staffRole,
   staffPendingCount,
   children,
 }: {
@@ -252,6 +284,7 @@ export function AppShell({
   isStaff: boolean;
   isSuperAdmin: boolean;
   isClient: boolean;
+  staffRole?: string | null;
   staffPendingCount: number;
   children: ReactNode;
 }) {
@@ -265,6 +298,7 @@ export function AppShell({
           isStaff={isStaff}
           isSuperAdmin={isSuperAdmin}
           isClient={isClient}
+          staffRole={staffRole ?? null}
           staffPendingCount={staffPendingCount}
         />
       </aside>
@@ -294,6 +328,7 @@ export function AppShell({
             isStaff={isStaff}
             isSuperAdmin={isSuperAdmin}
             isClient={isClient}
+            staffRole={staffRole ?? null}
             staffPendingCount={staffPendingCount}
             onNavigate={() => setOpen(false)}
           />

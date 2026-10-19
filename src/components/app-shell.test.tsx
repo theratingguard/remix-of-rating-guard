@@ -51,6 +51,8 @@ const adminLinks = [
   ["Storage Manager", "/storage"],
   ["Settings", "/settings"],
   ["Staff Approvals", "/admin/staff"],
+  ["Team Management", "/admin/team-management"],
+  ["Task Manager", "/admin/task-manager"],
   ["Resellers", "/admin/resellers"],
   ["Staff Activity", "/admin/staff-activity"],
   ["Chats", "/chat"],
@@ -83,6 +85,65 @@ describe("AppShell role navigation", () => {
     expect(screen.queryByText("Staff Approvals")).not.toBeInTheDocument();
     expect(screen.queryByText("Storage Manager")).not.toBeInTheDocument();
     expect(screen.queryByText("Settings")).not.toBeInTheDocument();
+  });
+
+  it("renders manager-only team and task navigation", () => {
+    render(
+      <AppShell
+        email="manager@example.com"
+        userId="manager-id"
+        isStaff
+        isSuperAdmin={false}
+        isClient={false}
+        staffRole="Manager"
+        staffPendingCount={0}
+      >
+        <div>Page content</div>
+      </AppShell>,
+    );
+    const navigation = within(screen.getByRole("navigation", { name: "Main navigation" }));
+    expect(
+      navigation
+        .getAllByRole("link")
+        .map((link) => [link.textContent?.trim(), link.getAttribute("href")]),
+    ).toEqual([
+      ["Manager Dashboard", "/manager"],
+      ["Task Manager", "/task-manager"],
+      ["Earnings", "/staff/wallet"],
+      ["Chats", "/chat"],
+    ]);
+    expect(navigation.queryByText("Team Leader Dashboard")).not.toBeInTheDocument();
+    expect(navigation.queryByText("Team Management")).not.toBeInTheDocument();
+  });
+
+  it("renders team-leader workflow navigation without staff removal controls", () => {
+    render(
+      <AppShell
+        email="leader@example.com"
+        userId="leader-id"
+        isStaff
+        isSuperAdmin={false}
+        isClient={false}
+        staffRole="Team Leader"
+        staffPendingCount={0}
+      >
+        <div>Page content</div>
+      </AppShell>,
+    );
+    const navigation = within(screen.getByRole("navigation", { name: "Main navigation" }));
+    expect(
+      navigation
+        .getAllByRole("link")
+        .map((link) => [link.textContent?.trim(), link.getAttribute("href")]),
+    ).toEqual([
+      ["Team Leader Dashboard", "/team-leader"],
+      ["Task Manager", "/task-manager"],
+      ["My Tasks", "/staff/tasks"],
+      ["Earnings", "/staff/wallet"],
+      ["Chats", "/chat"],
+    ]);
+    expect(navigation.queryByText("Staff Approvals")).not.toBeInTheDocument();
+    expect(navigation.queryByText("Team Management")).not.toBeInTheDocument();
   });
 
   it("renders only the admin navigation for superadmins", () => {
