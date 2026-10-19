@@ -24,6 +24,7 @@ import {
   FolderLock,
   GitCommitHorizontal,
   ShieldCheck,
+  MessageCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -41,7 +42,9 @@ const adminNav = [
   { to: "/storage", label: "Storage Manager", Icon: HardDrive },
   { to: "/settings", label: "Settings", Icon: Settings },
   { to: "/admin/staff", label: "Staff Approvals", Icon: Users },
+  { to: "/admin/resellers", label: "Resellers", Icon: CircleDollarSign },
   { to: "/admin/staff-activity", label: "Staff Activity", Icon: Activity },
+  { to: "/chat", label: "Chats", Icon: MessageCircle },
 ] as const;
 
 const staffNav = [
@@ -58,6 +61,7 @@ const staffNav = [
   { to: "/staff/lead-activity", label: "Team Review", Icon: ShieldCheck },
   { to: "/staff/alerts", label: "Alerts", Icon: Star },
   { to: "/staff/profile", label: "Profile", Icon: UserRound },
+  { to: "/chat", label: "Chats", Icon: MessageCircle },
 ] as const;
 
 const clientNav = [{ to: "/client/outcomes", label: "Review Outcomes", Icon: Activity }] as const;
@@ -81,6 +85,7 @@ function SidebarBody({
   isStaff,
   isSuperAdmin,
   isClient,
+  userId,
   staffPendingCount,
   onNavigate,
 }: {
@@ -88,12 +93,27 @@ function SidebarBody({
   isStaff: boolean;
   isSuperAdmin: boolean;
   isClient: boolean;
+  userId: string;
   staffPendingCount: number;
   onNavigate?: () => void;
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { data: profile } = useQuery({ ...profileQuery(), enabled: isSuperAdmin });
+  const unreadChats = useQuery({
+    queryKey: ["internal-chat", "unread-count", userId],
+    enabled: true,
+    refetchInterval: 10_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("internal_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("receiver_id", userId)
+        .eq("is_read", false);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
   async function logout() {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -143,6 +163,11 @@ function SidebarBody({
               {label === "Staff Approvals" && staffPendingCount > 0 && (
                 <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">
                   {staffPendingCount}
+                </span>
+              )}
+              {label === "Chats" && (unreadChats.data ?? 0) > 0 && (
+                <span className="ml-auto rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] text-white">
+                  {unreadChats.data}
                 </span>
               )}
             </Link>
@@ -214,6 +239,7 @@ function SidebarBody({
 
 export function AppShell({
   email,
+  userId,
   isStaff,
   isSuperAdmin,
   isClient,
@@ -221,6 +247,7 @@ export function AppShell({
   children,
 }: {
   email: string;
+  userId: string;
   isStaff: boolean;
   isSuperAdmin: boolean;
   isClient: boolean;
@@ -233,6 +260,7 @@ export function AppShell({
       <aside className="no-print fixed inset-y-0 left-0 hidden w-[200px] border-r bg-sidebar backdrop-blur-xl lg:block">
         <SidebarBody
           email={email}
+          userId={userId}
           isStaff={isStaff}
           isSuperAdmin={isSuperAdmin}
           isClient={isClient}
@@ -258,6 +286,7 @@ export function AppShell({
         <SheetContent side="left" className="w-64 p-0">
           <SidebarBody
             email={email}
+            userId={userId}
             isStaff={isStaff}
             isSuperAdmin={isSuperAdmin}
             isClient={isClient}

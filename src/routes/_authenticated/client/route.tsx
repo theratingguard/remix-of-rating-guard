@@ -7,5 +7,5 @@ export const Route = createFileRoute("/_authenticated/client")({
 
 function ClientRoute() {
   const { user } = Route.useRouteContext();
-  return <ClientLayout email={user.email ?? "Client account"} />;
+  return <ClientLayout email={user.email ?? "Client account"} userId={user.id} />;
 }

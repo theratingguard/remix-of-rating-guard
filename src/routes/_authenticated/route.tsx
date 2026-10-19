@@ -21,16 +21,19 @@ export const Route = createFileRoute("/_authenticated")({
     const isSuperAdmin = accessLevel === "super_admin";
     const role = data.user.app_metadata["role"];
     const isClient = role === "client";
+    const isReseller = role === "reseller";
     if (location.pathname === "/dashboard") {
       if (isSuperAdmin) throw redirect({ to: "/admin/staff", replace: true });
       if (isStaff) throw redirect({ to: "/staff/today", replace: true });
       if (isClient) throw redirect({ to: "/client/dashboard", replace: true });
+      if (isReseller) throw redirect({ to: "/reseller", replace: true });
     }
     const clientPaths = [
       "/client/dashboard",
       "/client/scan",
       "/client/reports",
       "/client/settings",
+      "/chat",
     ];
     if (isClient && !clientPaths.includes(location.pathname))
       throw redirect({ to: "/client/dashboard", replace: true });
@@ -40,6 +43,21 @@ export const Route = createFileRoute("/_authenticated")({
     ) {
       if (isSuperAdmin) throw redirect({ to: "/admin/staff", replace: true });
       if (isStaff) throw redirect({ to: "/staff/today", replace: true });
+      throw redirect({ to: "/dashboard", replace: true });
+    }
+    const resellerPaths = ["/reseller", "/chat"];
+    if (isReseller && !resellerPaths.includes(location.pathname))
+      throw redirect({ to: "/reseller", replace: true });
+    if (
+      !isReseller &&
+      (location.pathname === "/reseller" || location.pathname.startsWith("/reseller/"))
+    ) {
+      if (isSuperAdmin) throw redirect({ to: "/admin/staff", replace: true });
+      if (isStaff) throw redirect({ to: "/staff/today", replace: true });
+      if (isClient) throw redirect({ to: "/client/dashboard", replace: true });
+      throw redirect({ to: "/dashboard", replace: true });
+    }
+    if (location.pathname === "/chat" && !isClient && !isReseller && !isStaff && !isSuperAdmin) {
       throw redirect({ to: "/dashboard", replace: true });
     }
     let pendingStaffCount = 0;
@@ -81,6 +99,7 @@ export const Route = createFileRoute("/_authenticated")({
       "/staff/alerts",
       "/staff/profile",
       "/staff/cases",
+      "/chat",
     ];
     if (isStaff && !staffPaths.includes(location.pathname)) {
       throw redirect({ to: "/staff/today" });
@@ -97,6 +116,7 @@ export const Route = createFileRoute("/_authenticated")({
       isStaff,
       isSuperAdmin,
       isClient,
+      isReseller,
       pendingStaffCount,
       staffStatus: staff?.status ?? null,
       rejectReason: staff?.reject_reason_custom ?? staff?.reject_reason ?? null,
@@ -112,6 +132,7 @@ function Layout() {
     isStaff,
     isSuperAdmin,
     isClient,
+    isReseller,
     pendingStaffCount,
     staffStatus,
     rejectReason,
@@ -126,10 +147,11 @@ function Layout() {
       />
     );
   }
-  if (isClient) return <Outlet />;
+  if (isClient || isReseller) return <Outlet />;
   return (
     <AppShell
       email={user.email ?? "admin"}
+      userId={user.id}
       isStaff={isStaff}
       isSuperAdmin={isSuperAdmin}
       isClient={isClient}

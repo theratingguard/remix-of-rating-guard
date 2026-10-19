@@ -10,6 +10,114 @@ export type Database = {
   };
   public: {
     Tables: {
+      internal_messages: {
+        Row: {
+          id: string;
+          sender_id: string;
+          sender_role: "staff" | "client" | "reseller" | "superadmin" | "ai";
+          receiver_id: string;
+          message: string;
+          is_read: boolean;
+          is_locked: boolean;
+          deleted_by_superadmin: boolean;
+          reply_to_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          sender_id: string;
+          sender_role: "staff" | "client" | "reseller" | "superadmin" | "ai";
+          receiver_id: string;
+          message: string;
+          is_read?: boolean;
+          is_locked?: boolean;
+          deleted_by_superadmin?: boolean;
+          reply_to_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          is_read?: boolean;
+        };
+        Relationships: [];
+      };
+      internal_chat_settings: {
+        Row: { id: number; ai_auto_reply: boolean; updated_at: string };
+        Insert: { id?: number; ai_auto_reply?: boolean; updated_at?: string };
+        Update: { ai_auto_reply?: boolean; updated_at?: string };
+        Relationships: [];
+      };
+      internal_message_audit: {
+        Row: {
+          id: string;
+          message_id: string;
+          actor_id: string;
+          action: "edited" | "removed";
+          previous_message: string;
+          replacement_message: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          actor_id: string;
+          action: "edited" | "removed";
+          previous_message: string;
+          replacement_message?: string | null;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      internal_chat_presence: {
+        Row: { user_id: string; last_seen_at: string };
+        Insert: { user_id: string; last_seen_at?: string };
+        Update: { last_seen_at?: string };
+        Relationships: [];
+      };
+      reseller_profiles: {
+        Row: {
+          user_id: string;
+          referral_code: string;
+          mobile: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          referral_code?: string;
+          mobile?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: { mobile?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      reseller_commissions: {
+        Row: {
+          id: string;
+          reseller_id: string;
+          referred_user_id: string;
+          amount_paise: number;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          reseller_id: string;
+          referred_user_id: string;
+          amount_paise?: number;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          amount_paise?: number;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       staff: {
         Row: {
           id: string;
@@ -1953,6 +2061,32 @@ export type Database = {
         Returns: boolean;
       };
       report_access_level: { Args: Record<string, never>; Returns: string };
+      internal_chat_super_admin_id: { Args: Record<string, never>; Returns: string };
+      admin_edit_internal_message: {
+        Args: { _message_id: string; _replacement: string };
+        Returns: string;
+      };
+      admin_remove_internal_message: { Args: { _message_id: string }; Returns: string };
+      internal_chat_contacts: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          email: string;
+          display_name: string;
+          role: string;
+          last_seen_at: string | null;
+        }[];
+      };
+      ensure_reseller_profile: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          referral_code: string;
+          mobile: string | null;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
       can_read_report_owner: { Args: { owner_id: string }; Returns: boolean };
       private_report_summaries: {
         Args: Record<string, never>;
@@ -2007,7 +2141,7 @@ export type Database = {
       };
     };
     Enums: {
-      app_role: "admin" | "user";
+      app_role: "admin" | "user" | "reseller";
     };
     CompositeTypes: {
       [_ in never]: never;

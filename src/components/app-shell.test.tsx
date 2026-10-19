@@ -37,6 +37,7 @@ const staffLinks = [
   ["Team Review", "/staff/lead-activity"],
   ["Alerts", "/staff/alerts"],
   ["Profile", "/staff/profile"],
+  ["Chats", "/chat"],
 ];
 
 const adminLinks = [
@@ -50,7 +51,9 @@ const adminLinks = [
   ["Storage Manager", "/storage"],
   ["Settings", "/settings"],
   ["Staff Approvals", "/admin/staff"],
+  ["Resellers", "/admin/resellers"],
   ["Staff Activity", "/admin/staff-activity"],
+  ["Chats", "/chat"],
 ];
 
 afterEach(cleanup);
@@ -60,6 +63,7 @@ describe("AppShell role navigation", () => {
     render(
       <AppShell
         email="staff@example.com"
+        userId="staff-id"
         isStaff
         isSuperAdmin={false}
         isClient={false}
@@ -85,6 +89,7 @@ describe("AppShell role navigation", () => {
     render(
       <AppShell
         email="admin@example.com"
+        userId="admin-id"
         isStaff={false}
         isSuperAdmin
         isClient={false}
@@ -109,6 +114,7 @@ describe("AppShell role navigation", () => {
     render(
       <AppShell
         email="user@example.com"
+        userId="user-id"
         isStaff={false}
         isSuperAdmin={false}
         isClient={false}
@@ -127,6 +133,7 @@ describe("AppShell role navigation", () => {
     render(
       <AppShell
         email="client@example.com"
+        userId="client-id"
         isStaff={false}
         isSuperAdmin={false}
         isClient

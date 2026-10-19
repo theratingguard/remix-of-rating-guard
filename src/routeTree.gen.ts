@@ -13,10 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResponsibleUseRouteImport } from './routes/responsible-use'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedClientRouteRouteImport } from './routes/_authenticated/client/route'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
@@ -24,6 +26,7 @@ import { Route as AuthenticatedHomepagePreviewRouteImport } from './routes/_auth
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedRemovalCenterRouteImport } from './routes/_authenticated/removal-center'
 import { Route as AuthenticatedRepliesRouteImport } from './routes/_authenticated/replies'
+import { Route as AuthenticatedResellerRouteImport } from './routes/_authenticated/reseller'
 import { Route as AuthenticatedScanRouteImport } from './routes/_authenticated/scan'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStorageRouteImport } from './routes/_authenticated/storage'
@@ -35,6 +38,7 @@ import { Route as AuthenticatedAdminAssignRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminCaseAssignmentRouteImport } from './routes/_authenticated/admin.case-assignment'
 import { Route as AuthenticatedAdminCasesRouteImport } from './routes/_authenticated/admin.cases'
 import { Route as AuthenticatedAdminInvestigatorsRouteImport } from './routes/_authenticated/admin.investigators'
+import { Route as AuthenticatedAdminResellersRouteImport } from './routes/_authenticated/admin.resellers'
 import { Route as AuthenticatedAdminStaffRouteImport } from './routes/_authenticated/admin.staff'
 import { Route as AuthenticatedAdminStaffActivityRouteImport } from './routes/_authenticated/admin.staff-activity'
 import { Route as AuthenticatedClientDashboardRouteImport } from './routes/_authenticated/client/dashboard'
@@ -97,6 +101,11 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -116,6 +125,11 @@ const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedClientRouteRoute =
   AuthenticatedClientRouteRouteImport.update({
@@ -153,6 +167,11 @@ const AuthenticatedRemovalCenterRoute =
 const AuthenticatedRepliesRoute = AuthenticatedRepliesRouteImport.update({
   id: '/replies',
   path: '/replies',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedResellerRoute = AuthenticatedResellerRouteImport.update({
+  id: '/reseller',
+  path: '/reseller',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedScanRoute = AuthenticatedScanRouteImport.update({
@@ -212,6 +231,12 @@ const AuthenticatedAdminInvestigatorsRoute =
   AuthenticatedAdminInvestigatorsRouteImport.update({
     id: '/admin/investigators',
     path: '/admin/investigators',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminResellersRoute =
+  AuthenticatedAdminResellersRouteImport.update({
+    id: '/admin/resellers',
+    path: '/admin/resellers',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminStaffRoute = AuthenticatedAdminStaffRouteImport.update({
@@ -454,17 +479,20 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/responsible-use': typeof ResponsibleUseRoute
   '/terms': typeof TermsRoute
   '/client': typeof AuthenticatedClientRouteRouteWithChildren
+  '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/removal-center': typeof AuthenticatedRemovalCenterRoute
   '/replies': typeof AuthenticatedRepliesRoute
+  '/reseller': typeof AuthenticatedResellerRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/storage': typeof AuthenticatedStorageRoute
@@ -476,6 +504,7 @@ export interface FileRoutesByFullPath {
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/admin/cases': typeof AuthenticatedAdminCasesRoute
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  '/admin/resellers': typeof AuthenticatedAdminResellersRoute
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
   '/client/dashboard': typeof AuthenticatedClientDashboardRoute
@@ -523,17 +552,20 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/responsible-use': typeof ResponsibleUseRoute
   '/terms': typeof TermsRoute
   '/client': typeof AuthenticatedClientRouteRouteWithChildren
+  '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/removal-center': typeof AuthenticatedRemovalCenterRoute
   '/replies': typeof AuthenticatedRepliesRoute
+  '/reseller': typeof AuthenticatedResellerRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/storage': typeof AuthenticatedStorageRoute
@@ -545,6 +577,7 @@ export interface FileRoutesByTo {
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/admin/cases': typeof AuthenticatedAdminCasesRoute
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  '/admin/resellers': typeof AuthenticatedAdminResellersRoute
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
   '/client/dashboard': typeof AuthenticatedClientDashboardRoute
@@ -594,17 +627,20 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/responsible-use': typeof ResponsibleUseRoute
   '/terms': typeof TermsRoute
   '/_authenticated/client': typeof AuthenticatedClientRouteRouteWithChildren
+  '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/removal-center': typeof AuthenticatedRemovalCenterRoute
   '/_authenticated/replies': typeof AuthenticatedRepliesRoute
+  '/_authenticated/reseller': typeof AuthenticatedResellerRoute
   '/_authenticated/scan': typeof AuthenticatedScanRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/storage': typeof AuthenticatedStorageRoute
@@ -616,6 +652,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/_authenticated/admin/cases': typeof AuthenticatedAdminCasesRoute
   '/_authenticated/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  '/_authenticated/admin/resellers': typeof AuthenticatedAdminResellersRoute
   '/_authenticated/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/_authenticated/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
   '/_authenticated/client/dashboard': typeof AuthenticatedClientDashboardRoute
@@ -665,17 +702,20 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/contact'
+    | '/join'
     | '/login'
     | '/privacy'
     | '/responsible-use'
     | '/terms'
     | '/client'
+    | '/chat'
     | '/dashboard'
     | '/history'
     | '/homepage-preview'
     | '/profile'
     | '/removal-center'
     | '/replies'
+    | '/reseller'
     | '/scan'
     | '/settings'
     | '/storage'
@@ -687,6 +727,7 @@ export interface FileRouteTypes {
     | '/admin/case-assignment'
     | '/admin/cases'
     | '/admin/investigators'
+    | '/admin/resellers'
     | '/admin/staff'
     | '/admin/staff-activity'
     | '/client/dashboard'
@@ -734,17 +775,20 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/contact'
+    | '/join'
     | '/login'
     | '/privacy'
     | '/responsible-use'
     | '/terms'
     | '/client'
+    | '/chat'
     | '/dashboard'
     | '/history'
     | '/homepage-preview'
     | '/profile'
     | '/removal-center'
     | '/replies'
+    | '/reseller'
     | '/scan'
     | '/settings'
     | '/storage'
@@ -756,6 +800,7 @@ export interface FileRouteTypes {
     | '/admin/case-assignment'
     | '/admin/cases'
     | '/admin/investigators'
+    | '/admin/resellers'
     | '/admin/staff'
     | '/admin/staff-activity'
     | '/client/dashboard'
@@ -804,17 +849,20 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/contact'
+    | '/join'
     | '/login'
     | '/privacy'
     | '/responsible-use'
     | '/terms'
     | '/_authenticated/client'
+    | '/_authenticated/chat'
     | '/_authenticated/dashboard'
     | '/_authenticated/history'
     | '/_authenticated/homepage-preview'
     | '/_authenticated/profile'
     | '/_authenticated/removal-center'
     | '/_authenticated/replies'
+    | '/_authenticated/reseller'
     | '/_authenticated/scan'
     | '/_authenticated/settings'
     | '/_authenticated/storage'
@@ -826,6 +874,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/case-assignment'
     | '/_authenticated/admin/cases'
     | '/_authenticated/admin/investigators'
+    | '/_authenticated/admin/resellers'
     | '/_authenticated/admin/staff'
     | '/_authenticated/admin/staff-activity'
     | '/_authenticated/client/dashboard'
@@ -875,6 +924,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
+  JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   ResponsibleUseRoute: typeof ResponsibleUseRoute
@@ -925,6 +975,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -952,6 +1009,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/chat': {
+      id: '/_authenticated/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof AuthenticatedChatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/client': {
       id: '/_authenticated/client'
@@ -1000,6 +1064,13 @@ declare module '@tanstack/react-router' {
       path: '/replies'
       fullPath: '/replies'
       preLoaderRoute: typeof AuthenticatedRepliesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reseller': {
+      id: '/_authenticated/reseller'
+      path: '/reseller'
+      fullPath: '/reseller'
+      preLoaderRoute: typeof AuthenticatedResellerRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/scan': {
@@ -1077,6 +1148,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/investigators'
       fullPath: '/admin/investigators'
       preLoaderRoute: typeof AuthenticatedAdminInvestigatorsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/resellers': {
+      id: '/_authenticated/admin/resellers'
+      path: '/admin/resellers'
+      fullPath: '/admin/resellers'
+      preLoaderRoute: typeof AuthenticatedAdminResellersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/staff': {
@@ -1429,12 +1507,14 @@ const AuthenticatedAdminStaffRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedClientRouteRoute: typeof AuthenticatedClientRouteRouteWithChildren
+  AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedHomepagePreviewRoute: typeof AuthenticatedHomepagePreviewRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedRemovalCenterRoute: typeof AuthenticatedRemovalCenterRoute
   AuthenticatedRepliesRoute: typeof AuthenticatedRepliesRoute
+  AuthenticatedResellerRoute: typeof AuthenticatedResellerRoute
   AuthenticatedScanRoute: typeof AuthenticatedScanRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStorageRoute: typeof AuthenticatedStorageRoute
@@ -1443,6 +1523,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminCaseAssignmentRoute: typeof AuthenticatedAdminCaseAssignmentRoute
   AuthenticatedAdminCasesRoute: typeof AuthenticatedAdminCasesRoute
   AuthenticatedAdminInvestigatorsRoute: typeof AuthenticatedAdminInvestigatorsRouteWithChildren
+  AuthenticatedAdminResellersRoute: typeof AuthenticatedAdminResellersRoute
   AuthenticatedAdminStaffRoute: typeof AuthenticatedAdminStaffRouteWithChildren
   AuthenticatedAdminStaffActivityRoute: typeof AuthenticatedAdminStaffActivityRoute
   AuthenticatedInvestigatorCasesRoute: typeof AuthenticatedInvestigatorCasesRoute
@@ -1470,12 +1551,14 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedClientRouteRoute: AuthenticatedClientRouteRouteWithChildren,
+  AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedHomepagePreviewRoute: AuthenticatedHomepagePreviewRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedRemovalCenterRoute: AuthenticatedRemovalCenterRoute,
   AuthenticatedRepliesRoute: AuthenticatedRepliesRoute,
+  AuthenticatedResellerRoute: AuthenticatedResellerRoute,
   AuthenticatedScanRoute: AuthenticatedScanRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStorageRoute: AuthenticatedStorageRoute,
@@ -1485,6 +1568,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminCasesRoute: AuthenticatedAdminCasesRoute,
   AuthenticatedAdminInvestigatorsRoute:
     AuthenticatedAdminInvestigatorsRouteWithChildren,
+  AuthenticatedAdminResellersRoute: AuthenticatedAdminResellersRoute,
   AuthenticatedAdminStaffRoute: AuthenticatedAdminStaffRouteWithChildren,
   AuthenticatedAdminStaffActivityRoute: AuthenticatedAdminStaffActivityRoute,
   AuthenticatedInvestigatorCasesRoute: AuthenticatedInvestigatorCasesRoute,
@@ -1530,6 +1614,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
+  JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   ResponsibleUseRoute: ResponsibleUseRoute,

@@ -1,20 +1,51 @@
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { Bell, LayoutDashboard, LogOut, ScanLine, Settings2, FileText } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Bell,
+  LayoutDashboard,
+  LogOut,
+  ScanLine,
+  Settings2,
+  FileText,
+  MessageCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import type { ReactNode } from "react";
 
 const clientNavigation = [
   { to: "/client/dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { to: "/client/scan", label: "Scan & Remove", Icon: ScanLine },
   { to: "/client/reports", label: "Reports", Icon: FileText },
   { to: "/client/settings", label: "Settings / Profile", Icon: Settings2 },
+  { to: "/chat", label: "Chats", Icon: MessageCircle },
 ] as const;
 
-export function ClientLayout({ email }: { email: string }) {
+export function ClientLayout({
+  email,
+  userId,
+  children,
+}: {
+  email: string;
+  userId: string;
+  children?: ReactNode;
+}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const unreadChats = useQuery({
+    queryKey: ["internal-chat", "unread-count", userId],
+    refetchInterval: 10_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("internal_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("receiver_id", userId)
+        .eq("is_read", false);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
 
   async function logout() {
     const { error } = await supabase.auth.signOut();
@@ -61,11 +92,16 @@ export function ClientLayout({ email }: { email: string }) {
           <div className="hidden text-sm text-muted-foreground lg:block">Client workspace</div>
           <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-4">
             <Link
-              to="/client/reports"
-              aria-label="Notifications and reports"
-              className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              to="/chat"
+              aria-label="Unread chat messages"
+              className="relative rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <Bell className="size-5" />
+              {(unreadChats.data ?? 0) > 0 && (
+                <span className="absolute -mt-8 ml-3 grid size-4 place-items-center rounded-full bg-emerald-600 text-[9px] font-bold text-white">
+                  {unreadChats.data}
+                </span>
+              )}
             </Link>
             <Link
               to="/client/settings"
@@ -81,13 +117,13 @@ export function ClientLayout({ email }: { email: string }) {
         </header>
 
         <main className="mx-auto w-full max-w-7xl px-4 py-6 pb-24 sm:px-6 sm:py-8 lg:px-8 lg:pb-10">
-          <Outlet />
+          {children ?? <Outlet />}
         </main>
       </div>
 
       <nav
         aria-label="Mobile client navigation"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t bg-background/95 px-1 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-background/95 px-1 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur lg:hidden"
       >
         {clientNavigation.map(({ to, label, Icon }) => (
           <Link
@@ -99,6 +135,11 @@ export function ClientLayout({ email }: { email: string }) {
           >
             <Icon className="size-5" />
             <span className="max-w-full truncate px-1">{label}</span>
+            {label === "Chats" && (unreadChats.data ?? 0) > 0 && (
+              <span className="absolute right-1 top-0 grid size-4 place-items-center rounded-full bg-emerald-600 text-[9px] font-bold text-white">
+                {unreadChats.data}
+              </span>
+            )}
           </Link>
         ))}
       </nav>
