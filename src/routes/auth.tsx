@@ -13,10 +13,10 @@ import reportIcon from "@/assets/icon-report.png";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Rating Guard Remix" },
-      { name: "description", content: "Secure account sign in for Rating Guard Remix." },
-      { property: "og:title", content: "Sign in — Rating Guard Remix" },
-      { property: "og:description", content: "Secure account sign in for Rating Guard Remix." },
+      { title: "Sign in — Rating Guard" },
+      { name: "description", content: "Secure account sign in for Rating Guard." },
+      { property: "og:title", content: "Sign in — Rating Guard" },
+      { property: "og:description", content: "Secure account sign in for Rating Guard." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -214,7 +214,7 @@ function AuthPage() {
           />
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Rating Guard Remix
+              Rating Guard
             </p>
             <h2 className="mt-2 text-3xl font-bold">
               {mode === "reset"

@@ -76,12 +76,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Rating Guard Remix — Google review risk analysis" },
+      { title: "Rating Guard — Google review risk analysis" },
       {
         name: "description",
         content: "Scan, analyze and report potentially problematic Google reviews.",
       },
-      { property: "og:title", content: "Rating Guard Remix — Google review risk analysis" },
+      { name: "theme-color", content: "#061629" },
+      { property: "og:title", content: "Rating Guard — Google review risk analysis" },
       {
         property: "og:description",
         content: "Scan, analyze and report potentially problematic Google reviews.",
@@ -96,6 +97,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon-192.png", sizes: "192x192", type: "image/png" },
       { rel: "icon", href: "/favicon-512.png", sizes: "512x512", type: "image/png" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+      { rel: "manifest", href: "/site.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

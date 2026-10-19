@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/reports/$id")({
   validateSearch: z.object({ print: z.boolean().optional() }),
   head: () => ({
     meta: [
-      { title: "Review Risk Report — Rating Guard Remix" },
+      { title: "Review Risk Report — Rating Guard" },
       { name: "description", content: "Google review risk evidence report." },
     ],
   }),

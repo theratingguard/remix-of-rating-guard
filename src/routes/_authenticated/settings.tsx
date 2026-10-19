@@ -36,7 +36,7 @@ import {
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — Rating Guard Remix" },
+      { title: "Settings — Rating Guard" },
       { name: "description", content: "Account, API, database and system health." },
     ],
   }),

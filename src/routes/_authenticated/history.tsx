@@ -16,7 +16,7 @@ import { reportAccessQuery } from "@/lib/report-access";
 export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
     meta: [
-      { title: "Scan History — Rating Guard Remix" },
+      { title: "Scan History — Rating Guard" },
       { name: "description", content: "Searchable history of Google review scans." },
     ],
   }),

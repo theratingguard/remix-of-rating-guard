@@ -13,15 +13,15 @@ export const Route = createFileRoute("/contact")({
   },
   head: () => ({
     meta: [
-      { title: "Contact — Rating Guard Remix" },
+      { title: "Contact — Rating Guard" },
       {
         name: "description",
-        content: "Get in touch about Rating Guard Remix, your account or a report.",
+        content: "Get in touch about Rating Guard, your account or a report.",
       },
-      { property: "og:title", content: "Contact — Rating Guard Remix" },
+      { property: "og:title", content: "Contact — Rating Guard" },
       {
         property: "og:description",
-        content: "Get in touch about Rating Guard Remix, your account or a report.",
+        content: "Get in touch about Rating Guard, your account or a report.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

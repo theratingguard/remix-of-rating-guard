@@ -20,7 +20,7 @@ import { SimpleScanReport } from "@/components/simple-scan-report";
 export const Route = createFileRoute("/_authenticated/scan")({
   head: () => ({
     meta: [
-      { title: "Google Review URL Scanner — Rating Guard Remix" },
+      { title: "Google Review URL Scanner — Rating Guard" },
       { name: "description", content: "Scan a Google business for review policy risk." },
     ],
   }),

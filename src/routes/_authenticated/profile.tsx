@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Camera, Clock3, KeyRound, LogOut, ShieldCheck, Smartphone } from "lucide-react";
+import { Camera, Clock3, ImagePlus, KeyRound, LogOut, ShieldCheck, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { profileQuery } from "@/lib/profile";
 import { APP_DOMAIN } from "@/lib/config";
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
-      { title: "Your Profile — Rating Guard Remix" },
+      { title: "Your Profile — Rating Guard" },
       { name: "description", content: "Your profile, security and session." },
     ],
   }),
@@ -36,6 +36,25 @@ type PendingFactor = {
   challengeId?: string;
 };
 
+function profileAssetPath(url: string | null, userId: string): string | null {
+  if (!url) return null;
+  const marker = "/storage/v1/object/public/profile-assets/";
+  const markerIndex = url.indexOf(marker);
+  if (markerIndex < 0) return null;
+  const path = (url.slice(markerIndex + marker.length).split("?")[0] ?? "").trim();
+  return path.startsWith(`${userId}/`) ? path : null;
+}
+
+function profileAssetValidationMessage(file: File): string | null {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    return "Choose a JPEG, PNG, or WebP image.";
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return "Each image must be under 5 MB.";
+  }
+  return null;
+}
+
 function ProfilePage() {
   const { user } = Route.useRouteContext();
   const qc = useQueryClient();
@@ -45,7 +64,9 @@ function ProfilePage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [businessType, setBusinessType] = useState("");
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [language, setLanguage] = useState("en");
@@ -61,7 +82,12 @@ function ProfilePage() {
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [recoveryRemaining, setRecoveryRemaining] = useState<number | null>(null);
   const [mfaError, setMfaError] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+  const bannerFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!p) return;
@@ -69,12 +95,34 @@ function ProfilePage() {
     setUsername(p.username);
     setEmail(p.email);
     setPhone(p.phone);
+    setAddress(p.address);
     setCompanyName(p.companyName);
+    setWebsiteUrl(p.websiteUrl);
     setBusinessType(p.businessType);
     setEmailNotifications(p.emailNotifications);
     setLanguage(p.language);
     setTimezone(p.timezone);
   }, [p]);
+
+  useEffect(() => {
+    if (!avatarFile) {
+      setAvatarPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(avatarFile);
+    setAvatarPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [avatarFile]);
+
+  useEffect(() => {
+    if (!bannerFile) {
+      setBannerPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(bannerFile);
+    setBannerPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [bannerFile]);
 
   async function refreshFactors() {
     setMfaError("");
@@ -104,15 +152,30 @@ function ProfilePage() {
 
   async function savePersonal(e: FormEvent) {
     e.preventDefault();
+    if (!name.trim() || name.trim().length > 120) {
+      toast.error("Enter a name between 1 and 120 characters.");
+      return;
+    }
+    if (phone.trim() && !/^\+?[0-9 ()-]{6,32}$/.test(phone.trim())) {
+      toast.error("Enter a valid phone number.");
+      return;
+    }
+    if (websiteUrl.trim() && !/^https?:\/\//i.test(websiteUrl.trim())) {
+      toast.error("Enter a website URL beginning with http:// or https://.");
+      return;
+    }
     setBusy(true);
     try {
       const { error } = await supabase
         .from("profiles")
         .update({
-          name: name.trim() || "User",
+          name: name.trim(),
           username: username.trim(),
           phone: phone.trim() || null,
+          address: address.trim() || null,
+          business_name: companyName.trim() || null,
           company_name: companyName.trim() || null,
+          website_url: websiteUrl.trim() || null,
           business_type: businessType.trim() || null,
           email_notifications: emailNotifications,
           language,
@@ -137,35 +200,70 @@ function ProfilePage() {
     }
   }
 
-  async function uploadPhoto(file: File) {
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("Choose a JPEG, PNG, or WebP image.");
+  async function saveProfileAssets() {
+    if (!p) {
+      toast.error("Wait for your profile to finish loading before saving images.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5 MB.");
-      return;
+    const pendingAssets = [
+      ...(avatarFile ? [{ file: avatarFile, field: "avatar_url" as const }] : []),
+      ...(bannerFile ? [{ file: bannerFile, field: "banner_url" as const }] : []),
+    ];
+    if (!pendingAssets.length) return;
+    for (const { file } of pendingAssets) {
+      const validationMessage = profileAssetValidationMessage(file);
+      if (validationMessage) {
+        toast.error(validationMessage);
+        return;
+      }
     }
     setBusy(true);
+    const uploadedPaths: string[] = [];
     try {
-      const extension = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
-      const path = `${user.id}/avatar.${extension}`;
-      const upload = await supabase.storage
-        .from("avatars")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (upload.error) throw upload.error;
-      const { error } = await supabase
-        .from("profiles")
-        .update({ avatar_path: path, updated_at: new Date().toISOString() })
-        .eq("user_id", user.id);
+      const updates: { avatar_url?: string; banner_url?: string; updated_at: string } = {
+        updated_at: new Date().toISOString(),
+      };
+      for (const { file, field } of pendingAssets) {
+        const extension = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+        const path = `${user.id}/${field.replace("_url", "")}-${crypto.randomUUID()}.${extension}`;
+        const upload = await supabase.storage.from("profile-assets").upload(path, file, {
+          cacheControl: "0",
+          contentType: file.type,
+          upsert: false,
+        });
+        if (upload.error) throw upload.error;
+        uploadedPaths.push(path);
+        const publicUrl = supabase.storage.from("profile-assets").getPublicUrl(path).data.publicUrl;
+        updates[field] = `${publicUrl}?v=${Date.now()}`;
+      }
+      const { error } = await supabase.from("profiles").update(updates).eq("user_id", user.id);
       if (error) throw error;
-      toast.success("Profile photo updated.");
+      setAvatarFile(null);
+      setBannerFile(null);
+      toast.success("Profile images updated.");
       await qc.invalidateQueries({ queryKey: ["profile"] });
+      const replacedPaths = [
+        ...(avatarFile ? [profileAssetPath(p.avatarUrl, user.id)] : []),
+        ...(bannerFile ? [profileAssetPath(p.bannerUrl, user.id)] : []),
+      ].filter((path): path is string => path !== null);
+      if (replacedPaths.length) {
+        const cleanup = await supabase.storage.from("profile-assets").remove(replacedPaths);
+        if (cleanup.error) {
+          toast.error(
+            `Images were saved, but older profile images could not be removed: ${cleanup.error.message}`,
+          );
+        }
+      }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not upload profile photo.");
+      if (uploadedPaths.length) {
+        const cleanup = await supabase.storage.from("profile-assets").remove(uploadedPaths);
+        if (cleanup.error) {
+          toast.error(`Uploaded image cleanup failed: ${cleanup.error.message}`);
+        }
+      }
+      toast.error(error instanceof Error ? error.message : "Could not upload profile images.");
     } finally {
       setBusy(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -345,57 +443,106 @@ function ProfilePage() {
     (factor) => factor.factor_type === "totp" || factor.factor_type === "phone",
   );
   const pendingTotp = pendingFactor?.type === "totp";
+  const isBusinessAccount = ["client", "reseller"].includes(
+    String(user.app_metadata?.["role"] ?? ""),
+  );
 
   return (
     <>
       <PageHeader title="Profile & Security" subtitle={APP_DOMAIN} />
-      <div className="surface mb-6 flex flex-wrap items-center gap-5 p-6">
-        <div className="relative">
-          <Avatar name={p.name} url={p.avatarUrl} size={72} />
-          <button
+      <section className="surface mb-6 overflow-hidden p-0">
+        <div className="relative h-40 bg-gradient-to-br from-emerald-500/25 via-slate-900 to-cyan-500/20 sm:h-52">
+          {(bannerPreview ?? p.bannerUrl) && (
+            <img
+              src={bannerPreview ?? p.bannerUrl ?? ""}
+              alt="Profile cover"
+              className="absolute inset-0 size-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             disabled={busy}
-            onClick={() => fileRef.current?.click()}
-            aria-label="Change profile photo"
-            className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-lift)] disabled:opacity-60"
+            className="absolute right-3 top-3"
+            onClick={() => bannerFileRef.current?.click()}
           >
-            <Camera className="h-4 w-4" />
-          </button>
+            <ImagePlus className="mr-2 size-4" />
+            Change cover
+          </Button>
           <input
-            ref={fileRef}
+            ref={bannerFileRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
             className="hidden"
             onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void uploadPhoto(file);
+              const file = event.target.files?.[0] ?? null;
+              const validationMessage = file ? profileAssetValidationMessage(file) : null;
+              if (validationMessage) toast.error(validationMessage);
+              else setBannerFile(file);
+              event.currentTarget.value = "";
             }}
           />
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-xl font-bold">{p.name}</div>
-          <div className="break-all text-sm text-muted-foreground">{p.email}</div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => document.getElementById("profile-information")?.scrollIntoView()}
-          >
-            Edit profile
-          </Button>
+        <div className="-mt-12 relative flex flex-wrap items-end gap-4 px-5 pb-5 sm:px-7">
+          <div className="relative rounded-full border-4 border-background">
+            <Avatar name={p.name} url={avatarPreview ?? p.avatarUrl} size={88} />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => avatarFileRef.current?.click()}
+              aria-label="Change profile photo"
+              className="absolute bottom-0 right-0 grid size-8 place-items-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-lift)] disabled:opacity-60"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
+            <input
+              ref={avatarFileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                const validationMessage = file ? profileAssetValidationMessage(file) : null;
+                if (validationMessage) toast.error(validationMessage);
+                else setAvatarFile(file);
+                event.currentTarget.value = "";
+              }}
+            />
+          </div>
+          <div className="min-w-0 flex-1 pb-1">
+            <div className="text-xl font-bold">{p.name}</div>
+            <div className="break-all text-sm text-muted-foreground">{p.email}</div>
+          </div>
+          <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:pb-1">
+            <p className="text-xs text-muted-foreground">
+              Last sign-in: {p.lastLogin ? new Date(p.lastLogin).toLocaleString() : "Unavailable"}
+            </p>
+            {(avatarFile || bannerFile) && (
+              <Button type="button" disabled={busy} onClick={() => void saveProfileAssets()}>
+                {busy ? "Saving…" : "Save images"}
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="text-sm text-muted-foreground">
-          Last sign-in: {p.lastLogin ? new Date(p.lastLogin).toLocaleString() : "Unavailable"}
-        </div>
-      </div>
+        <p className="px-5 pb-4 text-xs text-muted-foreground sm:px-7">
+          JPEG, PNG, or WebP images · maximum 5 MB each · preview before saving
+        </p>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <form id="profile-information" onSubmit={savePersonal} className="surface space-y-4 p-6">
           <h2 className="font-semibold">Profile information</h2>
           <div className="space-y-2">
             <Label htmlFor="p-name">Full name</Label>
-            <Input id="p-name" value={name} onChange={(event) => setName(event.target.value)} />
+            <Input
+              id="p-name"
+              value={name}
+              maxLength={120}
+              autoComplete="name"
+              onChange={(event) => setName(event.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="p-user">Username</Label>
@@ -428,13 +575,41 @@ function ProfilePage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="p-company">Company name</Label>
+            <Label htmlFor="p-address">Address</Label>
             <Input
-              id="p-company"
-              value={companyName}
-              onChange={(event) => setCompanyName(event.target.value)}
+              id="p-address"
+              autoComplete="street-address"
+              maxLength={500}
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
             />
           </div>
+          {isBusinessAccount && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="p-company">Business name</Label>
+                <Input
+                  id="p-company"
+                  maxLength={160}
+                  value={companyName}
+                  onChange={(event) => setCompanyName(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="p-website">Website link</Label>
+                <Input
+                  id="p-website"
+                  type="url"
+                  inputMode="url"
+                  autoComplete="url"
+                  placeholder="https://example.com"
+                  maxLength={2048}
+                  value={websiteUrl}
+                  onChange={(event) => setWebsiteUrl(event.target.value)}
+                />
+              </div>
+            </>
+          )}
           <div className="space-y-2">
             <Label htmlFor="p-business-type">Business type</Label>
             <Input

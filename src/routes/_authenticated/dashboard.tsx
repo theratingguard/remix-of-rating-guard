@@ -14,7 +14,7 @@ import { ScannedUrlsTable } from "@/components/scanned-urls-table";
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Rating Guard Remix" },
+      { title: "Dashboard — Rating Guard" },
       { name: "description", content: "Review reporting and removal success metrics." },
     ],
   }),

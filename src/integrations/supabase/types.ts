@@ -1469,7 +1469,11 @@ export type Database = {
       profiles: {
         Row: {
           avatar_path: string | null;
+          avatar_url: string | null;
+          address: string | null;
+          banner_url: string | null;
           business_type: string | null;
+          business_name: string | null;
           company_name: string | null;
           created_at: string;
           email_notifications: boolean;
@@ -1481,10 +1485,15 @@ export type Database = {
           updated_at: string;
           user_id: string;
           username: string | null;
+          website_url: string | null;
         };
         Insert: {
           avatar_path?: string | null;
+          avatar_url?: string | null;
+          address?: string | null;
+          banner_url?: string | null;
           business_type?: string | null;
+          business_name?: string | null;
           company_name?: string | null;
           created_at?: string;
           email_notifications?: boolean;
@@ -1496,10 +1505,15 @@ export type Database = {
           updated_at?: string;
           user_id: string;
           username?: string | null;
+          website_url?: string | null;
         };
         Update: {
           avatar_path?: string | null;
+          avatar_url?: string | null;
+          address?: string | null;
+          banner_url?: string | null;
           business_type?: string | null;
+          business_name?: string | null;
           company_name?: string | null;
           created_at?: string;
           email_notifications?: boolean;
@@ -1511,6 +1525,7 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
           username?: string | null;
+          website_url?: string | null;
         };
         Relationships: [];
       };

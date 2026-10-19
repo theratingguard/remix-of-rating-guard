@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { isGoogleMapsUrl } from "@/lib/google-url";
 
 export const Route = createFileRoute("/_authenticated/submissions")({
-  head: () => ({ meta: [{ title: "Submissions — Rating Guard Remix" }] }),
+  head: () => ({ meta: [{ title: "Submissions — Rating Guard" }] }),
   component: SubmissionsPage,
 });
 

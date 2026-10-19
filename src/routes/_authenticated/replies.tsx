@@ -17,7 +17,7 @@ import {
 export const Route = createFileRoute("/_authenticated/replies")({
   head: () => ({
     meta: [
-      { title: "Reply Drafts — Rating Guard Remix" },
+      { title: "Reply Drafts — Rating Guard" },
       { name: "description", content: "Review and manage saved business reply drafts." },
     ],
   }),

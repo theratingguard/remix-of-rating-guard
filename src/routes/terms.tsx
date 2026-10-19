@@ -3,10 +3,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "Terms of Service — Rating Guard Remix" },
-      { name: "description", content: "The terms that govern use of Rating Guard Remix." },
-      { property: "og:title", content: "Terms of Service — Rating Guard Remix" },
-      { property: "og:description", content: "The terms that govern use of Rating Guard Remix." },
+      { title: "Terms of Service — Rating Guard" },
+      { name: "description", content: "The terms that govern use of Rating Guard." },
+      { property: "og:title", content: "Terms of Service — Rating Guard" },
+      { property: "og:description", content: "The terms that govern use of Rating Guard." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -18,7 +18,7 @@ const sections: { h: string; body: string[] }[] = [
   {
     h: "1. The Service",
     body: [
-      "Rating Guard Remix (“the Service”), helps you retrieve publicly available Google review data, analyse it for policy-relevant risk, and prepare reports and reply drafts.",
+      "Rating Guard (“the Service”), helps you retrieve publicly available Google review data, analyse it for policy-relevant risk, and prepare reports and reply drafts.",
       "The Service is independent and is not affiliated with, endorsed by, or sponsored by Google. “Google” and related marks belong to Google LLC.",
     ],
   },
@@ -86,7 +86,7 @@ function TermsPage() {
       <header className="border-b border-card-border bg-card/60">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link to="/" className="font-bold text-primary">
-            Rating Guard Remix
+            Rating Guard
           </Link>
           <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
             Privacy Policy

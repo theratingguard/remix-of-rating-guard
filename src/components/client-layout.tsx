@@ -7,6 +7,7 @@ import {
   Settings2,
   FileText,
   MessageCircle,
+  UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +20,7 @@ const clientNavigation = [
   { to: "/client/scan", label: "Scan & Remove", Icon: ScanLine },
   { to: "/client/reports", label: "Reports", Icon: FileText },
   { to: "/client/settings", label: "Settings / Profile", Icon: Settings2 },
+  { to: "/profile", label: "Profile", Icon: UserRound },
   { to: "/chat", label: "Chats", Icon: MessageCircle },
 ] as const;
 
@@ -112,7 +114,7 @@ export function ClientLayout({
 
       <nav
         aria-label="Mobile client navigation"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-background/95 px-1 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t bg-background/95 px-1 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur lg:hidden"
       >
         {clientNavigation.map(({ to, label, Icon }) => (
           <Link

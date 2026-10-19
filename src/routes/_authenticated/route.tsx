@@ -1,6 +1,7 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
+import { ClientLayout } from "@/components/client-layout";
 import { StaffApprovalScreen } from "@/components/staff-dashboard";
 import { GlobalHeaderControls } from "@/components/global-header-controls";
 
@@ -39,6 +40,7 @@ export const Route = createFileRoute("/_authenticated")({
       "/client/scan",
       "/client/reports",
       "/client/settings",
+      "/profile",
       "/chat",
     ];
     if (isClient && !clientPaths.includes(location.pathname))
@@ -51,7 +53,7 @@ export const Route = createFileRoute("/_authenticated")({
       if (isStaff) throw redirect({ to: "/staff/today", replace: true });
       throw redirect({ to: "/dashboard", replace: true });
     }
-    const resellerPaths = ["/reseller", "/chat"];
+    const resellerPaths = ["/reseller", "/profile", "/chat"];
     if (isReseller && !resellerPaths.includes(location.pathname))
       throw redirect({ to: "/reseller", replace: true });
     if (
@@ -104,16 +106,18 @@ export const Route = createFileRoute("/_authenticated")({
       "/staff/lead-activity",
       "/staff/alerts",
       "/staff/profile",
+      "/profile",
       "/staff/cases",
       "/chat",
     ];
-    const managerPaths = ["/manager", "/task-manager", "/staff/wallet", "/chat"];
+    const managerPaths = ["/manager", "/task-manager", "/staff/wallet", "/profile", "/chat"];
     const teamLeaderPaths = [
       "/team-leader",
       "/task-manager",
       "/staff/tasks",
       "/staff/wallet",
       "/staff/today",
+      "/profile",
       "/chat",
     ];
     if (
@@ -150,6 +154,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function Layout() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const {
     user,
     isStaff,
@@ -163,9 +168,29 @@ function Layout() {
     staffNotice,
   } = Route.useRouteContext();
   if (isStaff && staffStatus !== "active" && staffStatus !== "approved") {
+    if (pathname === "/profile") {
+      return (
+        <div>
+          <header className="flex h-14 items-center justify-between border-b bg-card/80 px-4 sm:px-6">
+            <Link to="/profile" className="flex items-center gap-2 font-semibold">
+              <img src="/logo.svg" alt="" width={32} height={32} />
+              Rating Guard
+            </Link>
+            <GlobalHeaderControls userId={user.id} isSuperAdmin={false} isClient={false} />
+          </header>
+          <main className="mx-auto max-w-[1720px] px-4 py-5 sm:px-6">
+            <Outlet />
+          </main>
+        </div>
+      );
+    }
     return (
       <div>
-        <header className="flex h-14 items-center justify-end border-b bg-card/80 px-4 sm:px-6">
+        <header className="flex h-14 items-center justify-between border-b bg-card/80 px-4 sm:px-6">
+          <Link to="/profile" className="flex items-center gap-2 font-semibold">
+            <img src="/logo.svg" alt="" width={32} height={32} />
+            Rating Guard
+          </Link>
           <GlobalHeaderControls userId={user.id} isSuperAdmin={false} isClient={false} />
         </header>
         <StaffApprovalScreen
@@ -176,11 +201,23 @@ function Layout() {
       </div>
     );
   }
-  if (isClient) return <Outlet />;
+  if (isClient) {
+    return pathname === "/profile" ? (
+      <ClientLayout email={user.email ?? "Client account"} userId={user.id}>
+        <Outlet />
+      </ClientLayout>
+    ) : (
+      <Outlet />
+    );
+  }
   if (isReseller) {
     return (
       <div>
-        <header className="flex h-14 items-center justify-end border-b bg-card/80 px-4 sm:px-6">
+        <header className="flex h-14 items-center justify-between border-b bg-card/80 px-4 sm:px-6">
+          <Link to="/profile" className="flex items-center gap-2 font-semibold">
+            <img src="/logo.svg" alt="" width={32} height={32} />
+            Rating Guard
+          </Link>
           <GlobalHeaderControls userId={user.id} isSuperAdmin={false} isClient={false} />
         </header>
         <Outlet />

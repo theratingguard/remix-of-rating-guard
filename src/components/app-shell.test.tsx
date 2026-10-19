@@ -36,7 +36,7 @@ const staffLinks = [
   ["Timeline", "/staff/timeline"],
   ["Team Review", "/staff/lead-activity"],
   ["Alerts", "/staff/alerts"],
-  ["Profile", "/staff/profile"],
+  ["Profile", "/profile"],
   ["Chats", "/chat"],
 ];
 
@@ -110,6 +110,7 @@ describe("AppShell role navigation", () => {
       ["Manager Dashboard", "/manager"],
       ["Task Manager", "/task-manager"],
       ["Earnings", "/staff/wallet"],
+      ["Profile", "/profile"],
       ["Chats", "/chat"],
     ]);
     expect(navigation.queryByText("Team Leader Dashboard")).not.toBeInTheDocument();
@@ -140,6 +141,7 @@ describe("AppShell role navigation", () => {
       ["Task Manager", "/task-manager"],
       ["My Tasks", "/staff/tasks"],
       ["Earnings", "/staff/wallet"],
+      ["Profile", "/profile"],
       ["Chats", "/chat"],
     ]);
     expect(navigation.queryByText("Staff Approvals")).not.toBeInTheDocument();

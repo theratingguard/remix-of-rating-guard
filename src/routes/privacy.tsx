@@ -3,15 +3,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
-      { title: "Privacy Policy — Rating Guard Remix" },
+      { title: "Privacy Policy — Rating Guard" },
       {
         name: "description",
-        content: "How Rating Guard Remix collects, uses, stores and protects your data.",
+        content: "How Rating Guard collects, uses, stores and protects your data.",
       },
-      { property: "og:title", content: "Privacy Policy — Rating Guard Remix" },
+      { property: "og:title", content: "Privacy Policy — Rating Guard" },
       {
         property: "og:description",
-        content: "How Rating Guard Remix collects, uses, stores and protects your data.",
+        content: "How Rating Guard collects, uses, stores and protects your data.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -24,7 +24,7 @@ const sections: { h: string; body: string[] }[] = [
   {
     h: "1. Who we are",
     body: [
-      "Rating Guard Remix (“the Service”) is operated by its service administrator, reachable at theratingguard@gmail.com. This policy explains what data we handle when you use the Service.",
+      "Rating Guard (“the Service”) is operated by its service administrator, reachable at theratingguard@gmail.com. This policy explains what data we handle when you use the Service.",
       "The Service is an independent tool. It is not affiliated with, endorsed by, or sponsored by Google.",
     ],
   },
@@ -97,7 +97,7 @@ function PrivacyPage() {
       <header className="border-b border-card-border bg-card/60">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link to="/" className="font-bold text-primary">
-            Rating Guard Remix
+            Rating Guard
           </Link>
           <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground">
             Terms of Service

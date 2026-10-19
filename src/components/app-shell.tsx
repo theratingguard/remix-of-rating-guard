@@ -63,7 +63,7 @@ const staffNav = [
   { to: "/staff/timeline", label: "Timeline", Icon: GitCommitHorizontal },
   { to: "/staff/lead-activity", label: "Team Review", Icon: ShieldCheck },
   { to: "/staff/alerts", label: "Alerts", Icon: Star },
-  { to: "/staff/profile", label: "Profile", Icon: UserRound },
+  { to: "/profile", label: "Profile", Icon: UserRound },
   { to: "/chat", label: "Chats", Icon: MessageCircle },
 ] as const;
 
@@ -72,6 +72,7 @@ const managerNav = [
   { to: "/manager", label: "Manager Dashboard", Icon: LayoutDashboard },
   { to: "/task-manager", label: "Task Manager", Icon: ClipboardList },
   { to: "/staff/wallet", label: "Earnings", Icon: CircleDollarSign },
+  { to: "/profile", label: "Profile", Icon: UserRound },
   { to: "/chat", label: "Chats", Icon: MessageCircle },
 ] as const;
 const teamLeaderNav = [
@@ -79,6 +80,7 @@ const teamLeaderNav = [
   { to: "/task-manager", label: "Task Manager", Icon: ClipboardList },
   { to: "/staff/tasks", label: "My Tasks", Icon: ClipboardList },
   { to: "/staff/wallet", label: "Earnings", Icon: CircleDollarSign },
+  { to: "/profile", label: "Profile", Icon: UserRound },
   { to: "/chat", label: "Chats", Icon: MessageCircle },
 ] as const;
 
@@ -87,9 +89,7 @@ function Brand() {
     <div className="flex items-center gap-2.5 px-2">
       <img src="/logo.svg" alt="" width={40} height={40} className="size-10" />
       <div className="leading-tight">
-        <div className="font-display text-sm font-bold tracking-tight">
-          Rating Guard <span className="text-gradient">Remix</span>
-        </div>
+        <div className="font-display text-sm font-bold tracking-tight">Rating Guard</div>
         <div className="text-[11px] text-muted-foreground">Review Intelligence Workspace</div>
       </div>
     </div>
@@ -117,7 +117,7 @@ function SidebarBody({
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { data: profile } = useQuery({ ...profileQuery(), enabled: isSuperAdmin });
+  const { data: profile } = useQuery({ ...profileQuery(), enabled: isSuperAdmin || isStaff });
   const unreadChats = useQuery({
     queryKey: ["internal-chat", "unread-count", userId],
     enabled: true,
@@ -208,6 +208,20 @@ function SidebarBody({
       </nav>
       {!isSuperAdmin ? (
         <div className="mt-auto border-t pt-4">
+          <Link
+            to="/profile"
+            onClick={onNavigate}
+            className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-sidebar-accent"
+            activeProps={{ className: "bg-sidebar-accent" }}
+          >
+            <Avatar name={profile?.name ?? email} url={profile?.avatarUrl ?? null} size={28} />
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium">
+                {profile?.name ?? "Your profile"}
+              </span>
+              <span className="block text-[11px] text-muted-foreground">Edit profile</span>
+            </span>
+          </Link>
           <button
             type="button"
             onClick={logout}

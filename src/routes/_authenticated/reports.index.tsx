@@ -16,7 +16,7 @@ import { ReportListActions } from "@/components/report-list-actions";
 export const Route = createFileRoute("/_authenticated/reports/")({
   head: () => ({
     meta: [
-      { title: "Reports — Rating Guard Remix" },
+      { title: "Reports — Rating Guard" },
       { name: "description", content: "Google review risk evidence reports." },
     ],
   }),
