@@ -5,7 +5,7 @@ import { prepareRecordedRejectionAppeal } from "./appeal-automation.server";
 
 export const generateAppealDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ outcomeId: z.string().uuid() }).parse(input))
+  .validator((input) => z.object({ outcomeId: z.string().uuid() }).parse(input))
   .handler(async ({ context, data }) => {
     try {
       return await prepareRecordedRejectionAppeal(context.supabase, data.outcomeId);

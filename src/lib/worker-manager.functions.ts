@@ -10,7 +10,7 @@ export const getLegalWorkers = createServerFn({ method: "GET" })
 
 export const setLegalWorkerEnabled = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z.object({ country: z.enum(LEGAL_COUNTRIES), enabled: z.boolean() }).parse(data),
   )
   .handler(({ context, data }) =>

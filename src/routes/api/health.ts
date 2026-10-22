@@ -61,7 +61,8 @@ export async function healthResponse({
       application: "responding",
       missingConfiguration: missing,
       database: databaseAvailable ? "available" : "unavailable",
-      providerVerification: databaseAvailable ? "verified" : "failed",
+      databaseVerification: databaseAvailable ? "verified" : "failed",
+      providerVerification: "unverified",
       queueConfigured:
         Boolean(process.env["SUPABASE_SERVICE_ROLE_KEY"]) &&
         process.env["SCAN_WORKER_SCHEDULED"] === "true",

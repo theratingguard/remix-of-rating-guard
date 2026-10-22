@@ -1,4 +1,6 @@
 import { PDFDocument } from "pdf-lib";
+import { access } from "node:fs/promises";
+import { constants } from "node:fs";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
@@ -177,6 +179,37 @@ ${legal ? legalAnalysisHtml(legal, reviews) : ""}
 }
 
 let rendering = false;
+
+async function resolvePuppeteerExecutable() {
+  let bundledExecutable: string | undefined;
+  try {
+    bundledExecutable = await puppeteer.executablePath();
+  } catch {
+    bundledExecutable = undefined;
+  }
+  const candidates = [
+    process.env["PUPPETEER_EXECUTABLE_PATH"],
+    bundledExecutable,
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/snap/bin/chromium",
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  for (const candidate of [...new Set(candidates)]) {
+    try {
+      await access(candidate, constants.X_OK);
+      return candidate;
+    } catch {
+      continue;
+    }
+  }
+  throw new Error(
+    "Chrome or Chromium was not found. Set PUPPETEER_EXECUTABLE_PATH or install a supported browser executable.",
+  );
+}
+
 export async function renderReportPdf(html: string) {
   if (rendering) throw new Error("Another report PDF is generating. Please retry shortly.");
   rendering = true;
@@ -184,6 +217,7 @@ export async function renderReportPdf(html: string) {
     const browser = await puppeteer.launch({
       headless: true,
       timeout: 30000,
+      executablePath: await resolvePuppeteerExecutable(),
       args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
     });
     try {

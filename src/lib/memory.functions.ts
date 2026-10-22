@@ -13,7 +13,7 @@ export const getMemoryStats = createServerFn({ method: "GET" })
 
 export const predictCaseOutcome = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => memoryReviewSchema.parse(input))
+  .validator((input) => memoryReviewSchema.parse(input))
   .handler(async ({ context, data }) => {
     if ((await context.supabase.rpc("report_access_level").throwOnError()).data !== "super_admin")
       throw new Error("Access Denied: case prediction is Super Admin only.");

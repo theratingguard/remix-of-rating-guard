@@ -68,7 +68,7 @@ const insightsSchema = z.object({
 
 export const generateBatchInsights = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ batchId: z.string().uuid() }).parse(d))
+  .validator((d) => z.object({ batchId: z.string().uuid() }).parse(d))
   .handler(
     async ({
       data,

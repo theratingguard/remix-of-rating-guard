@@ -6,7 +6,7 @@ import { detectCountry, generateLegalRequest } from "./legal-orchestrator.server
 
 export const generateCountryLegalRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z
       .object({
         scanId: z.string().uuid(),

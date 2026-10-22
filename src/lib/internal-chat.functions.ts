@@ -23,7 +23,7 @@ export const getInternalChatContacts = createServerFn({ method: "GET" })
 
 export const requestInternalChatAutoReply = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => messageInput.parse(input))
+  .validator((input) => messageInput.parse(input))
   .handler(async ({ context, data }) => {
     const { data: superAdminId, error: superAdminError } = await context.supabase.rpc(
       "internal_chat_super_admin_id",
@@ -86,7 +86,7 @@ export const requestInternalChatAutoReply = createServerFn({ method: "POST" })
 
 export const editInternalChatMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => editMessageInput.parse(input))
+  .validator((input) => editMessageInput.parse(input))
   .handler(async ({ context, data }) => {
     const { data: access, error: accessError } = await context.supabase.rpc("report_access_level");
     if (accessError) throw new Error("Could not verify message-edit access.");
@@ -103,7 +103,7 @@ export const editInternalChatMessage = createServerFn({ method: "POST" })
 
 export const removeInternalChatMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => messageInput.parse(input))
+  .validator((input) => messageInput.parse(input))
   .handler(async ({ context, data }) => {
     const { data: access, error: accessError } = await context.supabase.rpc("report_access_level");
     if (accessError) throw new Error("Could not verify message-removal access.");

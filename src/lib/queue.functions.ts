@@ -15,7 +15,7 @@ const startOfDayUtc = () => {
 /** Queue a bulk batch. Enforces the daily link cap and skips duplicate links. */
 export const enqueueBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({ urls: z.array(z.string().trim().min(3).max(2000)).min(1).max(MAX_BULK_INPUTS) })
       .parse(d),
@@ -129,7 +129,7 @@ export const processQueueNow = createServerFn({ method: "POST" })
 
 export const getBatchJobs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ batchId: z.string().uuid() }).parse(d))
+  .validator((d) => z.object({ batchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const batch = await context.supabase
       .from("scan_batches")
@@ -239,7 +239,7 @@ export const latestBatch = createServerFn({ method: "GET" })
 
 export const controlBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
+  .validator((input) =>
     z
       .object({ batchId: z.string().uuid(), action: z.enum(["pause", "resume", "cancel"]) })
       .parse(input),
@@ -272,7 +272,7 @@ export const controlBatch = createServerFn({ method: "POST" })
 
 export const retryJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ jobId: z.string().uuid() }).parse(d))
+  .validator((d) => z.object({ jobId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: job, error } = await context.supabase
       .from("scan_jobs")

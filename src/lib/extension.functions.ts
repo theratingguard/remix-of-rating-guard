@@ -28,7 +28,7 @@ async function requireExtensionAccess(supabase: SupabaseClient<Database>) {
 
 export const getExtensionReport = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ scanId: z.string().uuid() }).parse(input))
+  .validator((input) => z.object({ scanId: z.string().uuid() }).parse(input))
   .handler(async ({ context, data }) => {
     await requireExtensionAccess(context.supabase);
     const [scan, report, reviews] = await Promise.all([
@@ -98,7 +98,7 @@ export const getExtensionStatus = createServerFn({ method: "GET" })
 
 export const recordExtensionSubmission = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => extensionSubmissionSchema.parse(input))
+  .validator((input) => extensionSubmissionSchema.parse(input))
   .handler(async ({ context, data }) => {
     await requireExtensionAccess(context.supabase);
     const [scan, report, review] = await Promise.all([

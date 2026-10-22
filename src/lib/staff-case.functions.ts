@@ -45,6 +45,40 @@ async function requireAdmin(client: UserClient) {
   if (data !== "super_admin") throw new Error(adminMessage);
 }
 
+async function getManagerTeamScope(client: UserClient, userId: string) {
+  const { data: profile, error: profileError } = await client
+    .from("staff")
+    .select("id,role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profileError) throw new Error(`Could not verify manager access: ${profileError.message}`);
+  if (profile?.role.toLowerCase().replaceAll("_", " ") !== "manager")
+    throw new Error("Manager access is required for team case assignment.");
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: teams, error: teamsError } = await supabaseAdmin
+    .from("teams")
+    .select("id,team_leader_id")
+    .eq("manager_id", userId)
+    .eq("is_active", true);
+  if (teamsError) throw new Error(`Could not load manager teams: ${teamsError.message}`);
+  const teamIds = (teams ?? []).map((team) => team.id);
+  const teamLeaderIds = (teams ?? []).map((team) => team.team_leader_id);
+  if (teamIds.length === 0) throw new Error("No active team is assigned to this manager.");
+
+  const { data: members, error: membersError } = await supabaseAdmin
+    .from("staff")
+    .select("id")
+    .in("team_leader_id", teamLeaderIds)
+    .in("status", ["approved", "active"]);
+  if (membersError) throw new Error(`Could not load manager team members: ${membersError.message}`);
+  return {
+    teamIds,
+    teamLeaderIds,
+    memberIds: new Set((members ?? []).map((member) => member.id)),
+  };
+}
+
 async function staffRequestFingerprint() {
   const { getRequest } = await import("@tanstack/react-start/server");
   const { isIP } = await import("node:net");
@@ -697,6 +731,71 @@ export const getAdminStaffData = createServerFn({ method: "GET" })
     };
   });
 
+export const getManagerStaffAssignmentData = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { teamLeaderIds, memberIds } = await getManagerTeamScope(
+      context.supabase,
+      context.userId,
+    );
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [staffResult, scansResult] = await Promise.all([
+      supabaseAdmin
+        .from("staff")
+        .select("id,name,status,region_city,region_state")
+        .in("id", [...memberIds])
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabaseAdmin
+        .from("scans")
+        .select("id,user_id,source_url,business_name,address,status,created_at")
+        .eq("status", "complete")
+        .eq("is_seed", false)
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ]);
+    if (staffResult.error)
+      throw new Error(`Could not load manager team members: ${staffResult.error.message}`);
+    if (scansResult.error)
+      throw new Error(`Could not load completed client scans: ${scansResult.error.message}`);
+
+    const scans = scansResult.data ?? [];
+    const scanIds = scans.map((scan) => scan.id);
+    const reviewsResult = scanIds.length
+      ? await supabaseAdmin
+          .from("reviews")
+          .select("id,scan_id,text,review_uri,risk,policy_category,evidence,reason")
+          .in("scan_id", scanIds)
+          .in("risk", ["high", "medium"])
+          .order("created_at", { ascending: false })
+          .limit(500)
+      : { data: [], error: null };
+    if (reviewsResult.error)
+      throw new Error(`Could not load review candidates: ${reviewsResult.error.message}`);
+
+    const scanMap = new Map(scans.map((scan) => [scan.id, scan]));
+    const candidates = (reviewsResult.data ?? []).flatMap((review) => {
+      const scan = scanMap.get(review.scan_id);
+      if (!scan || !review.review_uri || !isGoogleMapsUrl(review.review_uri)) return [];
+      return [
+        {
+          scan_id: scan.id,
+          review_id: review.id,
+          client_user_id: scan.user_id,
+          review_url: review.review_uri,
+          business_name: scan.business_name ?? "Business",
+          business_region: scan.address ?? "",
+          review_text: review.text ?? "",
+          risk: review.risk,
+          policy_angle: review.policy_category,
+          evidence: review.evidence,
+          reason: review.reason,
+        },
+      ];
+    });
+    return { staff: staffResult.data ?? [], candidates, teamLeaderIds };
+  });
+
 export const assignStaffCases = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input) =>
@@ -709,7 +808,14 @@ export const assignStaffCases = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await requireAdmin(context.supabase);
+    const { data: accessLevel, error: accessError } =
+      await context.supabase.rpc("report_access_level");
+    if (accessError)
+      throw new Error(`Could not verify case assignment access: ${accessError.message}`);
+    const isSuperadmin = accessLevel === "super_admin";
+    const managerScope = isSuperadmin
+      ? null
+      : await getManagerTeamScope(context.supabase, context.userId);
     const targets = [
       ...new Map(data.targets.map((item) => [`${item.scanId}:${item.reviewId}`, item])).values(),
     ];
@@ -724,6 +830,8 @@ export const assignStaffCases = createServerFn({ method: "POST" })
     if (staffError) throw new Error(`Could not verify staff member: ${staffError.message}`);
     if (!["approved", "active"].includes(staff.status))
       throw new Error("Cases can only be assigned to approved staff.");
+    if (managerScope && !managerScope.memberIds.has(staff.id))
+      throw new Error("Managers can assign cases only to approved members of their own team.");
     const scanIds = [...new Set(targets.map((item) => item.scanId))];
     const [scansResult, reviewsResult] = await Promise.all([
       supabaseAdmin
@@ -789,6 +897,7 @@ export const assignStaffCases = createServerFn({ method: "POST" })
         evidence_notes: prepared.evidenceNotes,
         policy_angle: prepared.policyAngle,
         status: "open" as const,
+        deadline_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       };
     });
     const { data: created, error: insertError } = await supabaseAdmin

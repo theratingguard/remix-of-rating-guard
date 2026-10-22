@@ -25,7 +25,7 @@ export const getAiControlPanel = createServerFn({ method: "GET" })
   });
 export const saveAiSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => settingsSchema.parse(input))
+  .validator((input) => settingsSchema.parse(input))
   .handler(async ({ context, data }) => {
     try {
       if (data.email_share_enabled && !smtpConfigured())
@@ -43,7 +43,7 @@ export const saveAiSettings = createServerFn({ method: "POST" })
   });
 export const runModelTests = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
+  .validator((input) =>
     z.object({ model: z.enum(["gpt", "claude", "gemini", "all"]) }).parse(input),
   )
   .handler(async ({ context, data }) => {

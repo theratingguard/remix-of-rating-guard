@@ -14,7 +14,7 @@ function hasClientRole(claims: Record<string, unknown>) {
 
 export const prepareClientReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ reviewId: z.string().uuid() }).parse(input))
+  .validator((input) => z.object({ reviewId: z.string().uuid() }).parse(input))
   .handler(async ({ context, data }) => {
     if (!hasClientRole(context.claims)) throw new Error("Access denied. Client account required.");
 

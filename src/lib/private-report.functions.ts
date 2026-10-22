@@ -5,7 +5,7 @@ import { privatePdfInput, readPrivateReportPdf } from "./private-report.server";
 
 export const downloadPrivateReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => privatePdfInput.parse(input))
+  .validator((input) => privatePdfInput.parse(input))
   .handler(async ({ context, data }) => {
     setResponseHeader("Cache-Control", "private, no-store");
     setResponseHeader("X-Content-Type-Options", "nosniff");

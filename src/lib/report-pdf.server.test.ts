@@ -30,6 +30,7 @@ const browserMock = vi.hoisted(() => ({
 }));
 vi.mock("puppeteer", () => ({
   default: {
+    executablePath: () => process.execPath,
     launch: vi.fn(async () => ({
       newPage: async () => ({
         pdf: browserMock.pdf,

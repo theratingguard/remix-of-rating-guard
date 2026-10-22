@@ -69,7 +69,7 @@ export const getOperations = createServerFn({ method: "GET" })
 
 export const getScanEvents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ scanId: z.string().uuid() }).parse(d))
+  .validator((d) => z.object({ scanId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase
       .from("scan_events")
@@ -148,7 +148,7 @@ export const getActionCenter = createServerFn({ method: "GET" })
 
 export const setActionStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         reviewId: z.string().uuid(),
@@ -296,7 +296,7 @@ export const getErrorCenter = createServerFn({ method: "GET" })
 
 export const setErrorStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         id: z.string().uuid(),
@@ -331,7 +331,7 @@ export const setErrorStatus = createServerFn({ method: "POST" })
 
 export const retryErrorScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ errorId: z.string().uuid() }).parse(input))
+  .validator((input) => z.object({ errorId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     if ((await context.supabase.rpc("report_access_level").throwOnError()).data !== "super_admin")
       throw new Error("Access Denied: Super Admin retry only.");

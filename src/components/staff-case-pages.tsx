@@ -14,6 +14,7 @@ import {
   closeStaffCase,
   getAdminStaffData,
   getClientStaffCases,
+  getManagerStaffAssignmentData,
   getStaffWorkspace,
   recordStaffSubmission,
   registerStaff,
@@ -31,6 +32,7 @@ import { z } from "zod";
 
 const staffKey = ["staff-workspace"];
 const adminStaffKey = ["admin-staff-cases"];
+const managerAssignmentKey = ["manager-staff-case-assignment"];
 const emptyStaff: StaffProfileInput = { name: "", mobile: "", region_city: "", region_state: "" };
 
 function StatusPill({ status }: { status: string }) {
@@ -897,8 +899,55 @@ export function StaffWalletPage() {
 }
 
 export function AdminCaseAssignmentPage() {
-  const queryClient = useQueryClient();
   const adminData = useQuery({ queryKey: adminStaffKey, queryFn: useServerFn(getAdminStaffData) });
+  if (adminData.isLoading) return <p>Loading assignments…</p>;
+  if (adminData.error || !adminData.data)
+    return <p role="alert">{adminData.error?.message ?? "Could not load assignment data."}</p>;
+  return <CaseAssignmentForm data={adminData.data} queryKey={adminStaffKey} />;
+}
+
+export function ManagerCaseAssignmentPage() {
+  const assignmentData = useQuery({
+    queryKey: managerAssignmentKey,
+    queryFn: useServerFn(getManagerStaffAssignmentData),
+  });
+  if (assignmentData.isLoading) return <p>Loading team case assignments…</p>;
+  if (assignmentData.error || !assignmentData.data)
+    return (
+      <p role="alert">
+        {assignmentData.error?.message ?? "Could not load team case assignment data."}
+      </p>
+    );
+  return (
+    <CaseAssignmentForm data={assignmentData.data} queryKey={managerAssignmentKey} managerMode />
+  );
+}
+
+function CaseAssignmentForm({
+  data,
+  queryKey,
+  managerMode = false,
+}: {
+  data: {
+    staff: Array<{
+      id: string;
+      name: string;
+      status: string;
+      region_city: string;
+      region_state: string;
+    }>;
+    candidates: Array<{
+      scan_id: string;
+      review_id: string;
+      review_url: string;
+      business_name: string;
+      business_region: string;
+    }>;
+  };
+  queryKey: readonly unknown[];
+  managerMode?: boolean;
+}) {
+  const queryClient = useQueryClient();
   const assign = useServerFn(assignStaffCases);
   const [staffId, setStaffId] = useState("");
   const [pastedUrls, setPastedUrls] = useState("");
@@ -908,13 +957,12 @@ export function AdminCaseAssignmentPage() {
     .map((url) => url.trim())
     .filter(Boolean);
   const matched = useMemo(() => {
-    if (!adminData.data) return [];
     const pasted = pastedUrls
       .split(/\r?\n/)
       .map((url) => url.trim())
       .filter(Boolean);
     const available = new Map(
-      adminData.data.candidates.map((candidate) => [candidate.review_url, candidate]),
+      data.candidates.map((candidate) => [candidate.review_url, candidate]),
     );
     const used = new Set<string>();
     return pasted.map((url) => {
@@ -924,7 +972,7 @@ export function AdminCaseAssignmentPage() {
       used.add(key);
       return { url, candidate };
     });
-  }, [adminData.data, pastedUrls]);
+  }, [data.candidates, pastedUrls]);
   const eligible = matched.flatMap((entry) =>
     entry.candidate
       ? [{ scanId: entry.candidate.scan_id, reviewId: entry.candidate.review_id }]
@@ -939,23 +987,18 @@ export function AdminCaseAssignmentPage() {
         `${result.assignedCount} case${result.assignedCount === 1 ? "" : "s"} assigned.`,
       );
       setPastedUrls("");
-      await queryClient.invalidateQueries({ queryKey: adminStaffKey });
+      await queryClient.invalidateQueries({ queryKey });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Case assignment failed.");
     } finally {
       setBusy(false);
     }
   }
-  if (adminData.isLoading) return <p>Loading assignments…</p>;
-  if (adminData.error || !adminData.data)
-    return <p role="alert">{adminData.error?.message ?? "Could not load assignment data."}</p>;
-  const activeStaff = adminData.data.staff.filter((row) =>
-    ["approved", "active"].includes(row.status),
-  );
+  const activeStaff = data.staff.filter((row) => ["approved", "active"].includes(row.status));
   const orderedStaff = [...activeStaff].sort((left, right) => {
     const locationScore = (person: (typeof activeStaff)[number]) =>
       eligible.reduce((total, target) => {
-        const candidate = adminData.data.candidates.find(
+        const candidate = data.candidates.find(
           (row) => row.scan_id === target.scanId && row.review_id === target.reviewId,
         );
         const region = candidate?.business_region.toLocaleLowerCase() ?? "";
@@ -968,8 +1011,12 @@ export function AdminCaseAssignmentPage() {
   return (
     <main className="mx-auto max-w-4xl space-y-5">
       <PageHeader
-        title="Client case assignment"
-        subtitle="Paste exact review URLs from completed scans. Multiple eligible URLs can be assigned as one batch (up to 20)."
+        title={managerMode ? "Team review-case assignment" : "Client case assignment"}
+        subtitle={
+          managerMode
+            ? "Assign eligible completed-scan reviews to approved staff in your team. Multiple URLs can be assigned as one batch (up to 20)."
+            : "Paste exact review URLs from completed scans. Multiple eligible URLs can be assigned as one batch (up to 20)."
+        }
       />
       <section className="surface space-y-4 p-4 sm:p-6">
         <div className="space-y-2">
@@ -1026,7 +1073,8 @@ export function AdminCaseAssignmentPage() {
         )}
         <p className="text-xs text-muted-foreground">
           Business region is taken from the address captured during the client scan; confirm it
-          before assigning. Staff region is a routing convenience only.
+          before assigning. Staff region is a routing convenience only. Cases are due within 24
+          hours.
         </p>
         <Button
           disabled={!staffId || !eligible.length || busy || eligible.length > 20}
@@ -1037,11 +1085,13 @@ export function AdminCaseAssignmentPage() {
             : `Assign ${eligible.length} eligible case${eligible.length === 1 ? "" : "s"}`}
         </Button>
       </section>
-      <p>
-        <Link className="text-sm underline" to="/admin/staff">
-          Manage staff registrations
-        </Link>
-      </p>
+      {!managerMode && (
+        <p>
+          <Link className="text-sm underline" to="/admin/staff">
+            Manage staff registrations
+          </Link>
+        </p>
+      )}
     </main>
   );
 }
@@ -1150,7 +1200,7 @@ export function AdminStaffPage() {
           </div>
         ))}
       </section>
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <section className="grid min-w-0 grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {[
           ["Total staff", stats.totalStaff],
           ["Active today", stats.activeToday],
@@ -1162,8 +1212,8 @@ export function AdminStaffPage() {
             stats.meanHandlingHours == null ? "—" : `${stats.meanHandlingHours.toFixed(1)} h`,
           ],
         ].map(([label, value]) => (
-          <div className="surface p-4" key={label}>
-            <p className="text-xs text-muted-foreground">{label}</p>
+          <div className="surface min-w-0 p-4" key={label}>
+            <p className="break-words text-xs text-muted-foreground">{label}</p>
             <p className="mt-1 text-2xl font-bold">{value}</p>
           </div>
         ))}

@@ -15,7 +15,6 @@ Object.assign(env, {
   NODE_ENV: "production",
   MULTI_WORKER_ENABLED: "true",
   REDIS_URL: "redis://127.0.0.1:6379",
-  PUPPETEER_CACHE_DIR: "/opt/ratingguard-chromium",
   HOME: "/opt/ratingguard-chromium-runtime",
   XDG_CONFIG_HOME: "/opt/ratingguard-chromium-runtime/config",
   XDG_CACHE_HOME: "/opt/ratingguard-chromium-runtime/cache",

@@ -26,7 +26,8 @@ describe("Public health contract", () => {
     expect(await result.json()).toMatchObject({
       status: "degraded",
       database: "unavailable",
-      providerVerification: "failed",
+      databaseVerification: "failed",
+      providerVerification: "unverified",
       missingConfiguration: expect.arrayContaining(["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]),
     });
   });
@@ -55,7 +56,8 @@ describe("Public health contract", () => {
     expect(fetcher).toHaveBeenCalledOnce();
     expect(body).not.toContain("unit-secret");
     expect(body).toContain('"database":"available"');
-    expect(body).toContain('"providerVerification":"verified"');
+    expect(body).toContain('"databaseVerification":"verified"');
+    expect(body).toContain('"providerVerification":"unverified"');
   });
 
   it("fails health when Supabase is unreachable", async () => {
@@ -77,7 +79,8 @@ describe("Public health contract", () => {
     expect(await response.json()).toMatchObject({
       status: "degraded",
       database: "unavailable",
-      providerVerification: "failed",
+      databaseVerification: "failed",
+      providerVerification: "unverified",
     });
   });
 

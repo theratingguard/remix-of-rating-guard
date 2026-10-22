@@ -9,7 +9,7 @@ vi.mock("@tanstack/react-start", () => ({
     middleware() {
       return this;
     },
-    inputValidator() {
+    validator() {
       return this;
     },
     handler(fn: (input: { context: typeof fixture.context; data: unknown }) => Promise<unknown>) {

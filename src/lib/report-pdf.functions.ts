@@ -13,7 +13,7 @@ export const reportEmailStatus = createServerFn({ method: "GET" })
 
 export const emailReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
+  .validator((input) =>
     z.object({ scanId: z.string().uuid(), email: z.string().trim().email().max(254) }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -60,7 +60,7 @@ export const emailReport = createServerFn({ method: "POST" })
 
 export const saveReportPdf = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
+  .validator((input) =>
     z
       .object({
         scanId: z.string().uuid(),

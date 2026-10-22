@@ -5,7 +5,7 @@ import { createSelectedReport } from "./review-selection.server";
 
 export const generateSelectedReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
+  .validator((input) =>
     z
       .object({
         scanId: z.string().uuid(),

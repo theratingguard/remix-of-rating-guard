@@ -13,7 +13,7 @@ import { reserveBusinessSearchSlot } from "./business-search-limit.server";
 
 export const findBusinesses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ query: z.string().trim().min(3).max(200) }).parse(input))
+  .validator((input) => z.object({ query: z.string().trim().min(3).max(200) }).parse(input))
   .handler(async ({ data, context }) => {
     const key = process.env["GOOGLE_PLACES_API_KEY"];
     if (!key) throw new Error("Google business search is not configured.");
@@ -140,7 +140,7 @@ export const getSystemStatus = createServerFn({ method: "GET" })
 /** Stage 1: resolve business, read public place data, retrieve available reviews. */
 export const scanFetch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         url: z.string().trim().min(5).max(2000),
@@ -162,7 +162,7 @@ export const scanFetch = createServerFn({ method: "POST" })
 /** Stage 2: analyze review signals, classify risk, prepare report. */
 export const scanAnalyze = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ scanId: z.string().uuid() }).parse(d))
+  .validator((d) => z.object({ scanId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<StageResponse> => {
     if (process.env["MULTI_WORKER_ENABLED"] === "true") {
       const { retryWorkerTask } = await import("./queue/pipeline.server");
@@ -174,7 +174,7 @@ export const scanAnalyze = createServerFn({ method: "POST" })
 
 export const logAudit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         action: z.enum([
@@ -206,7 +206,7 @@ export const getAuditLog = createServerFn({ method: "GET" })
 
 export const createBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ total: z.number().int().min(1).max(500) }).parse(d))
+  .validator((d) => z.object({ total: z.number().int().min(1).max(500) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: b, error } = await context.supabase
       .from("scan_batches")

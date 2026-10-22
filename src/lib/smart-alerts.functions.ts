@@ -36,7 +36,7 @@ export const getSmartAlerts = createServerFn({ method: "GET" })
   });
 export const compareCompetitors = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
+  .validator((input) =>
     z.object({ ownId: z.string().uuid(), competitorId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ context, data }) => {
