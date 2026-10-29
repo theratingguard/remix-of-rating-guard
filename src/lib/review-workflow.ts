@@ -24,6 +24,8 @@ export function reviewWorkflowMetrics(counts: { reportEvents: number; removed: n
   return {
     totalReportsSent,
     totalRemoved,
-    successRate: totalReportsSent ? Math.round((totalRemoved / totalReportsSent) * 100) : 0,
+    successRate: totalReportsSent
+      ? Math.min(100, Math.round((totalRemoved / totalReportsSent) * 100))
+      : 0,
   };
 }

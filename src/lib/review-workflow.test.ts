@@ -24,3 +24,7 @@ it("counts repeated manually confirmed reports separately", () => {
     successRate: 25,
   });
 });
+
+it("caps report success at 100 percent when outcomes outnumber recorded reports", () => {
+  expect(reviewWorkflowMetrics({ reportEvents: 50, removed: 51 }).successRate).toBe(100);
+});

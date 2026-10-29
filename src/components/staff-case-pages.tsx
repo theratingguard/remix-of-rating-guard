@@ -27,6 +27,7 @@ import {
 } from "@/lib/staff-case.functions";
 import { AdminStaffChat } from "@/components/admin-staff-chat";
 import { AdminStaffPhaseTwo } from "@/components/admin-staff-phase-two";
+import { SuperAdminAddUserForm } from "@/components/super-admin-add-user-form";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
@@ -931,10 +932,8 @@ function CaseAssignmentForm({
   data: {
     staff: Array<{
       id: string;
-      name: string;
+      unique_id: string;
       status: string;
-      region_city: string;
-      region_state: string;
     }>;
     candidates: Array<{
       scan_id: string;
@@ -995,19 +994,9 @@ function CaseAssignmentForm({
     }
   }
   const activeStaff = data.staff.filter((row) => ["approved", "active"].includes(row.status));
-  const orderedStaff = [...activeStaff].sort((left, right) => {
-    const locationScore = (person: (typeof activeStaff)[number]) =>
-      eligible.reduce((total, target) => {
-        const candidate = data.candidates.find(
-          (row) => row.scan_id === target.scanId && row.review_id === target.reviewId,
-        );
-        const region = candidate?.business_region.toLocaleLowerCase() ?? "";
-        const cityMatches = region.includes(person.region_city.trim().toLocaleLowerCase());
-        const stateMatches = region.includes(person.region_state.trim().toLocaleLowerCase());
-        return total + (cityMatches ? 2 : stateMatches ? 1 : 0);
-      }, 0);
-    return locationScore(right) - locationScore(left);
-  });
+  const orderedStaff = [...activeStaff].sort((left, right) =>
+    left.unique_id.localeCompare(right.unique_id),
+  );
   return (
     <main className="mx-auto max-w-4xl space-y-5">
       <PageHeader
@@ -1015,7 +1004,7 @@ function CaseAssignmentForm({
         subtitle={
           managerMode
             ? "Assign eligible completed-scan reviews to approved staff in your team. Multiple URLs can be assigned as one batch (up to 20)."
-            : "Paste exact review URLs from completed scans. Multiple eligible URLs can be assigned as one batch (up to 20)."
+            : "Assign eligible completed-scan reviews to any approved staff member, regardless of location. Multiple URLs can be assigned as one batch (up to 20)."
         }
       />
       <section className="surface space-y-4 p-4 sm:p-6">
@@ -1035,7 +1024,7 @@ function CaseAssignmentForm({
           </p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="staff-assignee">Active staff member</Label>
+          <Label htmlFor="staff-assignee">Approved staff member</Label>
           <select
             id="staff-assignee"
             className="h-10 w-full rounded-md border bg-background px-3 text-sm"
@@ -1045,7 +1034,7 @@ function CaseAssignmentForm({
             <option value="">Select staff…</option>
             {orderedStaff.map((person) => (
               <option key={person.id} value={person.id}>
-                {person.name} · {person.region_city}, {person.region_state}
+                {person.unique_id}
               </option>
             ))}
           </select>
@@ -1072,8 +1061,7 @@ function CaseAssignmentForm({
           </section>
         )}
         <p className="text-xs text-muted-foreground">
-          Business region is taken from the address captured during the client scan; confirm it
-          before assigning. Staff region is a routing convenience only. Cases are due within 24
+          Staff and business locations do not restrict case assignment. Cases are due within 24
           hours.
         </p>
         <Button
@@ -1120,7 +1108,12 @@ export function AdminStaffPage() {
             : {}),
         },
       });
-      await queryClient.invalidateQueries({ queryKey: adminStaffKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminStaffKey }),
+        queryClient.invalidateQueries({ queryKey: ["admin-team-management"] }),
+        queryClient.invalidateQueries({ queryKey: ["team-task-data"] }),
+        queryClient.invalidateQueries({ queryKey: ["user-creation-options"] }),
+      ]);
       toast.success(
         status === "approved"
           ? "Staff approved."
@@ -1188,6 +1181,11 @@ export function AdminStaffPage() {
           </Link>
         }
       />
+      <SuperAdminAddUserForm
+        onCreated={async () => {
+          await queryClient.invalidateQueries({ queryKey: adminStaffKey });
+        }}
+      />
       <section className="grid gap-3 sm:grid-cols-3">
         {[
           ["Pending", staff.filter((person) => person.status === "pending").length],
@@ -1240,11 +1238,15 @@ export function AdminStaffPage() {
                 className="flex flex-col gap-4 rounded-xl border p-4 sm:flex-row"
                 key={person.id}
               >
-                {person.selfie_url ? (
+                {person.selfie_url || person.photo_url ? (
                   <img
                     className="size-24 shrink-0 rounded-lg object-cover"
-                    src={person.selfie_url}
-                    alt={`Live selfie of ${person.name}`}
+                    src={person.selfie_url ?? person.photo_url ?? undefined}
+                    alt={
+                      person.selfie_url
+                        ? `Live selfie of ${person.name}`
+                        : `Profile photo of ${person.name}`
+                    }
                   />
                 ) : (
                   <div className="grid size-24 shrink-0 place-items-center rounded-lg bg-muted text-xs text-muted-foreground">
@@ -1545,6 +1547,7 @@ export function AdminStaffDetailPage({ id }: { id: string }) {
             className="mx-auto max-h-[560px] w-full rounded-xl object-contain"
             src={person.selfie_url}
             alt={`Live selfie of ${person.name}`}
+            loading="lazy"
           />
         </section>
       )}

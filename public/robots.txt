@@ -1,5 +1,10 @@
 User-agent: *
 Allow: /
 Disallow: /admin/
+Disallow: /staff/
+Disallow: /client/
+Disallow: /manager/
+Disallow: /reseller/
+Disallow: /api/
 Disallow: /dashboard
 Sitemap: https://ratingguard.online/sitemap.xml

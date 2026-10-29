@@ -18,13 +18,19 @@ export function StaffActivityReviewPage() {
       if (authError) throw new Error(`Could not verify your session: ${authError.message}`);
       if (accessError) throw new Error(`Could not verify access: ${accessError.message}`);
       if (!auth.user) throw new Error("Sign in to review staff activity.");
-      const [logs, staff, todayLogs] = await Promise.all([
+      const [logs, staff, reportLogs, todayLogs] = await Promise.all([
         supabase
           .from("communication_log")
           .select("*")
           .order("created_at", { ascending: false })
           .limit(1000),
         supabase.from("staff").select("id,name").order("name").limit(1000),
+        supabase
+          .from("staff_activity_log")
+          .select("*")
+          .eq("action", "task_reported")
+          .order("created_at", { ascending: false })
+          .limit(1000),
         (async () => {
           const startOfDay = new Date();
           startOfDay.setHours(0, 0, 0, 0);
@@ -48,6 +54,8 @@ export function StaffActivityReviewPage() {
       ]);
       if (logs.error) throw new Error(`Could not load activity logs: ${logs.error.message}`);
       if (staff.error) throw new Error(`Could not load staff names: ${staff.error.message}`);
+      if (reportLogs.error)
+        throw new Error(`Could not load task report activity: ${reportLogs.error.message}`);
       const logIds = logs.data.map((item) => item.id);
       const evidence = logIds.length
         ? await supabase
@@ -71,6 +79,7 @@ export function StaffActivityReviewPage() {
         access,
         logs: logs.data,
         staff: staff.data,
+        reportLogs: reportLogs.data,
         evidence: files,
         todayLogs,
       };
@@ -141,6 +150,34 @@ export function StaffActivityReviewPage() {
         ))}
         {!counts.length && (
           <p className="surface p-4 text-sm text-muted-foreground">No activity records yet.</p>
+        )}
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Reported tasks</h2>
+        {activity.data.reportLogs.length ? (
+          activity.data.reportLogs.map((item) => {
+            const metadata =
+              item.metadata && typeof item.metadata === "object" && !Array.isArray(item.metadata)
+                ? item.metadata
+                : {};
+            const taskId = typeof metadata.task_id === "string" ? metadata.task_id : "Unknown";
+            return (
+              <article className="surface space-y-1 p-4" key={item.id}>
+                <h3 className="font-semibold">
+                  {activity.data!.staff.find((staff) => staff.id === item.staff_id)?.name ??
+                    "Staff"}{" "}
+                  · Task reported
+                </h3>
+                <p className="text-sm">Task ID: {taskId}</p>
+                <p className="text-xs text-muted-foreground">Staff ID: {item.staff_id}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(item.created_at).toLocaleString()}
+                </p>
+              </article>
+            );
+          })
+        ) : (
+          <p className="surface p-4 text-sm text-muted-foreground">No reported tasks yet.</p>
         )}
       </section>
       <section className="space-y-3">

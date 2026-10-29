@@ -1,10 +1,9 @@
 import { Worker, DelayedError, UnrecoverableError } from "bullmq";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { startWeeklyLearningRefresh } from "../learning.server";
-import { ScanError } from "../google-places.server";
 import { recordError } from "../scan-core.server";
 import { processWorkerStage, dispatchWorkerTasks } from "./pipeline.server";
-import { isPermanentWorkerError } from "./retry-policy.server";
+import { isPermanentWorkerError, workerErrorCode } from "./retry-policy.server";
 import { startSubmissionFollowupPolling } from "../status-polling.server";
 import { startReplyAutomation } from "../reply-automation.server";
 import {
@@ -79,6 +78,7 @@ export async function startWorker(stage: WorkerStage) {
       } catch (error) {
         if (error instanceof DelayedError) throw error;
         const message = error instanceof Error ? error.message : "Unknown worker failure";
+        const errorCode = workerErrorCode(error);
         const task = (
           await supabaseAdmin
             .from("worker_tasks")
@@ -111,14 +111,24 @@ export async function startWorker(stage: WorkerStage) {
           })
           .throwOnError();
         await recordError(supabaseAdmin, task.user_id, {
-          code: error instanceof ScanError ? error.code : "WORKER_ERROR",
+          code: errorCode ?? "WORKER_ERROR",
           message,
           scanId: task.scan_id,
           route: queueNames[stage],
         });
-        if (error instanceof ScanError && error.code === "AI_BUDGET_LIMIT") {
+        if (errorCode === "AI_BUDGET_LIMIT") {
           const tomorrow = new Date();
           tomorrow.setUTCHours(24, 0, 1, 0);
+          await supabaseAdmin
+            .from("system_state")
+            .update({
+              queue_paused: true,
+              pause_reason: message,
+              paused_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", "main")
+            .throwOnError();
           await supabaseAdmin
             .from("worker_tasks")
             .update({ status: "queued", error: message, updated_at: new Date().toISOString() })
@@ -129,6 +139,12 @@ export async function startWorker(stage: WorkerStage) {
             .update({ status: "running", stage: "queued", error: message, completed_at: null })
             .eq("id", task.scan_id)
             .throwOnError();
+          if (task.bulk_job_id)
+            await supabaseAdmin
+              .from("scan_jobs")
+              .update({ status: "pending", error: message, locked_until: null })
+              .eq("id", task.bulk_job_id)
+              .throwOnError();
           await job.moveToDelayed(tomorrow.getTime(), token);
           throw new DelayedError();
         }

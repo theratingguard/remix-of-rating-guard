@@ -5,6 +5,9 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SeoResearchTools } from "@/components/seo-research-tools";
+import { SeoKeywordsPanel } from "@/components/seo-keywords-panel";
+import { CountryHashtagsPanel } from "@/components/country-hashtags-panel";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import {
@@ -230,6 +233,9 @@ export function SeoAutomationDashboard() {
           superadmin session is valid. Details: {loadError.message}
         </p>
       )}
+
+      <SeoKeywordsPanel />
+      <CountryHashtagsPanel />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Worker status">
         <Card>
@@ -566,6 +572,7 @@ export function SeoAutomationDashboard() {
         modifies site metadata. The worker is capped at 2 outlines, 5 metadata rewrites, and 5 link
         suggestions per UTC day.
       </p>
+      <SeoResearchTools />
     </main>
   );
 }

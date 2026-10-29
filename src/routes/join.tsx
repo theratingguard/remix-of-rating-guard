@@ -5,8 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { SEOHead } from "@/lib/seo/seo-head";
 
 export const Route = createFileRoute("/join")({
+  head: () =>
+    SEOHead(
+      {
+        title: "Create Your Rating Guard Account",
+        description:
+          "Create a Rating Guard client account to organize Google review concerns and manage evidence-based reporting workflows.",
+      },
+      [],
+      { canonicalPath: "/join" },
+    ),
   validateSearch: (search: Record<string, unknown>) => ({
     ref: typeof search["ref"] === "string" ? search["ref"].slice(0, 32) : "",
   }),

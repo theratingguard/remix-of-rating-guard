@@ -48,7 +48,10 @@ export function boundAiRequest(url: string, init: RequestInit) {
   };
 }
 export async function budgetedAiFetch(url: string, init: RequestInit) {
-  if (process.env["MULTI_WORKER_ENABLED"] !== "true") return fetch(url, init);
+  const timeout = AbortSignal.timeout(15_000);
+  const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+  const request = { ...init, signal };
+  if (process.env["MULTI_WORKER_ENABLED"] !== "true") return fetch(url, request);
   const bound = boundAiRequest(url, init);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const admitted = await supabaseAdmin
@@ -59,5 +62,5 @@ export async function budgetedAiFetch(url: string, init: RequestInit) {
       "AI_BUDGET_LIMIT",
       "$10 daily AI reservation cap reached. Pending worker jobs wait until the next UTC day.",
     );
-  return fetch(url, { ...init, body: bound.body });
+  return fetch(url, { ...request, body: bound.body });
 }

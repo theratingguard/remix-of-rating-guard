@@ -54,6 +54,7 @@ describe("staff wallet summary", () => {
         },
         { transaction_type: "penalty", amount: 25, created_at: "2026-10-09T00:00:00.000Z" },
       ],
+      [{ amount_inr: 90, created_at: "2026-10-10T00:00:00.000Z" }],
       [
         {
           status: "approved",
@@ -67,9 +68,10 @@ describe("staff wallet summary", () => {
     expect(summary).toEqual({
       approvedTaskCount: 1,
       qualityBonus: 150,
+      caseEarnings: 90,
       penalty: 25,
-      monthlyPayout: 145,
-      totalEarned: 175,
+      monthlyPayout: 235,
+      totalEarned: 265,
     });
   });
 });

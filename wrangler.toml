@@ -1,0 +1,8 @@
+name = "ratingguard-public-assets"
+main = "workers/public-assets.js"
+compatibility_date = "2026-10-26"
+workers_dev = false
+
+routes = [
+  { pattern = "ratingguard.online/assets/*", zone_name = "ratingguard.online" }
+]

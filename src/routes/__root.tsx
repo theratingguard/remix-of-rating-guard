@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
   type ErrorComponentProps,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -14,6 +15,7 @@ import appCss from "../styles.css?url";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { useExtremeProtection } from "@/hooks/use-extreme-protection";
+import { resolveSeoLocale } from "@/lib/seo/locales";
 
 function NotFoundComponent() {
   return (
@@ -129,7 +131,21 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   useExtremeProtection();
+  useEffect(() => {
+    const pathLocale = pathname.split("/")[1];
+    document.documentElement.lang = resolveSeoLocale(pathLocale) ?? "en";
+  }, [pathname]);
+  useEffect(() => {
+    if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
+    void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((error: unknown) => {
+      console.error(
+        "[service-worker] Registration failed:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+    });
+  }, []);
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;

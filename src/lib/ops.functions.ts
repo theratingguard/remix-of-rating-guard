@@ -439,7 +439,8 @@ export const getSystemQuality = createServerFn({ method: "GET" })
     const done = live.filter((s) => s.status === "complete").length;
     const failed = live.filter((s) => s.status === "failed").length;
     const rv = reviews ?? [];
-    const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : null);
+    const pct = (a: number, b: number) =>
+      b ? Math.min(100, Math.round((a / b) * 100)) : null;
     return {
       findings: f,
       counts: {

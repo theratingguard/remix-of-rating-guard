@@ -89,7 +89,7 @@ export function LegalWorkersPanel() {
                     </td>
                     <td className="px-3 py-3">
                       {worker.average_days_to_response == null
-                        ? "—"
+                        ? "No Data"
                         : worker.average_days_to_response.toFixed(1)}
                     </td>
                     <td className="px-3 py-3">

@@ -265,6 +265,38 @@ export async function scanFetchCore(
       message: "Google Places API is not configured. Add the API key in Settings.",
     };
 
+  let clientLead: {
+    id: string;
+    client_name: string;
+    client_mobile: string;
+    team_leader_name: string | null;
+  } | null;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: lead, error: leadError } = await supabaseAdmin
+      .from("client_leads")
+      .select("id,client_name,client_mobile,team_leader_name")
+      .eq("review_url", normalizeGoogleUrl(data.url))
+      .maybeSingle();
+    if (leadError) throw leadError;
+    clientLead = lead;
+  } catch (error) {
+    console.error("[scan] Could not check registered client lead", {
+      code: error instanceof Error ? error.name : "UnknownError",
+    });
+    return {
+      ok: false,
+      code: "DB_UNAVAILABLE",
+      message: "Could not check registered client details. Confirm the client-leads migration is applied.",
+    };
+  }
+  const clientLeadSnapshot = {
+    client_lead_id: clientLead?.id ?? null,
+    client_name: clientLead?.client_name ?? null,
+    client_mobile: clientLead?.client_mobile ?? null,
+    team_leader_name: clientLead?.team_leader_name ?? null,
+  };
+
   await sweepStale(supabase, userId);
   try {
     if (!data.batchId && !data.queuedScanId)
@@ -309,6 +341,20 @@ export async function scanFetchCore(
         .eq("user_id", userId)
         .single()
     : null;
+  if (existing?.data) {
+    const { error: leadSnapshotError } = await supabase
+      .from("scans")
+      .update(clientLeadSnapshot)
+      .eq("id", existing.data.id)
+      .eq("user_id", userId);
+    if (leadSnapshotError)
+      return {
+        ok: false,
+        code: "DB_UNAVAILABLE",
+        message: "Database unavailable — client referral details could not be saved to this scan.",
+        scanId: existing.data.id,
+      };
+  }
   if (existing?.data && existing.data.stage === "analyze" && existing.data.reviews_retrieved > 0)
     return { ok: true, scanId: existing.data.id, reviews: existing.data.reviews_retrieved };
   const { data: scan, error } =
@@ -324,6 +370,7 @@ export async function scanFetchCore(
         batch_id: data.batchId ?? null,
         region: data.region ?? null,
         region_source: data.region ? "manual" : null,
+        ...clientLeadSnapshot,
       })
       .select("id")
       .single());

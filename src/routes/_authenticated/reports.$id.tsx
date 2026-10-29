@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { ReviewSelection } from "@/components/review-selection";
 import { LegalAnalysisPanel } from "@/components/legal-analysis";
 import { RemovalSummary } from "@/components/removal-summary";
-import { RatingAnalysis } from "@/components/scan-result";
+import { ClientLeadAttribution, RatingAnalysis } from "@/components/scan-result";
 import { PrivatePdfButton } from "@/components/private-pdf-button";
 import { downloadPrivateReport } from "@/lib/private-report.functions";
 import { openPdfPreview, openPrivatePdf } from "@/lib/private-report";
@@ -288,6 +288,9 @@ function ReportDetail() {
           )}
         </section>
       )}
+      <div className="mx-auto max-w-4xl">
+        <ClientLeadAttribution scan={scan} />
+      </div>
       <article ref={articleRef} className="surface mx-auto max-w-4xl p-8 sm:p-12">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
           <div>

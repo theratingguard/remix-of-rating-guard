@@ -1,5 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { buildOsmQuery, parsePageMetadata, parseSitemap } from "./seo-automation.server";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  buildOsmQuery,
+  fetchWithLimit,
+  isAuthPage,
+  parsePageMetadata,
+  parseSitemap,
+} from "./seo-automation.server";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("SEO automation parsing", () => {
   it("extracts metadata and same-origin links, excluding external links", () => {
@@ -22,6 +32,25 @@ describe("SEO automation parsing", () => {
     );
 
     expect(urls).toEqual(["https://ratingguard.online/"]);
+  });
+
+  it("follows redirects when fetching pages", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("<title>Destination</title>"));
+    vi.stubGlobal("fetch", fetchMock);
+    const url = new URL("https://ratingguard.online/join");
+
+    await fetchWithLimit(url);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({ redirect: "follow" }),
+    );
+  });
+
+  it("recognizes final login destinations as auth pages", () => {
+    expect(isAuthPage(new URL("https://ratingguard.online/auth"))).toBe(true);
+    expect(isAuthPage(new URL("https://ratingguard.online/staff/today"))).toBe(false);
+    expect(isAuthPage(new URL("https://ratingguard.online/author"))).toBe(false);
   });
 
   it("builds bounded Overpass queries from allowlisted categories", () => {

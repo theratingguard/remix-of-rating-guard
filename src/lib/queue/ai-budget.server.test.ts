@@ -53,4 +53,19 @@ describe("Fail-closed daily AI reservation guard", () => {
       }),
     ).toThrow();
   });
+  it("applies a strict 15-second timeout to provider calls", async () => {
+    vi.stubEnv("MULTI_WORKER_ENABLED", "false");
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const fetch = vi.fn().mockResolvedValue(Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetch);
+    try {
+      await budgetedAiFetch("https://api.openai.com/v1/responses", {
+        body: '{"model":"gpt-4o"}',
+      });
+      expect(timeout).toHaveBeenCalledWith(15_000);
+      expect(fetch.mock.calls[0]?.[1]?.signal).toBeDefined();
+    } finally {
+      timeout.mockRestore();
+    }
+  });
 });

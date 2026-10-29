@@ -10,6 +10,7 @@ import { isGoogleMapsUrl } from "./google-url";
 export const PAUSE_CODES = new Set([
   "AI_QUOTA",
   "AI_AUTH",
+  "AI_BUDGET_LIMIT",
   "API_UNAVAILABLE",
   "GOOGLE_API_NOT_CONFIGURED",
 ]);

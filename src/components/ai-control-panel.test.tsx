@@ -34,7 +34,7 @@ describe("AI control panel", () => {
         <AiControlPanel />
       </QueryClientProvider>,
     );
-    expect(await screen.findByText("Billing")).toBeInTheDocument();
+    expect(await screen.findByText("Disabled due to Billing")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("switch", { name: "Claude Sonnet enabled" }));
     await waitFor(() =>
       expect(save).toHaveBeenCalledWith({ data: { ...defaultSettings, claude_enabled: false } }),

@@ -161,7 +161,7 @@ export const getBatchJobs = createServerFn({ method: "GET" })
                 context.supabase
                   .from("scans")
                   .select(
-                    "id, business_name, rating, total_reviews, reviews_retrieved, high_count, medium_count",
+                    "id, business_name, rating, total_reviews, reviews_retrieved, high_count, medium_count, client_name, client_mobile, team_leader_name",
                   )
                   .in("id", ids.slice(index * 100, (index + 1) * 100))
                   .throwOnError(),

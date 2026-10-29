@@ -22,6 +22,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedClientRouteRouteImport } from './routes/_authenticated/client/route'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedDashboardRoleRouteImport } from './routes/_authenticated/dashboard.$role'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedHomepagePreviewRouteImport } from './routes/_authenticated/homepage-preview'
 import { Route as AuthenticatedManagerRouteImport } from './routes/_authenticated/manager'
@@ -79,6 +80,9 @@ import { Route as AuthenticatedStaffWalletRouteImport } from './routes/_authenti
 import { Route as ApiExtensionReportRouteImport } from './routes/api/extension/report'
 import { Route as ApiExtensionStatusRouteImport } from './routes/api/extension/status'
 import { Route as ApiExtensionSubmissionRouteImport } from './routes/api/extension/submission'
+import { Route as ApiHierarchyAddMemberRouteImport } from './routes/api/hierarchy/add-member'
+import { Route as ApiHierarchyAssignTaskRouteImport } from './routes/api/hierarchy/assign-task'
+import { Route as ApiHierarchyGetTeamRouteImport } from './routes/api/hierarchy/get-team'
 import { Route as ApiStaffGeocodeRouteImport } from './routes/api/staff/geocode'
 import { Route as ApiStorageDeleteRouteImport } from './routes/api/storage/delete'
 import { Route as ApiStorageDownloadRouteImport } from './routes/api/storage/download'
@@ -156,6 +160,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDashboardRoleRoute =
+  AuthenticatedDashboardRoleRouteImport.update({
+    id: '/dashboard/$role',
+    path: '/dashboard/$role',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   id: '/history',
   path: '/history',
@@ -475,6 +485,21 @@ const ApiExtensionSubmissionRoute = ApiExtensionSubmissionRouteImport.update({
   path: '/api/extension/submission',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHierarchyAddMemberRoute = ApiHierarchyAddMemberRouteImport.update({
+  id: '/api/hierarchy/add-member',
+  path: '/api/hierarchy/add-member',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHierarchyAssignTaskRoute = ApiHierarchyAssignTaskRouteImport.update({
+  id: '/api/hierarchy/assign-task',
+  path: '/api/hierarchy/assign-task',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHierarchyGetTeamRoute = ApiHierarchyGetTeamRouteImport.update({
+  id: '/api/hierarchy/get-team',
+  path: '/api/hierarchy/get-team',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStaffGeocodeRoute = ApiStaffGeocodeRouteImport.update({
   id: '/api/staff/geocode',
   path: '/api/staff/geocode',
@@ -547,6 +572,7 @@ export interface FileRoutesByFullPath {
   '/client': typeof AuthenticatedClientRouteRouteWithChildren
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/dashboard/$role': typeof AuthenticatedDashboardRoleRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/manager': typeof AuthenticatedManagerRoute
@@ -603,6 +629,9 @@ export interface FileRoutesByFullPath {
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
+  '/api/hierarchy/add-member': typeof ApiHierarchyAddMemberRoute
+  '/api/hierarchy/assign-task': typeof ApiHierarchyAssignTaskRoute
+  '/api/hierarchy/get-team': typeof ApiHierarchyGetTeamRoute
   '/api/staff/geocode': typeof ApiStaffGeocodeRoute
   '/api/storage/delete': typeof ApiStorageDeleteRoute
   '/api/storage/download': typeof ApiStorageDownloadRoute
@@ -629,6 +658,7 @@ export interface FileRoutesByTo {
   '/client': typeof AuthenticatedClientRouteRouteWithChildren
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/dashboard/$role': typeof AuthenticatedDashboardRoleRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/manager': typeof AuthenticatedManagerRoute
@@ -685,6 +715,9 @@ export interface FileRoutesByTo {
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
+  '/api/hierarchy/add-member': typeof ApiHierarchyAddMemberRoute
+  '/api/hierarchy/assign-task': typeof ApiHierarchyAssignTaskRoute
+  '/api/hierarchy/get-team': typeof ApiHierarchyGetTeamRoute
   '/api/staff/geocode': typeof ApiStaffGeocodeRoute
   '/api/storage/delete': typeof ApiStorageDeleteRoute
   '/api/storage/download': typeof ApiStorageDownloadRoute
@@ -713,6 +746,7 @@ export interface FileRoutesById {
   '/_authenticated/client': typeof AuthenticatedClientRouteRouteWithChildren
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/dashboard/$role': typeof AuthenticatedDashboardRoleRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/_authenticated/manager': typeof AuthenticatedManagerRoute
@@ -769,6 +803,9 @@ export interface FileRoutesById {
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
+  '/api/hierarchy/add-member': typeof ApiHierarchyAddMemberRoute
+  '/api/hierarchy/assign-task': typeof ApiHierarchyAssignTaskRoute
+  '/api/hierarchy/get-team': typeof ApiHierarchyGetTeamRoute
   '/api/staff/geocode': typeof ApiStaffGeocodeRoute
   '/api/storage/delete': typeof ApiStorageDeleteRoute
   '/api/storage/download': typeof ApiStorageDownloadRoute
@@ -797,6 +834,7 @@ export interface FileRouteTypes {
     | '/client'
     | '/chat'
     | '/dashboard'
+    | '/dashboard/$role'
     | '/history'
     | '/homepage-preview'
     | '/manager'
@@ -853,6 +891,9 @@ export interface FileRouteTypes {
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
+    | '/api/hierarchy/add-member'
+    | '/api/hierarchy/assign-task'
+    | '/api/hierarchy/get-team'
     | '/api/staff/geocode'
     | '/api/storage/delete'
     | '/api/storage/download'
@@ -879,6 +920,7 @@ export interface FileRouteTypes {
     | '/client'
     | '/chat'
     | '/dashboard'
+    | '/dashboard/$role'
     | '/history'
     | '/homepage-preview'
     | '/manager'
@@ -935,6 +977,9 @@ export interface FileRouteTypes {
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
+    | '/api/hierarchy/add-member'
+    | '/api/hierarchy/assign-task'
+    | '/api/hierarchy/get-team'
     | '/api/staff/geocode'
     | '/api/storage/delete'
     | '/api/storage/download'
@@ -962,6 +1007,7 @@ export interface FileRouteTypes {
     | '/_authenticated/client'
     | '/_authenticated/chat'
     | '/_authenticated/dashboard'
+    | '/_authenticated/dashboard/$role'
     | '/_authenticated/history'
     | '/_authenticated/homepage-preview'
     | '/_authenticated/manager'
@@ -1018,6 +1064,9 @@ export interface FileRouteTypes {
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
+    | '/api/hierarchy/add-member'
+    | '/api/hierarchy/assign-task'
+    | '/api/hierarchy/get-team'
     | '/api/staff/geocode'
     | '/api/storage/delete'
     | '/api/storage/download'
@@ -1050,6 +1099,9 @@ export interface RootRouteChildren {
   ApiExtensionReportRoute: typeof ApiExtensionReportRouteWithChildren
   ApiExtensionStatusRoute: typeof ApiExtensionStatusRoute
   ApiExtensionSubmissionRoute: typeof ApiExtensionSubmissionRoute
+  ApiHierarchyAddMemberRoute: typeof ApiHierarchyAddMemberRoute
+  ApiHierarchyAssignTaskRoute: typeof ApiHierarchyAssignTaskRoute
+  ApiHierarchyGetTeamRoute: typeof ApiHierarchyGetTeamRoute
   ApiStaffGeocodeRoute: typeof ApiStaffGeocodeRoute
   ApiStorageDeleteRoute: typeof ApiStorageDeleteRoute
   ApiStorageDownloadRoute: typeof ApiStorageDownloadRoute
@@ -1151,6 +1203,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard/$role': {
+      id: '/_authenticated/dashboard/$role'
+      path: '/dashboard/$role'
+      fullPath: '/dashboard/$role'
+      preLoaderRoute: typeof AuthenticatedDashboardRoleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/history': {
@@ -1552,6 +1611,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExtensionSubmissionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/hierarchy/add-member': {
+      id: '/api/hierarchy/add-member'
+      path: '/api/hierarchy/add-member'
+      fullPath: '/api/hierarchy/add-member'
+      preLoaderRoute: typeof ApiHierarchyAddMemberRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hierarchy/assign-task': {
+      id: '/api/hierarchy/assign-task'
+      path: '/api/hierarchy/assign-task'
+      fullPath: '/api/hierarchy/assign-task'
+      preLoaderRoute: typeof ApiHierarchyAssignTaskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hierarchy/get-team': {
+      id: '/api/hierarchy/get-team'
+      path: '/api/hierarchy/get-team'
+      fullPath: '/api/hierarchy/get-team'
+      preLoaderRoute: typeof ApiHierarchyGetTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/staff/geocode': {
       id: '/api/staff/geocode'
       path: '/api/staff/geocode'
@@ -1687,6 +1767,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedClientRouteRoute: typeof AuthenticatedClientRouteRouteWithChildren
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDashboardRoleRoute: typeof AuthenticatedDashboardRoleRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedHomepagePreviewRoute: typeof AuthenticatedHomepagePreviewRoute
   AuthenticatedManagerRoute: typeof AuthenticatedManagerRoute
@@ -1738,6 +1819,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedClientRouteRoute: AuthenticatedClientRouteRouteWithChildren,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDashboardRoleRoute: AuthenticatedDashboardRoleRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedHomepagePreviewRoute: AuthenticatedHomepagePreviewRoute,
   AuthenticatedManagerRoute: AuthenticatedManagerRoute,
@@ -1819,6 +1901,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiExtensionReportRoute: ApiExtensionReportRouteWithChildren,
   ApiExtensionStatusRoute: ApiExtensionStatusRoute,
   ApiExtensionSubmissionRoute: ApiExtensionSubmissionRoute,
+  ApiHierarchyAddMemberRoute: ApiHierarchyAddMemberRoute,
+  ApiHierarchyAssignTaskRoute: ApiHierarchyAssignTaskRoute,
+  ApiHierarchyGetTeamRoute: ApiHierarchyGetTeamRoute,
   ApiStaffGeocodeRoute: ApiStaffGeocodeRoute,
   ApiStorageDeleteRoute: ApiStorageDeleteRoute,
   ApiStorageDownloadRoute: ApiStorageDownloadRoute,

@@ -871,6 +871,9 @@ export function HomePage({ c, preview }: { c: SiteContent; preview?: boolean }) 
               <li>
                 <a href="#faq">FAQ</a>
               </li>
+              <li>
+                <Link to="/blog/">Blog</Link>
+              </li>
             </ul>
           </div>
           <div>

@@ -3,6 +3,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { logEvent } from "./logger.server";
+import { isGoogleMapsUrl, normalizeGoogleUrl } from "./google-url";
 
 const payoutSchema = z
   .object({
@@ -68,44 +69,57 @@ export const getStaffDashboard = createServerFn({ method: "GET" })
       })
       .join(", ");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [casesResult, payoutResult, messagesResult, creditsResult, ledgerResult, notesResult] =
-      await Promise.all([
-        supabaseAdmin
-          .from("staff_cases")
-          .select("*")
-          .eq("staff_id", context.userId)
-          .order("assigned_at", { ascending: false })
-          .limit(500),
-        supabaseAdmin
-          .from("staff_payout_details")
-          .select("*")
-          .eq("staff_id", context.userId)
-          .maybeSingle(),
-        supabaseAdmin
-          .from("staff_admin_messages")
-          .select("*")
-          .eq("staff_id", context.userId)
-          .order("created_at", { ascending: true })
-          .limit(200),
-        supabaseAdmin
-          .from("staff_credits")
-          .select("id,amount,reason,created_at,case_id")
-          .eq("staff_id", context.userId)
-          .order("created_at", { ascending: false })
-          .limit(200),
-        supabaseAdmin
-          .from("staff_wallet_ledger")
-          .select("*")
-          .eq("staff_id", context.userId)
-          .order("created_at", { ascending: false })
-          .limit(200),
-        supabaseAdmin
-          .from("staff_quality_notes")
-          .select("*")
-          .eq("staff_id", context.userId)
-          .order("created_at", { ascending: false })
-          .limit(100),
-      ]);
+    const [
+      casesResult,
+      payoutResult,
+      messagesResult,
+      creditsResult,
+      ledgerResult,
+      caseEarningsResult,
+      notesResult,
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("staff_cases")
+        .select("*")
+        .eq("staff_id", context.userId)
+        .order("assigned_at", { ascending: false })
+        .limit(500),
+      supabaseAdmin
+        .from("staff_payout_details")
+        .select("*")
+        .eq("staff_id", context.userId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("staff_admin_messages")
+        .select("*")
+        .eq("staff_id", context.userId)
+        .order("created_at", { ascending: true })
+        .limit(200),
+      supabaseAdmin
+        .from("staff_credits")
+        .select("id,amount,reason,created_at,case_id")
+        .eq("staff_id", context.userId)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      supabaseAdmin
+        .from("staff_wallet_ledger")
+        .select("*")
+        .eq("staff_id", context.userId)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      supabaseAdmin
+        .from("staff_case_earnings")
+        .select("*")
+        .eq("staff_id", context.userId)
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabaseAdmin
+        .from("staff_quality_notes")
+        .select("*")
+        .eq("staff_id", context.userId)
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ]);
     if (casesResult.error)
       throw new Error(`Could not load assigned tasks: ${casesResult.error.message}`);
     if (payoutResult.error)
@@ -116,6 +130,8 @@ export const getStaffDashboard = createServerFn({ method: "GET" })
       throw new Error(`Could not load wallet history: ${creditsResult.error.message}`);
     if (ledgerResult.error)
       throw new Error(`Could not load wallet adjustments: ${ledgerResult.error.message}`);
+    if (caseEarningsResult.error)
+      throw new Error(`Could not load task earnings: ${caseEarningsResult.error.message}`);
     if (notesResult.error)
       throw new Error(`Could not load quality notes: ${notesResult.error.message}`);
     return {
@@ -126,8 +142,85 @@ export const getStaffDashboard = createServerFn({ method: "GET" })
       messages: messagesResult.data ?? [],
       credits: creditsResult.data ?? [],
       walletLedger: ledgerResult.data ?? [],
+      caseEarnings: caseEarningsResult.data ?? [],
       qualityNotes: notesResult.data ?? [],
     };
+  });
+
+export const submitClientLead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input) =>
+    z
+      .object({
+        reviewUrl: z.string().trim().min(1).max(2048),
+        clientName: z.string().trim().min(1).max(160),
+        clientMobile: z.string().trim().min(6).max(32),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    if (!isGoogleMapsUrl(data.reviewUrl)) throw new Error("Enter a valid Google Maps URL.");
+    if (!/^[+()\d\s.-]{6,32}$/.test(data.clientMobile))
+      throw new Error("Enter a valid client mobile number.");
+    const profile = await requireApprovedStaff(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let teamLeaderName: string | null = null;
+    if (profile.team_leader_id) {
+      const { data: leader, error: leaderError } = await supabaseAdmin
+        .from("staff")
+        .select("name")
+        .eq("id", profile.team_leader_id)
+        .maybeSingle();
+      if (leaderError)
+        throw new Error(`Could not load your team leader profile: ${leaderError.message}`);
+      teamLeaderName = leader?.name ?? null;
+    }
+    const { data: lead, error } = await supabaseAdmin
+      .from("client_leads")
+      .insert({
+        review_url: normalizeGoogleUrl(data.reviewUrl),
+        client_name: data.clientName,
+        client_mobile: data.clientMobile,
+        submitted_by_staff_id: context.userId,
+        team_leader_name: teamLeaderName,
+      })
+      .select("id,review_url,client_name,submitted_at")
+      .single();
+    if (error) {
+      if (error.code === "23505") throw new Error("This Google URL has already been submitted.");
+      throw new Error(`Could not submit this URL: ${error.message}`);
+    }
+    logEvent("info", "staff.client-lead.submitted", "Staff submitted a client Google URL", {
+      leadId: lead.id,
+    });
+    return lead;
+  });
+
+export const getClientLeads = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: accessLevel, error: accessError } =
+      await context.supabase.rpc("report_access_level");
+    if (accessError) throw new Error(`Could not verify admin access: ${accessError.message}`);
+    if (accessLevel !== "super_admin")
+      throw new Error("Superadmin access is required to view client URL submissions.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: leads, error } = await supabaseAdmin
+      .from("client_leads")
+      .select("*")
+      .order("submitted_at", { ascending: false })
+      .limit(2000);
+    if (error) throw new Error(`Could not load client URL submissions: ${error.message}`);
+    const staffIds = [...new Set(leads.map((lead) => lead.submitted_by_staff_id))];
+    const { data: staff, error: staffError } = staffIds.length
+      ? await supabaseAdmin.from("staff").select("id,name").in("id", staffIds)
+      : { data: [], error: null };
+    if (staffError) throw new Error(`Could not load submitting staff names: ${staffError.message}`);
+    const names = new Map((staff ?? []).map((member) => [member.id, member.name]));
+    return leads.map((lead) => ({
+      ...lead,
+      staff_name: names.get(lead.submitted_by_staff_id) ?? "Staff profile unavailable",
+    }));
   });
 
 export const updateStaffTaskStatus = createServerFn({ method: "POST" })

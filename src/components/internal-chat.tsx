@@ -54,6 +54,7 @@ export function InternalChat({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showMobileContacts, setShowMobileContacts] = useState(false);
   const [superAdminId, setSuperAdminId] = useState<string | null>(null);
+  const [chatUserIds, setChatUserIds] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(false);
@@ -116,6 +117,16 @@ export function InternalChat({
         return;
       }
       if (mounted) setSuperAdminId(data);
+    });
+    void supabase.rpc("internal_chat_user_ids").then(({ data, error }) => {
+      if (error) {
+        toast.error("Could not load chat user IDs.");
+        return;
+      }
+      if (mounted)
+        setChatUserIds(
+          Object.fromEntries((data ?? []).map((user) => [user.user_id, user.unique_id])),
+        );
     });
     const sendPresence = () =>
       supabase
@@ -476,9 +487,8 @@ export function InternalChat({
                   </div>
                   <p
                     className={`mt-1 font-mono text-[9px] opacity-60 ${mine ? "text-right text-emerald-100" : "text-slate-500"}`}
-                    title={`Sender user ID: ${message.sender_id}`}
                   >
-                    ID {message.sender_id}
+                    User ID: {chatUserIds[message.sender_id] ?? "Support"}
                   </p>
                   {isSuperAdmin && !removed && (
                     <div className="mt-2 flex justify-end gap-1 border-t border-current/15 pt-1.5">

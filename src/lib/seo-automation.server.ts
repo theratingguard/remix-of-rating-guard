@@ -101,13 +101,17 @@ function configuredSiteUrl() {
   return url;
 }
 
-async function fetchWithLimit(url: URL, method: "GET" | "HEAD" = "GET") {
+export async function fetchWithLimit(url: URL, method: "GET" | "HEAD" = "GET") {
   return fetch(url, {
     method,
-    redirect: "manual",
+    redirect: "follow",
     headers: { "User-Agent": "RatingGuard-SEOBot/1.0" },
     signal: AbortSignal.timeout(8_000),
   });
+}
+
+export function isAuthPage(url: URL) {
+  return /(?:^|\/)(?:auth|login|log-in|sign-in|signin)(?:\/|$)/i.test(url.pathname);
 }
 
 async function readTextBounded(response: Response, maxBytes: number) {
@@ -143,7 +147,7 @@ function localOllamaUrl() {
 }
 
 function configuredOllamaModel() {
-  return process.env["OLLAMA_MODEL"]?.trim() || "llama3.2:3b";
+  return process.env["OLLAMA_MODEL"]?.trim() || "qwen2.5-coder:14b";
 }
 
 const outlineSchema = z.object({
@@ -160,7 +164,7 @@ async function ollamaJson<T>(prompt: string, schema: z.ZodType<T>): Promise<T> {
   const response = await fetch(`${base}/api/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(15_000),
     body: JSON.stringify({
       model: configuredOllamaModel(),
       stream: false,
@@ -316,7 +320,6 @@ async function auditSite(runId: string) {
     const pageUrl = new URL(pageValue);
     requests += 1;
     auditPages += 1;
-    auditedPageUrls.push(pageValue);
     let response: Response;
     try {
       response = await fetchWithLimit(pageUrl);
@@ -331,9 +334,13 @@ async function auditSite(runId: string) {
       });
       continue;
     }
+    const finalUrl = new URL(response.url || pageUrl.href);
+    if (isAuthPage(finalUrl)) continue;
+    auditedPageUrls.push(finalUrl.toString());
     if (!response.ok) {
+      if ([301, 302, 307].includes(response.status)) continue;
       issues.push({
-        page_url: pageValue,
+        page_url: finalUrl.toString(),
         issue_type: "page_unreachable",
         severity: "high",
         details: { status: response.status },
@@ -342,22 +349,22 @@ async function auditSite(runId: string) {
     }
     if (!(response.headers.get("content-type") ?? "").includes("text/html")) continue;
     const html = await readTextBounded(response, 1_000_000);
-    const metadata = parsePageMetadata(html, siteUrl);
+    const metadata = parsePageMetadata(html, finalUrl);
     metadataCandidates.push({
-      page_url: pageValue,
+      page_url: finalUrl.toString(),
       title: metadata.title,
       description: metadata.description,
     });
     if (!metadata.title)
       issues.push({
-        page_url: pageValue,
+        page_url: finalUrl.toString(),
         issue_type: "missing_title",
         severity: "medium",
         details: { current_title: metadata.title, current_description: metadata.description },
       });
     if (!metadata.description)
       issues.push({
-        page_url: pageValue,
+        page_url: finalUrl.toString(),
         issue_type: "missing_description",
         severity: "low",
         details: { current_title: metadata.title, current_description: metadata.description },
@@ -373,7 +380,7 @@ async function auditSite(runId: string) {
         linkResponse = await fetchWithLimit(new URL(link), "HEAD");
       } catch {
         issues.push({
-          page_url: pageValue,
+          page_url: finalUrl.toString(),
           issue_type: "broken_link",
           severity: "medium",
           details: { link },
@@ -382,7 +389,7 @@ async function auditSite(runId: string) {
       }
       if (!linkResponse.ok && ![301, 302, 303, 307, 308, 405, 501].includes(linkResponse.status))
         issues.push({
-          page_url: pageValue,
+          page_url: finalUrl.toString(),
           issue_type: "broken_link",
           severity: "medium",
           details: { link, status: linkResponse.status },

@@ -65,6 +65,15 @@ export async function dispatchWorkerTasks() {
     token = randomUUID();
   if (!(await redis.set("rg:dispatch-lock", token, "PX", 30000, "NX"))) return;
   try {
+    const queueState = (
+      await supabaseAdmin
+        .from("system_state")
+        .select("queue_paused")
+        .eq("id", "main")
+        .single()
+        .throwOnError()
+    ).data;
+    if (queueState.queue_paused) return;
     // New queue owns all execution when enabled. The old timer must be disabled
     // before cutover; this claims only explicitly running bulk batches.
     const jobs = (await supabaseAdmin.rpc("claim_scan_jobs", { _limit: 1 }).throwOnError()).data;
@@ -147,6 +156,15 @@ export async function processWorkerStage(stage: WorkerStage, raw: WorkerPayload)
     ["complete", "failed", "cancelled"].includes(task.status)
   )
     return "obsolete";
+  const queueState = (
+    await db
+      .from("system_state")
+      .select("queue_paused")
+      .eq("id", "main")
+      .single()
+      .throwOnError()
+  ).data;
+  if (queueState.queue_paused) return "paused";
   if (task.batch_id) {
     if (!(await getSettings()).bulk_scan_enabled) return "paused";
     const batch = (
@@ -156,9 +174,6 @@ export async function processWorkerStage(stage: WorkerStage, raw: WorkerPayload)
         .eq("id", task.batch_id)
         .single()
         .throwOnError()
-    ).data;
-    const state = (
-      await db.from("system_state").select("queue_paused").eq("id", "main").single().throwOnError()
     ).data;
     if (batch.control_status === "cancelled") {
       await db
@@ -183,7 +198,7 @@ export async function processWorkerStage(stage: WorkerStage, raw: WorkerPayload)
           .throwOnError();
       return "cancelled";
     }
-    if (batch.control_status === "paused" || state.queue_paused) return "paused";
+    if (batch.control_status === "paused") return "paused";
   }
   const scan = (
     await db

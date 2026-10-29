@@ -82,7 +82,7 @@ export function AiControlPanel() {
                   : status?.status === "active"
                     ? "Active"
                     : status?.status === "billing"
-                      ? "Billing"
+                      ? "Disabled due to Billing"
                       : status?.status === "unconfigured"
                         ? "Unconfigured"
                         : status && status.status !== "disabled"
@@ -121,7 +121,8 @@ export function AiControlPanel() {
         single-model. Multi-Model OFF uses the first enabled provider (GPT, then Claude, then
         Gemini). Disabled models are not called. Retryable provider/output failures get 3 attempts.
         GPT-only may use explicitly labelled OpenAI gpt-4.1-mini fallback after retry exhaustion.
-        Authentication/billing failures do not fall back.
+        Billing failures from Claude or Gemini fall back to GPT-4o when its credential is available;
+        affected providers are shown as disabled due to billing.
       </p>
       <Button disabled={busy} onClick={() => void run("all")}>
         {busy ? "Working..." : "Test All Models"}

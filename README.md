@@ -51,10 +51,140 @@ and creates up to two content outlines, five metadata suggestions, and five
 internal-link suggestions per UTC day. Suggestions remain pending until a
 superadmin reviews them and are never automatically published or applied.
 
-The Search Console, GA4, Matomo, OpenStreetMap lead search, and Google Places
-connectors are not active in this build; the admin panel reports them as
-unconfigured/disabled rather than implying a connection. The sitemap and
-robots.txt are generated from the public-route allowlist during `npm run build`.
+GA4, Matomo, OpenStreetMap lead search, and Google Places connectors are not
+active in this build; the admin panel reports them as unconfigured/disabled
+rather than implying a connection.
+
+### SEO keyword research
+
+Apply `supabase/migrations/20261026190000_seo_keyword_engine.sql` to add keyword
+metrics and the encrypted provider-key registry. Configure
+`SEO_API_KEYS_ENCRYPTION_KEY` as a 32-byte hexadecimal secret before saving
+Semrush, Ahrefs, or DataForSEO credentials in Super Admin → SEO Automation.
+Provider credentials are stored encrypted and are not currently used to make
+paid-provider requests. Keyword generation currently uses deterministic local
+country/modifier/industry combinations; it does not fetch Google Autocomplete,
+Google Trends, or DuckDuckGo data. Local Ollama can generate long-tail keyword
+ideas in the dashboard; `npm run seo:keywords:generate -- "review removal"`
+creates up to 10,000 pending country/modifier/industry combinations using the
+service-role Supabase connection. No generated keyword pages are published
+automatically.
+
+### Programmatic SEO
+
+Apply `supabase/migrations/20261026120000_programmatic_seo_keywords.sql` before
+using the keyword generator. Set `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` server-side, then run `npm run seo:keywords` to
+collect Google Suggest/Wikipedia research and save at least 10,000 keyword
+candidates as **drafts**. The generator never publishes pages. Only editorially
+reviewed pages with substantial `page_content` and `status = 'published'` are
+rendered or included in the build-generated sitemap.
+
+Localized routes use `/{locale}/service/{slug}` for the supported country
+locales; short language aliases such as `/en/service/{slug}` resolve to their
+default country locale. Hreflang links include only published translations that
+actually exist. `npm run build` refreshes the sitemap and `robots.txt`, including
+all eligible published pages when Supabase publishable-key configuration is
+available. Search Console submission is optional and requires
+`GOOGLE_SEARCH_CONSOLE_SITE_URL` plus a server-only
+`GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON` authorized for that property.
+IndexNow notifications are optional via `INDEXNOW_KEY`; the build writes its
+public verification file under `public/`. No deprecated Google sitemap-ping
+endpoint is used. LocalBusiness schema is emitted only when a page contains
+verified business address details; no location is invented from the target
+keyword.
+
+Country hashtag metadata contains exactly 100 deterministic service hashtags
+for each of the 20 supported SEO locales. Apply
+`supabase/migrations/20261028100000_country_hashtags.sql` once to create the
+table, then apply
+`supabase/migrations/20261029110000_country_hashtags_100_each.sql` to replace
+the initial seed set with 100 tags per country. `npm run seo:hashtags` prints
+the same 2,000 country/tag records to the database using
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Super Admin → SEO Automation
+displays the country sets and can copy all tags for the selected country.
+Published service and curated location pages load their country tags into
+`article:tag` and `keywords` metadata; public location pages also offer hashtag
+search links and sharing actions. WhatsApp and X share text includes up to five
+tags. LinkedIn's share dialog accepts the page URL and reads its page metadata;
+it does not support prefilled share text.
+
+The shared SEO head also adds 100 deterministic country-specific review and
+reputation search phrases to the `keywords` metadata for localized service and
+published location pages. These are generated from each page's supported
+country locale at render time and are not used to auto-publish content.
+
+Curated location pages use `/remove-google-review/{country}/{city}`. Apply
+`supabase/migrations/20261026150000_review_location_pages.sql` before adding
+reviewed page records. Pages remain drafts until their city-specific content
+includes a substantive introduction, at least three substantive sections, and
+verified FAQ content. Only published records meeting those checks are rendered
+or included in the sitemap; the app does not generate fictional testimonials,
+ratings, or city-specific claims.
+
+Blog articles use `/blog` and `/blog/{slug}`. Apply
+`supabase/migrations/20261026130000_blog_posts.sql` before using the routes.
+The Super Admin-only `POST /api/admin/generate-blog` endpoint accepts
+`{"keyword":"..."}` with the caller's Supabase bearer token, generates an
+approximately 1,000-word draft through the configured OpenAI provider or a
+loopback Ollama service, and never publishes it automatically. Only published
+posts are publicly readable or included in the sitemap.
+
+## AEO and entity information
+
+`/llms.txt` is a static, publicly accessible factual summary. Keep pricing,
+coverage, organization identity, and product claims there only when verified.
+The `/about` page links to Contact, Terms, and Privacy and states the service's
+scope and limitations. The shared SEO head emits Organization and FAQPage
+structured data; conversational FAQ markup is generated only from visible,
+editorially supplied answers. Direct-answer blocks are shown on published blog
+and service pages, with a 40–50 word range and a clear disclaimer that Google
+controls review-policy outcomes.
+
+Founder/founding-date details, named team authors, and official social-profile
+URLs are not present in the repository and are intentionally omitted from
+structured data until verified. Add video metadata to a service page's
+`page_content.video` object with `youtubeUrl`, `name`, `description`,
+`uploadDate` (ISO date), and `duration` (ISO 8601 duration such as `PT2M30S`).
+Valid YouTube video metadata produces a lazy-loaded privacy-enhanced embed,
+VideoObject structured data, and a `<video:video>` sitemap entry on the next
+build.
+
+Production assets under `/assets/` receive immutable one-year caching; named
+public icons use short revalidating cache lifetimes. Vite already minifies
+production JS/CSS, and TanStack route files are code-split by its router build
+plugin. Existing public raster images are browser icons (PNG/ICO), so they
+remain in compatible favicon formats; SVG brand art is already vector.
+No rating/review aggregate is emitted unless it can be backed by genuine,
+verified customer reviews. Hard-coded or generated ratings are intentionally
+not used in structured data.
+
+### Backlink and semantic content research
+
+Apply `supabase/migrations/20261026170000_backlink_nlp_tools.sql` before using
+the research tools in Super Admin → SEO Automation. Backlink imports use a
+user-authorized CSV export only; `npm run seo:backlinks:import -- <export.csv>`
+expects `competitor_url`, `referring_page_url`, and optional `source_type`,
+`anchor_text`, `contact_email`, and `notes` columns. The importer never crawls
+or fetches competitor/referring sites. Outreach drafts require local Ollama and
+are saved for manual review; the application does not send them.
+
+Semantic review compares article content with up to three text excerpts supplied
+by an administrator. It does not scrape search results or assert a Google
+ranking score. Its 0–100 topic-coverage heuristic and missing-term suggestions
+are editorial aids, not BERT/MUM measurements or ranking guarantees.
+
+### Public asset caching
+
+The service worker caches only same-origin, public files under `/assets/`; it
+does not cache documents, API responses, or authenticated content. The
+`wrangler.toml` worker route is scoped to `/assets/*` and likewise bypasses
+requests with cookies/authorization and responses that set cookies. Configure
+and deploy this route only after confirming the domain is attached to the
+Cloudflare zone. It does not vary content by IP or inject alternate SEO tags:
+the app's server-rendered route metadata remains the canonical source for
+canonical, hreflang, and schema output. No sub-second global performance
+guarantee is implied.
 
 Apply the application baseline only to a validated empty database. Existing
 deployments apply the additive `20261010130000_content_security.sql` migration:
@@ -321,3 +451,11 @@ only on the server. Bulk admission remains disabled unless
 Do not claim background progress based on an open browser or a configured key.
 Unconfirmed users must complete email verification; the login screen offers
 the supported confirmation-resend operation without bypassing verification.
+
+## Enterprise foundation
+
+See [docs/enterprise-foundation.md](docs/enterprise-foundation.md) for the
+repository audit, scoped role/permission matrix, additive Supabase migration
+status, tenant-isolation test plan, environment requirements, and deployment
+blockers. The RBAC migration is prepared but has not been applied to a live
+database.

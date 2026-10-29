@@ -1,0 +1,27 @@
+# Rating Guard
+
+> Rating Guard is an online service that helps businesses assess potentially policy-relevant Google reviews, organize supporting evidence, and manage review-related workflows.
+
+## What the service does
+
+- Provides tools to scan and analyze Google review information.
+- Helps users organize evidence and prepare policy-based reports.
+- Supports review-management workflows for business teams.
+- Google independently evaluates reports and makes all decisions about its review policies. Rating Guard cannot remove reviews or guarantee a result.
+
+## Pricing
+
+Current pricing is not stated in this file. Contact Rating Guard for current plans and availability.
+
+## Locations and availability
+
+Rating Guard is an online service at https://ratingguard.online. This site does not claim physical offices or confirmed service coverage in specific countries.
+
+## Useful pages
+
+- [About Rating Guard](https://ratingguard.online/about)
+- [Contact](https://ratingguard.online/contact)
+- [Terms](https://ratingguard.online/terms)
+- [Privacy](https://ratingguard.online/privacy)
+- [Blog](https://ratingguard.online/blog)
+- [Sitemap](https://ratingguard.online/sitemap.xml)

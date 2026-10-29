@@ -6,6 +6,21 @@ import { Stars, ReviewCard, ReviewDrawer, SeedBadge } from "./review-ui";
 import { ratingTone } from "./review-ui.utils";
 import { Button } from "@/components/ui/button";
 
+export function ClientLeadAttribution({ scan }: { scan: Scan }) {
+  if (!scan.client_name && !scan.client_mobile && !scan.team_leader_name) return null;
+  return (
+    <aside
+      className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm"
+      aria-label="Client referral details"
+    >
+      <p className="font-semibold">
+        Client: {scan.client_name ?? "—"} | Mobile: {scan.client_mobile ?? "—"} | Team Leader:{" "}
+        {scan.team_leader_name ?? "—"}
+      </p>
+    </aside>
+  );
+}
+
 export function BusinessHeader({ scan }: { scan: Scan }) {
   const rating = scan.rating != null ? Number(scan.rating) : null;
   return (
@@ -170,8 +185,8 @@ export function RiskAnalysis({
       {!scan.is_seed && (
         <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> Google's official Places API
-          returns up to 5 reviews per business. These are the available reviews — not all Google
-          reviews.
+          returns up to 5 reviews per business. This is a Places API limitation, not a system
+          failure; these are the available reviews, not all Google reviews.
         </p>
       )}
       {reviews.length === 0 ? (

@@ -60,10 +60,12 @@ type WalletEntry = {
   amount: number;
   created_at: string;
 };
+type CaseEarning = { amount_inr: number; created_at: string };
 
 export function getStaffWalletSummary(
   credits: CreditEntry[],
   ledger: WalletEntry[],
+  caseEarnings: CaseEarning[],
   cases: {
     status: string;
     ai_status: string | null;
@@ -97,17 +99,22 @@ export function getStaffWalletSummary(
   const monthlyPenalty = ledger
     .filter((entry) => entry.transaction_type === "penalty" && inCurrentMonth(entry.created_at))
     .reduce((sum, entry) => sum + entry.amount, 0);
+  const monthlyCaseEarnings = caseEarnings
+    .filter((entry) => inCurrentMonth(entry.created_at))
+    .reduce((sum, entry) => sum + entry.amount_inr, 0);
 
   return {
     approvedTaskCount: monthlyApprovedTaskCount,
     qualityBonus: monthlyBonus,
+    caseEarnings: monthlyCaseEarnings,
     penalty: monthlyPenalty,
-    monthlyPayout: monthlyCreditsValue + monthlyBonus - monthlyPenalty,
+    monthlyPayout: monthlyCreditsValue + monthlyBonus + monthlyCaseEarnings - monthlyPenalty,
     totalEarned:
       credits.reduce((sum, entry) => sum + entry.amount * 10, 0) +
       ledger.reduce(
         (sum, entry) => sum + entry.amount * (entry.transaction_type === "penalty" ? -1 : 1),
         0,
-      ),
+      ) +
+      caseEarnings.reduce((sum, entry) => sum + entry.amount_inr, 0),
   };
 }

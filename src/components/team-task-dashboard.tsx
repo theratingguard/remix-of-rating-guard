@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,14 +9,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/app-shell";
+import { ManagerAddMemberForm } from "@/components/manager-add-member-form";
+import { TeamLeaderAddStaffForm } from "@/components/team-leader-add-staff-form";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { getClientLeads } from "@/lib/staff-dashboard.functions";
 
 type Staff = Tables<"staff">;
+type TeamMember = Pick<Staff, "id" | "unique_id" | "role" | "status" | "team_id"> &
+  Partial<Pick<Staff, "name" | "email" | "manager_id" | "team_leader_id">>;
 type Team = Tables<"teams">;
 type Task = Tables<"tasks">;
 type Earning = Tables<"team_task_earnings">;
 type Mode = "manager" | "leader" | "staff" | "task-manager";
+const GOOGLE_REVIEW_REPORT_URL = "https://support.google.com/business/workflow/9945796?hl=en";
+
+function isGoogleMapsUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      (/^(?:[a-z0-9-]+\.)*google\.[a-z]{2,}(?:\.[a-z]{2})?$/.test(url.hostname) ||
+        ["goo.gl", "g.page", "maps.app.goo.gl"].includes(url.hostname))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getGoogleMapsProfileUrl(value: string | null) {
+  return value && isGoogleMapsUrl(value) ? value : null;
+}
 
 function money(amount: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -44,11 +68,12 @@ function useTeamData(mode: Mode) {
       const profile = profileResult.data as Staff | null;
       const role = profile?.role.toLowerCase().replaceAll("_", " ") ?? "superadmin";
       if (
-        (mode === "manager" && !isSuperadmin && role !== "manager") ||
+        (mode === "manager" && !isSuperadmin && role !== "manager" && role !== "team manager") ||
         (mode === "leader" && !["team leader", "team lead", "tl"].includes(role)) ||
         (mode === "task-manager" &&
           !isSuperadmin &&
           role !== "manager" &&
+          role !== "team manager" &&
           !["team leader", "team lead", "tl"].includes(role)) ||
         (mode === "staff" && isSuperadmin)
       ) {
@@ -56,34 +81,47 @@ function useTeamData(mode: Mode) {
       }
       let teamQuery = supabase.from("teams").select("*").eq("is_active", true);
       if (!isSuperadmin) {
-        teamQuery = teamQuery.eq(role === "manager" ? "manager_id" : "team_leader_id", userId);
+        teamQuery = teamQuery.eq(
+          role === "manager" || role === "team manager" ? "manager_id" : "team_leader_id",
+          userId,
+        );
       }
       const { data: teams, error: teamsError } = await teamQuery.order("created_at");
       if (teamsError) throw teamsError;
       const scopedTeams = (teams ?? []) as Team[];
       const teamIds = scopedTeams.map((team) => team.id);
-      let members: Staff[] = [];
+      let members: TeamMember[] = [];
       let tasks: Task[] = [];
-      if (teamIds.length > 0) {
-        let memberQuery = supabase.from("staff").select("*");
-        if (role === "manager" || isSuperadmin) {
-          const managerIds = [...new Set(scopedTeams.map((team) => team.manager_id))];
-          memberQuery = memberQuery.in("manager_id", managerIds);
-        } else {
-          memberQuery = memberQuery.eq("team_leader_id", userId);
-        }
-        const [memberResult, taskResult] = await Promise.all([
-          memberQuery.order("created_at", { ascending: false }).limit(500),
-          supabase
-            .from("tasks")
-            .select("*")
-            .in("team_id", teamIds)
-            .order("created_at", { ascending: false })
-            .limit(500),
+      const isTeamManager = [
+        "manager",
+        "team manager",
+        "team leader",
+        "team lead",
+        "tl",
+      ].includes(role);
+      if (teamIds.length > 0 || isSuperadmin || isTeamManager) {
+        let taskQuery = supabase.from("tasks").select("*");
+        if (!isSuperadmin) taskQuery = taskQuery.in("team_id", teamIds);
+        const [memberData, taskResult] = await Promise.all([
+          (async () => {
+            if (!isSuperadmin) {
+              const { data, error } = await supabase.rpc("team_member_directory");
+              if (error) throw error;
+              return data as TeamMember[];
+            }
+            const { data, error } = await supabase
+              .from("staff")
+              .select("*")
+              .in("status", ["approved", "active"])
+              .order("created_at", { ascending: false })
+              .limit(500);
+            if (error) throw error;
+            return data as TeamMember[];
+          })(),
+          taskQuery.order("created_at", { ascending: false }).limit(500),
         ]);
-        if (memberResult.error) throw memberResult.error;
         if (taskResult.error) throw taskResult.error;
-        members = (memberResult.data ?? []) as Staff[];
+        members = memberData;
         tasks = (taskResult.data ?? []) as Task[];
       }
       if (mode === "staff") {
@@ -131,13 +169,15 @@ function TasksList({
   userId,
   canReview,
   canComplete,
+  isSuperadmin,
   refresh,
 }: {
   tasks: Task[];
-  members: Staff[];
+  members: TeamMember[];
   userId: string;
   canReview: boolean;
   canComplete?: boolean;
+  isSuperadmin: boolean;
   refresh: () => Promise<void>;
 }) {
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -146,6 +186,14 @@ function TasksList({
     if (status === "rejected") {
       statusNote = window.prompt("Reason for rejecting this task:")?.trim();
       if (!statusNote) return;
+    }
+    if (
+      status === "completed" &&
+      task.assigned_to === userId &&
+      task.review_url &&
+      !window.confirm("Have you submitted this review through Google's reporting workflow?")
+    ) {
+      return;
     }
     setBusyId(task.id);
     try {
@@ -156,7 +204,11 @@ function TasksList({
       });
       if (error) throw error;
       await refresh();
-      toast.success(`Task marked ${status.replaceAll("_", " ")}.`);
+      toast.success(
+        status === "completed" && task.review_url
+          ? "Task marked as reported."
+          : `Task marked ${status.replaceAll("_", " ")}.`,
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Task status could not be updated.");
     } finally {
@@ -169,74 +221,103 @@ function TasksList({
     </p>
   ) : (
     <div className="space-y-3">
-      {tasks.map((task) => (
-        <article key={task.id} className="rounded-xl border p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="font-semibold">{task.title}</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Assigned to:{" "}
-                {members.find((member) => member.id === task.assigned_to)?.name ??
-                  (task.assigned_to === userId ? "You" : `…${task.assigned_to.slice(-8)}`)}
-              </p>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
-                {task.description || "No additional details."}
-              </p>
-              {task.deadline_at && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Deadline: {new Date(task.deadline_at).toLocaleString()}
+      {tasks.map((task) => {
+        const reviewerProfileUrl = getGoogleMapsProfileUrl(task.reviewer_profile_url);
+        return (
+          <article key={task.id} className="rounded-xl border p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="font-semibold">{task.title}</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Assigned to:{" "}
+                  {(isSuperadmin
+                    ? members.find((member) => member.id === task.assigned_to)?.name
+                    : members.find((member) => member.id === task.assigned_to)?.unique_id) ??
+                    (task.assigned_to === userId ? "You" : "Team member")}
                 </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                  {task.description || "No additional details."}
+                </p>
+                {task.review_url && (
+                  <section className="mt-3 space-y-2 rounded-lg border bg-muted/30 p-3">
+                    <h4 className="text-sm font-semibold">Investigation</h4>
+                    {task.reviewer_name && (
+                      <p className="text-sm">Reviewer: {task.reviewer_name}</p>
+                    )}
+                    <p className="whitespace-pre-wrap text-sm">
+                      {task.review_text || "No review text is available."}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {reviewerProfileUrl && (
+                        <Button asChild size="sm" variant="outline">
+                          <a href={reviewerProfileUrl} target="_blank" rel="noreferrer">
+                            Open Reviewer Profile
+                          </a>
+                        </Button>
+                      )}
+                      <Button asChild size="sm" variant="outline">
+                        <a href={GOOGLE_REVIEW_REPORT_URL} target="_blank" rel="noreferrer">
+                          Open Google Report Page
+                        </a>
+                      </Button>
+                    </div>
+                  </section>
+                )}
+                {task.deadline_at && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Deadline: {new Date(task.deadline_at).toLocaleString()}
+                  )}
+                {task.status_note && (
+                  <p className="mt-2 text-sm text-destructive">Note: {task.status_note}</p>
+                )}
+              </div>
+              <span className="rounded-full border px-3 py-1 text-xs capitalize">
+                {task.status.replaceAll("_", " ")}
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {task.assigned_to === userId && task.status === "pending" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busyId === task.id}
+                  onClick={() => void update(task, "in_progress")}
+                >
+                  {task.review_url ? "Start investigation" : "Start task"}
+                </Button>
               )}
-              {task.status_note && (
-                <p className="mt-2 text-sm text-destructive">Note: {task.status_note}</p>
+              {task.assigned_to === userId && task.status === "in_progress" && (
+                <Button
+                  size="sm"
+                  disabled={busyId === task.id}
+                  onClick={() => void update(task, "completed")}
+                >
+                  {task.review_url ? "Mark as Reported" : "Submit task"}
+                </Button>
+              )}
+              {canComplete && task.status === "in_progress" && task.assigned_to !== userId && (
+                <Button
+                  size="sm"
+                  disabled={busyId === task.id}
+                  onClick={() => void update(task, "completed")}
+                >
+                  Confirm completion
+                </Button>
+              )}
+              {canReview && ["pending", "in_progress"].includes(task.status) && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={busyId === task.id}
+                  onClick={() => void update(task, "rejected")}
+                >
+                  Reject task
+                </Button>
               )}
             </div>
-            <span className="rounded-full border px-3 py-1 text-xs capitalize">
-              {task.status.replaceAll("_", " ")}
-            </span>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {task.assigned_to === userId && task.status === "pending" && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busyId === task.id}
-                onClick={() => void update(task, "in_progress")}
-              >
-                Start task
-              </Button>
-            )}
-            {task.assigned_to === userId && task.status === "in_progress" && (
-              <Button
-                size="sm"
-                disabled={busyId === task.id}
-                onClick={() => void update(task, "completed")}
-              >
-                Submit task
-              </Button>
-            )}
-            {canComplete && task.status === "in_progress" && task.assigned_to !== userId && (
-              <Button
-                size="sm"
-                disabled={busyId === task.id}
-                onClick={() => void update(task, "completed")}
-              >
-                Confirm completion
-              </Button>
-            )}
-            {canReview && ["pending", "in_progress"].includes(task.status) && (
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={busyId === task.id}
-                onClick={() => void update(task, "rejected")}
-              >
-                Reject task
-              </Button>
-            )}
-          </div>
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -259,6 +340,9 @@ function Earnings({ entries }: { entries: Earning[] }) {
 export function TeamTaskDashboard({ mode }: { mode: Mode }) {
   const queryClient = useQueryClient();
   const query = useTeamData(mode);
+  const [managerSection, setManagerSection] = useState<
+    "overview" | "leaders" | "staff" | "tasks"
+  >("overview");
   const data = query.data;
   const assignedTasks = data?.tasks ?? [];
   const completed = assignedTasks.filter((task) => task.status === "completed").length;
@@ -309,6 +393,7 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
           members={data.members}
           userId={data.userId}
           canReview={false}
+          isSuperadmin={data.isSuperadmin}
           refresh={refresh}
         />
       </div>
@@ -327,9 +412,11 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
             userId={data.userId}
             canReview
             canComplete={data.isSuperadmin}
+            isSuperadmin={data.isSuperadmin}
             refresh={refresh}
           />
         </section>
+        {data.isSuperadmin && <ClientLeadSubmissions />}
       </div>
     );
   }
@@ -339,7 +426,7 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
       try {
         const { error } = await supabase.rpc("team_leader_add_staff", { _staff_id: staffId });
         if (error) throw error;
-        toast.success("Staff added to your team and approved.");
+        toast.success("Staff assigned to your team and sent for Super Admin approval.");
         await refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Staff could not be added.");
@@ -360,14 +447,15 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
           <Metric title="Team tasks completed" value={completed} />
           <Metric title="Pending tasks" value={pending} />
         </section>
+        <TeamLeaderAddStaffForm hasActiveTeam={data.teams.length > 0} />
         <Earnings entries={data.earnings} />
         <Card className="hover:translate-y-0">
           <CardContent className="space-y-3 p-5">
             <div>
-              <h2 className="font-semibold">Add and approve staff</h2>
+              <h2 className="font-semibold">Assign a pending staff application</h2>
               <p className="text-sm text-muted-foreground">
-                Only pending, unassigned applications are listed. Existing team members cannot be
-                removed here.
+                Assign an existing pending application to your team. A Super Admin must still
+                approve it before the staff member can access the platform.
               </p>
             </div>
             {pendingRows.length === 0 ? (
@@ -381,10 +469,10 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
                 >
                   <span>
-                    {staff.name} · {staff.region_city}, {staff.region_state}
+                    User ID: {staff.unique_id}
                   </span>
                   <Button size="sm" onClick={() => void addStaff(staff.id)}>
-                    Add and approve
+                    Assign to my team
                   </Button>
                 </div>
               ))
@@ -407,6 +495,7 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
           members={data.members}
           userId={data.userId}
           canReview
+          isSuperadmin={data.isSuperadmin}
           refresh={refresh}
         />
       </div>
@@ -416,7 +505,7 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
   return (
     <div className="space-y-5">
       <PageHeader
-        title={mode === "manager" ? "Manager Dashboard" : "Team Dashboard"}
+        title={mode === "manager" ? "Team & Operations Control Center" : "Team Dashboard"}
         subtitle={`Team oversight · ${data.profile?.name ?? "Superadmin"}`}
         action={
           <Button asChild>
@@ -424,31 +513,190 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
           </Button>
         }
       />
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric title="Team leaders" value={tlRows.length} />
-        <Metric
-          title="Team members"
-          value={staffRows.filter((row) => row.id !== data.userId).length}
+      <nav aria-label="Manager dashboard sections" className="flex flex-wrap gap-2 border-b pb-3">
+        {([
+          ["overview", "Overview"],
+          ["leaders", "My Team Leaders"],
+          ["staff", "My Staff"],
+          ["tasks", "Task Tracking"],
+        ] as const).map(([section, label]) => (
+          <Button
+            key={section}
+            size="sm"
+            variant={managerSection === section ? "default" : "outline"}
+            aria-pressed={managerSection === section}
+            onClick={() => setManagerSection(section)}
+          >
+            {label}
+          </Button>
+        ))}
+      </nav>
+      {managerSection === "overview" && (
+        <>
+          <ManagerAddMemberForm onCreated={refresh} />
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Metric title="Team leaders" value={tlRows.length} />
+            <Metric
+              title="Team members"
+              value={staffRows.filter((row) => row.id !== data.userId).length}
+            />
+            <Metric title="Total tasks" value={assignedTasks.length} />
+            <Metric title="Completed / active" value={`${completed} / ${pending}`} />
+          </section>
+          <Earnings entries={data.earnings} />
+          <p className="text-sm text-muted-foreground">
+            Approval decisions and any evidence-based review actions remain with authorized
+            administrators. Task completion does not establish that a third-party review violates
+            a platform policy.
+          </p>
+        </>
+      )}
+      {managerSection === "leaders" && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">My Team Leaders</h2>
+            <p className="text-sm text-muted-foreground">
+              Pending leader applications are visible by status. Account approval remains a Super
+              Admin action.
+            </p>
+          </div>
+          {tlRows.length === 0 ? (
+            <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+              No team leaders are currently visible in your team scope.
+            </p>
+          ) : (
+            <StaffList rows={tlRows} />
+          )}
+        </section>
+      )}
+      {managerSection === "staff" && (
+        <ManagerStaffGroups
+          rows={staffRows.filter((row) => row.id !== data.userId)}
+          teams={data.teams}
         />
-        <Metric title="Total tasks" value={assignedTasks.length} />
-        <Metric title="Completed / pending" value={`${completed} / ${pending}`} />
-      </section>
-      <Earnings entries={data.earnings} />
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Team leaders</h2>
-        <StaffList rows={tlRows} />
-      </section>
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Task activity</h2>
-        <TasksList
-          tasks={assignedTasks}
-          members={data.members}
-          userId={data.userId}
-          canReview
-          refresh={refresh}
-        />
-      </section>
+      )}
+      {managerSection === "tasks" && (
+        <ManagerTaskTracker tasks={assignedTasks} members={data.members} />
+      )}
     </div>
+  );
+}
+
+function ManagerStaffGroups({ rows, teams }: { rows: TeamMember[]; teams: Team[] }) {
+  const groups = useMemo(() => {
+    const leaders = new Map<string, TeamMember>();
+    const assignedLeaderIds = new Set(teams.map((team) => team.team_leader_id));
+    for (const row of rows) {
+      if (
+        ["team leader", "team lead", "tl"].includes(
+          row.role.toLowerCase().replaceAll("_", " "),
+        ) &&
+        assignedLeaderIds.has(row.id) &&
+        row.team_id
+      )
+        leaders.set(row.team_id, row);
+    }
+    const grouped = new Map<string, { leader: TeamMember | null; staff: TeamMember[] }>();
+    for (const row of rows) {
+      if (
+        ["team leader", "team lead", "tl", "manager"].includes(
+          row.role.toLowerCase().replaceAll("_", " "),
+        )
+      )
+        continue;
+      const leader = row.team_id ? leaders.get(row.team_id) ?? null : null;
+      const key = row.team_id ?? "unassigned";
+      const current = grouped.get(key) ?? { leader, staff: [] };
+      current.staff.push(row);
+      grouped.set(key, current);
+    }
+    return [...grouped.values()].sort((a, b) =>
+      (a.leader?.unique_id ?? "Unassigned").localeCompare(b.leader?.unique_id ?? "Unassigned"),
+    );
+  }, [rows, teams]);
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">My Staff</h2>
+        <p className="text-sm text-muted-foreground">Staff are grouped by their visible team leader.</p>
+      </div>
+      {groups.length === 0 ? (
+        <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+          No staff members are currently visible in your team scope.
+        </p>
+      ) : (
+        groups.map(({ leader, staff }) => (
+          <Card key={leader?.id ?? "unassigned"} className="hover:translate-y-0">
+            <CardContent className="space-y-3 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold">
+                  {leader ? `Team Leader · ${leader.unique_id}` : "Unassigned team members"}
+                </h3>
+                {leader && (
+                  <span className="rounded-full border px-2.5 py-1 text-xs capitalize">
+                    Leader · {leader.status === "pending" ? "Pending Super Admin Approval" : leader.status}
+                  </span>
+                )}
+              </div>
+              <StaffList rows={staff} />
+            </CardContent>
+          </Card>
+        ))
+      )}
+    </section>
+  );
+}
+
+function ManagerTaskTracker({ tasks, members }: { tasks: Task[]; members: TeamMember[] }) {
+  const activeTasks = tasks.filter((task) => ["pending", "in_progress"].includes(task.status));
+  const byId = new Map(members.map((member) => [member.id, member]));
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Active task tracker</h2>
+        <p className="text-sm text-muted-foreground">
+          Each row is an individual assignment. Completed tasks are available in the dashboard
+          overview counts.
+        </p>
+      </div>
+      {activeTasks.length === 0 ? (
+        <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+          There are no active team tasks.
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead>
+              <tr className="border-b text-xs text-muted-foreground">
+                <th className="p-3">Task</th>
+                <th className="p-3">Review URL</th>
+                <th className="p-3">Assignee</th>
+                <th className="p-3">Status</th>
+                <th className="p-3">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activeTasks.map((task) => (
+                <tr key={task.id} className="border-b align-top last:border-0">
+                  <td className="p-3 font-medium">{task.title}</td>
+                  <td className="max-w-xs break-all p-3">
+                    {task.review_url ? (
+                      <a href={task.review_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                        Open URL
+                      </a>
+                    ) : "—"}
+                  </td>
+                  <td className="p-3">{byId.get(task.assigned_to)?.unique_id ?? "Staff member"}</td>
+                  <td className="p-3 capitalize">{task.status.replaceAll("_", " ")}</td>
+                  <td className="whitespace-nowrap p-3">{new Date(task.updated_at).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -463,7 +711,7 @@ function Metric({ title, value }: { title: string; value: string | number }) {
   );
 }
 
-function StaffList({ rows }: { rows: Staff[] }) {
+function StaffList({ rows }: { rows: TeamMember[] }) {
   return rows.length === 0 ? (
     <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
       No staff members are assigned to this team yet.
@@ -473,28 +721,90 @@ function StaffList({ rows }: { rows: Staff[] }) {
       <table className="w-full min-w-[640px] text-left text-sm">
         <thead>
           <tr className="border-b text-xs text-muted-foreground">
-            <th className="p-3">Name</th>
-            <th className="p-3">Email</th>
+            <th className="p-3">User ID</th>
             <th className="p-3">Role</th>
             <th className="p-3">Status</th>
-            <th className="p-3">Location</th>
+            <th className="p-3">Team ID</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.id} className="border-b last:border-0">
-              <td className="p-3 font-medium">{row.name}</td>
-              <td className="p-3">{row.email}</td>
+              <td className="p-3 font-medium">{row.unique_id}</td>
               <td className="p-3">{row.role}</td>
-              <td className="p-3 capitalize">{row.status}</td>
               <td className="p-3">
-                {row.region_city}, {row.region_state}
+                {row.status === "pending" ? "Pending Super Admin Approval" : row.status}
               </td>
+              <td className="p-3">{row.team_id ?? "—"}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function ClientLeadSubmissions() {
+  const loadLeads = useServerFn(getClientLeads);
+  const leads = useQuery({
+    queryKey: ["admin-client-leads"],
+    queryFn: () => loadLeads(),
+  });
+  if (leads.isPending) return <p>Loading staff URL submissions…</p>;
+  if (leads.error || !leads.data)
+    return <p role="alert">Could not load staff URL submissions: {leads.error?.message}</p>;
+  return (
+    <section className="space-y-3">
+      <div>
+        <h2 className="text-lg font-semibold">Staff URL Submissions</h2>
+        <p className="text-sm text-muted-foreground">
+          {leads.data.length} client URL{leads.data.length === 1 ? "" : "s"} submitted by staff.
+        </p>
+      </div>
+      {!leads.data.length ? (
+        <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+          No client URLs have been submitted yet.
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border">
+          <table className="w-full min-w-[900px] text-left text-sm">
+            <thead>
+              <tr className="border-b text-xs text-muted-foreground">
+                <th className="p-3">Date</th>
+                <th className="p-3">Staff Name</th>
+                <th className="p-3">URL</th>
+                <th className="p-3">Client Name</th>
+                <th className="p-3">Client Mobile</th>
+                <th className="p-3">Team Leader</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leads.data.map((lead) => (
+                <tr key={lead.id} className="border-b align-top last:border-0">
+                  <td className="whitespace-nowrap p-3">
+                    {new Date(lead.submitted_at).toLocaleString()}
+                  </td>
+                  <td className="p-3">{lead.staff_name}</td>
+                  <td className="max-w-xs break-all p-3">
+                    <a
+                      href={lead.review_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      {lead.review_url}
+                    </a>
+                  </td>
+                  <td className="p-3">{lead.client_name}</td>
+                  <td className="whitespace-nowrap p-3">{lead.client_mobile}</td>
+                  <td className="p-3">{lead.team_leader_name ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -506,19 +816,21 @@ function TaskManagerForm({
   refresh: () => Promise<void>;
 }) {
   const isManager = data.profile?.role.toLowerCase() === "manager";
-  const assignees = data.members.filter((member) =>
-    data.isSuperadmin
-      ? member.role.toLowerCase() !== "manager"
-      : isManager
-        ? member.id !== data.userId && member.role.toLowerCase() !== "manager"
-        : member.id !== data.userId &&
-          !["team leader", "team lead", "tl"].includes(
-            member.role.toLowerCase().replaceAll("_", " "),
-          ) &&
-          member.status !== "pending",
+  const assignees = data.members.filter(
+    (member) =>
+      ["approved", "active"].includes(member.status) &&
+      (data.isSuperadmin
+        ? member.role.toLowerCase() !== "manager"
+        : isManager
+          ? member.id !== data.userId && member.role.toLowerCase() !== "manager"
+          : member.id !== data.userId &&
+            !["team leader", "team lead", "tl"].includes(
+              member.role.toLowerCase().replaceAll("_", " "),
+            )),
   );
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [reviewUrl, setReviewUrl] = useState("");
   const [deadline, setDeadline] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -529,18 +841,25 @@ function TaskManagerForm({
       toast.error("Select at least one assignee.");
       return;
     }
+    const normalizedReviewUrl = reviewUrl.trim();
+    if (!isGoogleMapsUrl(normalizedReviewUrl)) {
+      toast.error("Enter a valid Google Maps review URL.");
+      return;
+    }
     setBusy(true);
     try {
       const { data: count, error } = await supabase.rpc("create_team_tasks", {
         _title: title.trim(),
         _description: description.trim(),
         _assignees: selected,
+        _review_url: normalizedReviewUrl,
         _deadline_at: deadline ? new Date(deadline).toISOString() : null,
       });
       if (error) throw error;
       toast.success(`${count} task${count === 1 ? "" : "s"} assigned.`);
       setTitle("");
       setDescription("");
+      setReviewUrl("");
       setDeadline("");
       setSelected([]);
       await refresh();
@@ -549,6 +868,9 @@ function TaskManagerForm({
     } finally {
       setBusy(false);
     }
+  }
+  function selectAllEligible() {
+    setSelected(assignees.slice(0, 100).map((member) => member.id));
   }
   return (
     <div className="space-y-5">
@@ -580,6 +902,22 @@ function TaskManagerForm({
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="team-task-review-url">Google Review URL</Label>
+              <Input
+                id="team-task-review-url"
+                type="url"
+                required
+                maxLength={2048}
+                placeholder="https://www.google.com/maps/..."
+                value={reviewUrl}
+                onChange={(event) => setReviewUrl(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Reviewer name, profile, and review text are filled from a matching review in the
+                local database. Scan or import the review first if it is not found.
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="team-task-deadline">Deadline (optional)</Label>
               <Input
                 id="team-task-deadline"
@@ -589,10 +927,27 @@ function TaskManagerForm({
               />
             </div>
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">Assign to</legend>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <legend className="text-sm font-medium">Assign to</legend>
+                {data.isSuperadmin && assignees.length > 0 && (
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={selectAllEligible}>
+                      Select up to 100
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelected([])}
+                    >
+                      Clear selection
+                    </Button>
+                  </div>
+                )}
+              </div>
               {assignees.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No eligible team members are available.
+                  No eligible staff members are available.
                 </p>
               ) : (
                 <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border p-3">
@@ -601,6 +956,7 @@ function TaskManagerForm({
                       <input
                         type="checkbox"
                         checked={selected.includes(member.id)}
+                        disabled={!selected.includes(member.id) && selected.length >= 100}
                         onChange={(event) =>
                           setSelected((current) =>
                             event.target.checked
@@ -609,16 +965,19 @@ function TaskManagerForm({
                           )
                         }
                       />
-                      {member.name} · {member.role} · {member.status}
+                      {(data.isSuperadmin ? member.name ?? member.unique_id : member.unique_id)} ·{" "}
+                      {member.role}
                     </label>
                   ))}
                 </div>
               )}
             </fieldset>
             <p className="text-xs text-muted-foreground">
-              A completed task automatically credits ₹90 to the staff assignee, ₹40 to the team
-              leader, and ₹20 to the manager. Team-leader-assigned work credits the leader ₹40 and
-              manager ₹20. Earnings are stored once per task.
+              Admins can assign to any approved staff member, including staff outside a team;
+              location does not restrict assignment. Up to 100 assignees can receive the task at
+              once. When completed, ₹30 goes to the staff assignee, ₹40 to their team leader, and
+              ₹90 to their manager. A team leader's task credits the leader ₹40 and manager ₹90.
+              Earnings are stored once per task.
             </p>
             <Button type="submit" disabled={busy || assignees.length === 0}>
               {busy

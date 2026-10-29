@@ -48,10 +48,12 @@ const ollamaBaseUrl = () =>
   );
 
 const ollamaTimeoutMs = () => {
-  const timeoutMs = Number(process.env["OLLAMA_TIMEOUT_MS"] ?? 60_000);
+  const timeoutMs = Number(process.env["OLLAMA_TIMEOUT_MS"] ?? 15_000);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1_000) {
-    console.warn("[ai-orchestrator] Invalid OLLAMA_TIMEOUT_MS; using 60000ms.");
-    return 60_000;
+    console.warn(
+      "[ai-orchestrator] Invalid OLLAMA_TIMEOUT_MS; using the 15000ms maximum.",
+    );
+    return 15_000;
   }
   return Math.min(timeoutMs, 15_000);
 };

@@ -458,7 +458,7 @@ async function classifyStaffReplyWithAI(reply: string) {
   const response = await fetch(`${baseUrl}/api/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(15_000),
     body: JSON.stringify({
       model: process.env["OLLAMA_MODEL"] ?? "llama3.2:3b",
       stream: false,
@@ -742,7 +742,7 @@ export const getManagerStaffAssignmentData = createServerFn({ method: "GET" })
     const [staffResult, scansResult] = await Promise.all([
       supabaseAdmin
         .from("staff")
-        .select("id,name,status,region_city,region_state")
+        .select("id,unique_id,status")
         .in("id", [...memberIds])
         .order("created_at", { ascending: false })
         .limit(500),

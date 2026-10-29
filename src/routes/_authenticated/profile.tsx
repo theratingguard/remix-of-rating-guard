@@ -712,7 +712,11 @@ function ProfilePage() {
               <form onSubmit={verifyFactor} className="space-y-3 rounded-lg border p-4">
                 <p className="text-sm font-medium">Scan this QR code with your authenticator app</p>
                 {pendingFactor.qrCode && (
-                  <img src={pendingFactor.qrCode} alt="Authenticator enrollment QR code" />
+                  <img
+                    src={pendingFactor.qrCode}
+                    alt="Authenticator enrollment QR code"
+                    loading="lazy"
+                  />
                 )}
                 <p className="break-all text-xs text-muted-foreground">
                   Manual setup key: {pendingFactor.secret}

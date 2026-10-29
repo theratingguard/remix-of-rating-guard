@@ -9,9 +9,10 @@ const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   unsubscribe: vi.fn(),
   resend: vi.fn(),
+  recordStaffLogin: vi.fn(),
 }));
 vi.mock("@tanstack/react-start", () => ({
-  useServerFn: () => vi.fn().mockResolvedValue({ recorded: false }),
+  useServerFn: () => mocks.recordStaffLogin,
 }));
 vi.mock("@/lib/staff-case.functions", () => ({
   recordStaffLogin: vi.fn(),
@@ -38,15 +39,51 @@ describe("Authentication UI contract (unit tests, not production login evidence)
     window.history.replaceState({}, "", "/auth");
     mocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
     mocks.navigate.mockResolvedValue(undefined);
+    mocks.recordStaffLogin.mockResolvedValue({ recorded: false });
   });
   afterEach(cleanup);
 
   function credentials() {
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "user@example.com" } });
+    fireEvent.change(screen.getByLabelText("Email or user ID"), {
+      target: { value: "user@example.com" },
+    });
     fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "test-password-only" },
     });
   }
+
+  it.each([
+    "demo_global",
+    "demo_country",
+    "demo_state",
+    "demo_division",
+    "demo_district",
+    "demo_teammanager",
+    "demo_teamleader",
+    "demo_teammember",
+  ])("converts the %s login ID to its Supabase email", async (loginId) => {
+    mocks.signInWithPassword.mockResolvedValue({ error: null });
+    render(<Page />);
+    const loginInput = screen.getByLabelText("Email or user ID");
+    expect(loginInput).toHaveAttribute("type", "text");
+    fireEvent.change(loginInput, { target: { value: loginId } });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "test-password-only" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Login" }));
+    await waitFor(() => {
+      expect(mocks.signInWithPassword).toHaveBeenCalledWith({
+        email: `${loginId}@ratingguard.online`,
+        password: "test-password-only",
+      });
+    });
+    await waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith({
+        to: "/dashboard",
+        replace: true,
+      }),
+    );
+  });
 
   it("shows provider errors instead of redirecting invalid login", async () => {
     mocks.signInWithPassword.mockResolvedValue({ error: new Error("Invalid login credentials") });
@@ -55,6 +92,23 @@ describe("Authentication UI contract (unit tests, not production login evidence)
     fireEvent.click(screen.getByRole("button", { name: "Login" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Invalid login credentials");
     expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+  it("does not block a successful sign-in when optional activity logging fails", async () => {
+    mocks.signInWithPassword.mockResolvedValue({ error: null });
+    mocks.recordStaffLogin.mockRejectedValue(new Error("Audit service unavailable"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    render(<Page />);
+    credentials();
+    fireEvent.click(screen.getByRole("button", { name: "Login" }));
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({
+      to: "/dashboard",
+      replace: true,
+    }));
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[auth] Staff login activity could not be recorded",
+      expect.any(Error),
+    );
+    errorSpy.mockRestore();
   });
   it("resends normal signup confirmation without creating a session", async () => {
     mocks.signInWithPassword.mockResolvedValue({

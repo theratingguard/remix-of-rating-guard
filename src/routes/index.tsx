@@ -3,6 +3,7 @@ import { z } from "zod";
 import { HomePage } from "@/components/home-page";
 import { DEFAULT_CONTENT, loadSiteContent } from "@/lib/site-content";
 import { APP_URL } from "@/lib/config";
+import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/seo-head";
 
 const SEO_KEYWORDS = [
   "Rating Guard",
@@ -131,6 +132,14 @@ export const Route = createFileRoute("/")({
       ],
       links: APP_URL ? [{ rel: "canonical", href: APP_URL }] : [],
       scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(organizationJsonLd(APP_URL || "https://ratingguard.online")),
+        },
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(websiteJsonLd(APP_URL || "https://ratingguard.online")),
+        },
         {
           type: "application/ld+json",
           children: JSON.stringify({

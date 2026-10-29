@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/app-shell";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getStaffDashboard,
+  submitClientLead,
   saveStaffPayoutDetails,
   sendStaffAdminMessage,
   updateStaffTaskStatus,
@@ -148,6 +149,83 @@ function Overview({ data }: { data: StaffDashboardData }) {
         )}
       </section>
     </div>
+  );
+}
+
+function ClientLeadSubmissionForm() {
+  const submitLead = useServerFn(submitClientLead);
+  const [reviewUrl, setReviewUrl] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [clientMobile, setClientMobile] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      await submitLead({ data: { reviewUrl, clientName, clientMobile } });
+      setReviewUrl("");
+      setClientName("");
+      setClientMobile("");
+      toast.success("Google URL and client details submitted.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not submit the Google URL.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="surface space-y-4 p-4 sm:p-5">
+      <div>
+        <h2 className="text-lg font-semibold">Submit New URL</h2>
+        <p className="text-sm text-muted-foreground">
+          Register a Google Maps URL with the client details so future scans can show its referral
+          information.
+        </p>
+      </div>
+      <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="client-lead-review-url">Google Review URL</Label>
+          <Input
+            id="client-lead-review-url"
+            type="url"
+            required
+            maxLength={2048}
+            value={reviewUrl}
+            onChange={(event) => setReviewUrl(event.target.value)}
+            placeholder="https://maps.google.com/..."
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="client-lead-name">Client Name</Label>
+          <Input
+            id="client-lead-name"
+            required
+            maxLength={160}
+            value={clientName}
+            onChange={(event) => setClientName(event.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="client-lead-mobile">Client Mobile Number</Label>
+          <Input
+            id="client-lead-mobile"
+            type="tel"
+            required
+            minLength={6}
+            maxLength={32}
+            value={clientMobile}
+            onChange={(event) => setClientMobile(event.target.value)}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <Button type="submit" disabled={busy}>
+            {busy ? "Submitting…" : "Submit URL"}
+          </Button>
+        </div>
+      </form>
+    </section>
   );
 }
 
@@ -564,7 +642,12 @@ function Incentive({ data, refresh }: { data: StaffDashboardData; refresh: () =>
   }
 
   const credits = data.credits.reduce((sum, item) => sum + item.amount, 0);
-  const wallet = getStaffWalletSummary(data.credits, data.walletLedger, data.cases);
+  const wallet = getStaffWalletSummary(
+    data.credits,
+    data.walletLedger,
+    data.caseEarnings,
+    data.cases,
+  );
   const transactions = [
     ...data.credits.map((entry) => ({
       id: entry.id,
@@ -580,12 +663,19 @@ function Incentive({ data, refresh }: { data: StaffDashboardData; refresh: () =>
       reason: entry.reason,
       label: entry.transaction_type === "penalty" ? "Penalty" : "Quality bonus",
     })),
+    ...data.caseEarnings.map((entry) => ({
+      id: entry.id,
+      created_at: entry.created_at,
+      amount: entry.amount_inr,
+      reason: `Completed case · ${entry.earning_type.replaceAll("_", " ")}`,
+      label: "Task payout",
+    })),
   ].sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at));
   return (
     <div className="space-y-5">
       <PageHeader
         title="Incentive / Wallet"
-        subtitle="Credits are added only after a case outcome is confirmed."
+        subtitle="Case payouts are credited after a removal is confirmed and the case is closed."
       />
       <section className="grid gap-3 sm:grid-cols-3">
         <Metric title="Credits" value={credits} />
@@ -593,13 +683,17 @@ function Incentive({ data, refresh }: { data: StaffDashboardData; refresh: () =>
         <Metric title="Total earned" value={`₹${wallet.totalEarned.toFixed(2)}`} />
       </section>
       <section
-        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
         aria-label="Monthly payout summary"
       >
         <Metric title="Approved tasks this month (UTC)" value={wallet.approvedTaskCount} />
         <Metric
           title="Quality bonus this month (UTC)"
           value={`₹${wallet.qualityBonus.toFixed(2)}`}
+        />
+        <Metric
+          title="Case payouts this month (UTC)"
+          value={`₹${wallet.caseEarnings.toFixed(2)}`}
         />
         <Metric title="Penalty this month (UTC)" value={`₹${wallet.penalty.toFixed(2)}`} />
         <Metric title="Monthly payout" value={`₹${wallet.monthlyPayout.toFixed(2)}`} />
@@ -1058,7 +1152,12 @@ export function StaffDashboardPage({ module }: { module: DashboardModule }) {
     case "overview":
       return <Overview data={dashboard.data} />;
     case "tasks":
-      return <MyTasks data={dashboard.data} refresh={refresh} />;
+      return (
+        <div className="space-y-5">
+          <ClientLeadSubmissionForm />
+          <MyTasks data={dashboard.data} refresh={refresh} />
+        </div>
+      );
     case "status-board":
       return <StatusBoard data={dashboard.data} />;
     case "performance":

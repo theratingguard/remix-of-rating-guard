@@ -132,6 +132,42 @@ describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
     ).rejects.toMatchObject({ code: "UNSUPPORTED_LINK" });
     expect(fetch).not.toHaveBeenCalled();
   });
+  it("reports ambiguous Maps searches instead of choosing the first nearby result", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        places: [{ id: "place-one" }, { id: "place-two" }],
+      }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    await expect(
+      resolveAndFetchPlace("test-key", "https://www.google.com/maps/place/Unit+Business"),
+    ).rejects.toMatchObject({
+      code: "AMBIGUOUS_BUSINESS",
+      message: expect.stringContaining("multiple matching businesses"),
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("rejects malformed Place IDs rather than using them in a Places request", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    await expect(
+      resolveAndFetchPlace(
+        "test-key",
+        "https://www.google.com/maps/search/?query_place_id=bad%2Fplace",
+      ),
+    ).rejects.toMatchObject({ code: "INVALID_URL" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("does not treat an unresolved short URL as a resolved business link", async () => {
+    dns.lookup.mockResolvedValue([{ address: "8.8.8.8", family: 4 }]);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html></html>")));
+    await expect(
+      resolveAndFetchPlace("test-key", "https://goo.gl/maps/short"),
+    ).rejects.toMatchObject({
+      code: "RESOLVE_FAILED",
+      message: expect.stringContaining("did not fully resolve"),
+    });
+  });
   it("resolves CID-only identity from official Maps and still requires exact CID match in Places", async () => {
     cid.resolve.mockResolvedValueOnce("Exact Apartment Name");
     const fetch = vi
@@ -166,6 +202,38 @@ describe("Google Places boundary (unit fixtures, not scan evidence)", () => {
     expect(parseMapsUrl("https://www.google.com/maps/place/Test/data=!1sChIJtest%2Did")).toEqual({
       placeId: "ChIJtest-id",
     });
+  });
+
+  it("extracts Place IDs embedded in Google Maps query parameters", () => {
+    expect(
+      parseMapsUrl(
+        "https://www.google.com/maps/search/?query=Coffee&data=!4m2!1sChIJexact-place",
+      ),
+    ).toEqual({ placeId: "ChIJexact-place" });
+  });
+
+  it("uses an embedded Place ID for Places details instead of business-name search", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ id: "ChIJexact-place", displayName: { text: "Exact Business" } }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const result = await resolveAndFetchPlace(
+      "fixture",
+      "https://www.google.com/maps/search/?query=Coffee&data=!4m2!1sChIJexact-place",
+    );
+    expect(result.placeId).toBe("ChIJexact-place");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0]?.[0]).toContain("/places/ChIJexact-place");
+  });
+
+  it("rejects links that contain conflicting explicit Place IDs", () => {
+    expect(() =>
+      parseMapsUrl(
+        "https://www.google.com/maps/place/Test/data=!1sChIJembedded?query_place_id=ChIJdifferent",
+      ),
+    ).toThrow("conflicting Place IDs");
   });
 
   it("rejects invalid place coordinates", () => {

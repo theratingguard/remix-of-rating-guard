@@ -83,13 +83,14 @@ export function consensusReviews(
   if (!ballots.length || ballots.length !== indices.length)
     throw new Error("All enabled models must return validated results.");
   return reviews.map((review, index): ReviewAnalysis & { consensus: Consensus } => {
-    const votes = ballots.map((modelResults, modelIndex) => {
+    const allVotes = ballots.map((modelResults, modelIndex) => {
       const result = modelResults.find((item) => item.index === index);
       if (!result) throw new Error("Incomplete consensus results.");
       return { ...result, model: actualModels[indices[modelIndex]!]! };
     });
+    const votes = [...new Map(allVotes.map((vote) => [vote.model, vote])).values()];
     const positive = votes.filter((vote) => vote.violates_policy);
-    const supported = positive.length >= (indices.length === 1 ? 1 : 2);
+    const supported = positive.length >= (votes.length === 1 ? 1 : 2);
     const chosen = supported ? positive[0]! : votes[0]!;
     const risk = supported
       ? positive.length === 3
@@ -100,7 +101,7 @@ export function consensusReviews(
         : review.text.trim()
           ? "normal"
           : "requires_review";
-    const reason = `${positive.length}/${indices.length} enabled models found supported policy concerns. ${indices.length === 1 ? "Single-model assessment, not consensus." : "Agreement is not proof or a removal probability."} ${chosen.reasoning}`;
+    const reason = `${positive.length}/${votes.length} unique enabled models found supported policy concerns. ${votes.length === 1 ? "Single-model assessment, not consensus." : "Agreement is not proof or a removal probability."} ${chosen.reasoning}`;
     return {
       risk,
       category: supported ? chosen.policy_type : null,
@@ -109,9 +110,17 @@ export function consensusReviews(
       confidence: Math.round(votes.reduce((sum, vote) => sum + vote.confidence, 0) / votes.length),
       reason,
       consensus: {
-        model: indices.map((index) => actualModels[index]).join(" + "),
-        provider: indices.map((index) => ["OpenAI", "Anthropic", "Google"][index]).join(" + "),
-        enabled_models: indices.length,
+        model: votes.map((vote) => vote.model).join(" + "),
+        provider: votes
+          .map((vote) =>
+            vote.model.startsWith("gpt-")
+              ? "OpenAI"
+              : vote.model.startsWith("claude-")
+                ? "Anthropic"
+                : "Google",
+          )
+          .join(" + "),
+        enabled_models: votes.length,
         agrees: supported,
         risk,
         reason,
@@ -238,20 +247,21 @@ export async function analyzeWithThreeModels(
   const timings: number[] = [];
   const statuses: (number | null)[] = [];
   const actualModels: string[] = [...models];
-  let fallback: string | undefined;
+  const fallbacks: string[] = [];
+  let gptBillingFallback: Promise<ModelBallot[]> | undefined;
   const settled = await Promise.allSettled(
     indices.map(async (index) => {
-      const request = requests[index]!;
       const started = Date.now();
       try {
-        const call = async (model: string) => {
+        const call = async (providerIndex: number, statusIndex: number | null, model: string) => {
+          const request = requests[providerIndex]!;
           const response = await budgetedAiFetch(request.url, {
             method: "POST",
             headers: request.headers,
-            body: JSON.stringify({ ...request.body, ...(index === 0 ? { model } : {}) }),
-            signal: AbortSignal.timeout(20000),
+            body: JSON.stringify({ ...request.body, ...(providerIndex === 0 ? { model } : {}) }),
+            signal: AbortSignal.timeout(15_000),
           });
-          statuses[index] = response.status;
+          if (statusIndex !== null) statuses[statusIndex] = response.status;
           await requireProviderResponse(response);
           const json: unknown = await response.json();
           const openai = z.object({
@@ -266,9 +276,9 @@ export async function analyzeWithThreeModels(
             ),
           });
           const text =
-            index === 0
+            providerIndex === 0
               ? openai.parse(json).choices[0]?.message.content
-              : index === 1
+              : providerIndex === 1
                 ? claude
                     .parse(json)
                     .content.filter((item) => item.type === "text")
@@ -285,8 +295,19 @@ export async function analyzeWithThreeModels(
           );
         };
         try {
-          return await retryAi(() => call(models[index]!), models[index]!);
+          return await retryAi(() => call(index, index, models[index]!), models[index]!);
         } catch (error) {
+          if (index > 0 && error instanceof ProviderHttpError && error.billing) {
+            if (!apiKey)
+              throw new ScanError("AI_UNAVAILABLE", "GPT-4o billing fallback is not configured.");
+            actualModels[index] = models[0];
+            fallbacks.push(`${models[index]} disabled due to billing; used GPT-4o as fallback.`);
+            gptBillingFallback ??= retryAi(
+              () => call(0, null, models[0]),
+              "GPT-4o billing fallback",
+            );
+            return await gptBillingFallback;
+          }
           if (
             index !== 0 ||
             indices.length !== 1 ||
@@ -295,10 +316,11 @@ export async function analyzeWithThreeModels(
           )
             throw error;
           actualModels[0] = "gpt-4.1-mini";
-          fallback =
+          const fallback =
             "GPT-4o exhausted retryable attempts; explicitly labelled OpenAI gpt-4.1-mini single-model fallback. Disabled Claude/Gemini were not called.";
+          fallbacks.push(fallback);
           console.warn("[multi-model]", fallback);
-          return await call(actualModels[0]);
+          return await call(0, index, actualModels[0]);
         }
       } catch (error) {
         console.error(
@@ -371,6 +393,7 @@ export async function analyzeWithThreeModels(
     indices,
     actualModels,
   );
+  const fallback = [...new Set(fallbacks)].join(" ");
   return result.map((item) =>
     fallback
       ? {

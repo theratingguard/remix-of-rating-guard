@@ -32,6 +32,11 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { GlobalHeaderControls } from "@/components/global-header-controls";
+import {
+  getHierarchyDashboardPath,
+  getHierarchyRole,
+  HIERARCHY_ROLE_LABELS,
+} from "@/lib/management-hierarchy";
 
 const adminNav = [
   { to: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
@@ -119,6 +124,10 @@ function SidebarBody({
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const hierarchyRole = isStaff ? getHierarchyRole(staffRole) : null;
+  const hierarchyDashboardSegment = hierarchyRole
+    ? (getHierarchyDashboardPath(hierarchyRole).split("/").pop() ?? "global")
+    : "global";
   const { data: profile } = useQuery({ ...profileQuery(), enabled: isSuperAdmin || isStaff });
   const unreadChats = useQuery({
     queryKey: ["internal-chat", "unread-count", userId],
@@ -148,7 +157,50 @@ function SidebarBody({
     <div className="flex h-full flex-col gap-6 p-4">
       <Brand />
       <nav className="flex flex-col gap-1" aria-label="Main navigation">
-        {(isSuperAdmin
+        {isStaff && hierarchyRole ? (
+          <>
+            <Link
+              to="/dashboard/$role"
+              params={{ role: hierarchyDashboardSegment }}
+              onClick={onNavigate}
+              className="flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2 text-sm font-medium text-sidebar-accent-foreground"
+            >
+              <LayoutDashboard className="h-4 w-4 shrink-0" />
+              {HIERARCHY_ROLE_LABELS[hierarchyRole]} Dashboard
+            </Link>
+            {hierarchyRole === "team_member" && (
+              <>
+                <Link
+                  to="/staff/tasks"
+                  onClick={onNavigate}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                  activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
+                >
+                  <ClipboardList className="h-4 w-4 shrink-0" />
+                  My Tasks
+                </Link>
+                <Link
+                  to="/staff/evidence"
+                  onClick={onNavigate}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                  activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
+                >
+                  <FolderLock className="h-4 w-4 shrink-0" />
+                  Evidence
+                </Link>
+              </>
+            )}
+            <Link
+              to="/staff/wallet"
+              onClick={onNavigate}
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+              activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
+            >
+              <CircleDollarSign className="h-4 w-4 shrink-0" />
+              Wallet
+            </Link>
+          </>
+        ) : (isSuperAdmin
           ? adminNav
           : isClient
             ? clientNav

@@ -207,4 +207,21 @@ describe("Evidence-grounded three-model consensus", () => {
       expect(fetch).toHaveBeenCalledTimes(1);
     }
   });
+  it("uses GPT-4o immediately when Claude reports a billing failure", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "fixture");
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("insufficient credits", { status: 402 }))
+      .mockResolvedValueOnce(
+        Response.json({ choices: [{ message: { content: JSON.stringify({ results: [yes] }) } }] }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const result = await analyzeWithThreeModels("fixture", "Fixture", null, reviews, [1]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(String(fetch.mock.calls[1]?.[0])).toContain("api.openai.com");
+    expect(JSON.parse(String(fetch.mock.calls[1]?.[1]?.body)).model).toBe("gpt-4o");
+    expect(result[0]?.consensus.model).toBe("gpt-4o");
+    expect(result[0]?.consensus.provider).toBe("OpenAI");
+    expect(result[0]?.consensus.fallback).toContain("Claude");
+  });
 });

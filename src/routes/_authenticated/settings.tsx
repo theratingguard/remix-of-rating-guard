@@ -263,7 +263,10 @@ function SettingsPage() {
             </div>
           )}
           <Row k="API health" v={<HBadge s={check("Google API")?.status} />} />
-          <Row k="Review limit" v={`Up to ${sys?.reviewLimit ?? 5} reviews per business`} />
+          <Row
+            k="Review limit"
+            v={`Up to ${sys?.reviewLimit ?? 5} reviews per business (Google Places API limitation, not a system failure)`}
+          />
           <Button variant="outline" onClick={() => setCfgOpen(true)}>
             Configure API
           </Button>

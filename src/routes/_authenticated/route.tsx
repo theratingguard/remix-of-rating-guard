@@ -4,36 +4,56 @@ import { AppShell } from "@/components/app-shell";
 import { ClientLayout } from "@/components/client-layout";
 import { StaffApprovalScreen } from "@/components/staff-dashboard";
 import { GlobalHeaderControls } from "@/components/global-header-controls";
+import {
+  getHierarchyDashboardPath,
+  getHierarchyRole,
+} from "@/lib/management-hierarchy";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
+    if (error) throw new Error(`Could not verify your session: ${error.message}`);
+    if (!data.user) throw redirect({ to: "/auth" });
     const { data: staff, error: staffError } = await supabase
       .from("staff")
       .select("id,status,reject_reason,reject_reason_custom,role,manager_id,team_leader_id")
       .eq("id", data.user.id)
       .maybeSingle();
     if (staffError) throw new Error(`Could not determine staff navigation: ${staffError.message}`);
+    const accountRole =
+      data.user.app_metadata["role"] ?? data.user.user_metadata?.["role"];
+    const expectsStaffProfile =
+      accountRole === "staff" ||
+      getHierarchyRole(accountRole) !== null ||
+      getHierarchyRole(data.user.user_metadata?.["role"]) !== null ||
+      data.user.user_metadata?.["is_staff_registration"] === true;
+    if (expectsStaffProfile && !staff)
+      throw new Error("Staff profile missing. Contact the administrator to restore your account.");
     const { data: accessLevel, error: accessError } = await supabase.rpc("report_access_level");
     if (accessError)
       throw new Error(`Could not determine navigation access: ${accessError.message}`);
     const isStaff = Boolean(staff) && accessLevel !== "super_admin";
     const isSuperAdmin = accessLevel === "super_admin";
     const staffRole = (staff?.role ?? "").toLowerCase().replaceAll("_", " ");
-    const isManager = isStaff && staffRole === "manager";
-    const isTeamLeader = isStaff && ["team leader", "team lead", "tl"].includes(staffRole);
+    const hierarchyRole = getHierarchyRole(staff?.role);
     const role = data.user.app_metadata["role"];
     const isClient = role === "client";
     const isReseller = role === "reseller";
     if (location.pathname === "/dashboard") {
       if (isSuperAdmin) throw redirect({ to: "/admin/staff", replace: true });
-      if (isManager) throw redirect({ to: "/manager", replace: true });
-      if (isTeamLeader) throw redirect({ to: "/team-leader", replace: true });
+      if (hierarchyRole)
+        throw redirect({ href: getHierarchyDashboardPath(hierarchyRole), replace: true });
       if (isStaff) throw redirect({ to: "/staff/today", replace: true });
       if (isClient) throw redirect({ to: "/client/dashboard", replace: true });
       if (isReseller) throw redirect({ to: "/reseller", replace: true });
+    }
+    if (
+      hierarchyRole &&
+      location.pathname.startsWith("/dashboard/") &&
+      location.pathname !== getHierarchyDashboardPath(hierarchyRole)
+    ) {
+      throw redirect({ href: getHierarchyDashboardPath(hierarchyRole), replace: true });
     }
     const clientPaths = [
       "/client/dashboard",
@@ -110,21 +130,22 @@ export const Route = createFileRoute("/_authenticated")({
       "/staff/cases",
       "/chat",
     ];
-    const managerPaths = ["/manager", "/task-manager", "/staff/wallet", "/profile", "/chat"];
-    const teamLeaderPaths = [
-      "/team-leader",
-      "/task-manager",
-      "/staff/tasks",
-      "/staff/wallet",
-      "/staff/today",
+    const hierarchyDashboardPath = hierarchyRole ? getHierarchyDashboardPath(hierarchyRole) : null;
+    const hierarchyPaths = [
+      hierarchyDashboardPath,
       "/profile",
-      "/chat",
+      "/staff/wallet",
+      ...(hierarchyRole === "team_member" ? ["/staff/tasks", "/staff/evidence"] : []),
     ];
+    const hierarchyPathAllowed =
+      !hierarchyRole || hierarchyPaths.includes(location.pathname);
+    if (isStaff && hierarchyRole && !hierarchyPathAllowed) {
+      throw redirect({ href: hierarchyDashboardPath!, replace: true });
+    }
     if (
       isStaff &&
       !staffPaths.includes(location.pathname) &&
-      !(isManager && managerPaths.includes(location.pathname)) &&
-      !(isTeamLeader && teamLeaderPaths.includes(location.pathname))
+      location.pathname !== hierarchyDashboardPath
     ) {
       throw redirect({ to: "/staff/today" });
     }
@@ -143,8 +164,6 @@ export const Route = createFileRoute("/_authenticated")({
       isReseller,
       pendingStaffCount,
       staffRole: staff?.role ?? null,
-      isManager,
-      isTeamLeader,
       staffStatus: staff?.status ?? null,
       rejectReason: staff?.reject_reason_custom ?? staff?.reject_reason ?? null,
       staffNotice,

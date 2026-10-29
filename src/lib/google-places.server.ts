@@ -11,7 +11,7 @@ import {
 } from "./google-url";
 
 const placeSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().regex(/^[A-Za-z0-9_-]{3,256}$/),
   displayName: z.object({ text: z.string().min(1) }),
   formattedAddress: z.string().optional(),
   addressComponents: z
@@ -47,9 +47,15 @@ const placeSchema = z.object({
 });
 const searchSchema = z.object({
   places: z
-    .array(z.object({ id: z.string().min(1), googleMapsUri: z.string().optional() }))
+    .array(
+      z.object({
+        id: z.string().regex(/^[A-Za-z0-9_-]{3,256}$/),
+        googleMapsUri: z.string().optional(),
+      }),
+    )
     .optional(),
 });
+const PLACE_ID_PATTERN = /^[A-Za-z0-9_-]{3,256}$/;
 
 export class ScanError extends Error {
   constructor(
@@ -220,6 +226,11 @@ async function expandShortLink(url: string): Promise<string> {
         "RESOLVE_FAILED",
         `Valid short link, but Google returned ${res.status} while resolving it.`,
       );
+    if (GOOGLE_SHORT_HOSTS.has(u.hostname) || isGoogleShareBridge(u))
+      throw new ScanError(
+        "RESOLVE_FAILED",
+        "Google did not fully resolve this short link. Open the business in Maps and copy its full business URL.",
+      );
     return cur;
   }
   throw new ScanError("RESOLVE_FAILED", "Short link had too many redirects.");
@@ -230,14 +241,29 @@ type Parsed = { placeId?: string; query?: string; lat?: number; lng?: number; ci
 export function parseMapsUrl(raw: string): Parsed {
   const url = new URL(raw);
   const p = url.searchParams;
-  const pid = p.get("query_place_id") || p.get("place_id") || p.get("cid_place_id");
-  if (pid) return { placeId: pid };
+  const placeIdParams = ["query_place_id", "place_id", "cid_place_id"]
+    .map((key) => p.get(key))
+    .filter((value): value is string => value !== null);
   const q = p.get("q") || p.get("query");
-  if (q?.startsWith("place_id:")) return { placeId: q.slice(9) };
+  if (q?.startsWith("place_id:")) placeIdParams.push(q.slice(9));
+
+  const decodedUrl = decodeURIComponent(`${url.pathname}${url.search}`);
+  const embeddedPlaceIds = [...decodedUrl.matchAll(/!1s(ChIJ[A-Za-z0-9_-]+)/g)].map(
+    (match) => match[1]!,
+  );
+  const explicitPlaceIds = [...new Set([...placeIdParams, ...embeddedPlaceIds])];
+  if (explicitPlaceIds.some((placeId) => !PLACE_ID_PATTERN.test(placeId))) {
+    throw new ScanError("INVALID_URL", "The Google Maps link contains an invalid Place ID.");
+  }
+  if (explicitPlaceIds.length > 1)
+    throw new ScanError(
+      "INVALID_URL",
+      "The Google Maps link contains conflicting Place IDs. Copy the exact business link from Google Maps.",
+    );
+  if (explicitPlaceIds.length === 1) return { placeId: explicitPlaceIds[0]! };
+
   const out: Parsed = {};
   const decodedPath = decodeURIComponent(url.pathname);
-  const embeddedId = decodedPath.match(/!1s(ChIJ[A-Za-z0-9_-]+)/)?.[1];
-  if (embeddedId) return { placeId: embeddedId };
   const hexCid = decodedPath.match(/!1s0x[0-9a-f]+:0x([0-9a-f]+)/i)?.[1];
   const cidParam = p.get("cid");
   if (hexCid) out.cid = BigInt(`0x${hexCid}`).toString(10);
@@ -268,7 +294,7 @@ export async function searchBusinesses(apiKey: string, query: string) {
       places: z
         .array(
           z.object({
-            id: z.string().min(1),
+            id: z.string().regex(PLACE_ID_PATTERN),
             displayName: z.object({ text: z.string().min(1) }),
             formattedAddress: z.string().optional(),
             googleMapsUri: z.string().optional(),
@@ -285,7 +311,10 @@ export async function searchBusinesses(apiKey: string, query: string) {
       }),
     );
   if (!result.success)
-    throw new ScanError("GOOGLE_ERROR", "Google returned invalid business search results.");
+    throw new ScanError(
+      "INVALID_PROVIDER_DATA",
+      "Google returned malformed business search results. No business was selected.",
+    );
   return (result.data.places ?? []).map((place) => {
     const finalUrl =
       place.googleMapsUri && isGoogleMapsUrl(place.googleMapsUri)
@@ -335,7 +364,7 @@ export async function resolveAndFetchPlace(
       );
     const body: Record<string, unknown> = {
       textQuery: parsed.query,
-      pageSize: parsed.cid ? 5 : 1,
+      pageSize: 5,
     };
     if (parsed.lat != null && parsed.lng != null) {
       body["locationBias"] = {
@@ -369,10 +398,22 @@ export async function resolveAndFetchPlace(
           "NOT_FOUND",
           "Google search did not return the business identified by this link. No nearby business was substituted.",
         );
-    } else placeId = search.places?.[0]?.id;
+    } else {
+      if ((search.places?.length ?? 0) > 1)
+        throw new ScanError(
+          "AMBIGUOUS_BUSINESS",
+          "Google found multiple matching businesses. Add the city or copy the exact Google Maps business link.",
+        );
+      placeId = search.places?.[0]?.id;
+    }
     if (!placeId)
       throw new ScanError("NOT_FOUND", "Business not found on Google. Try a different link.");
   }
+  if (!PLACE_ID_PATTERN.test(placeId))
+    throw new ScanError(
+      "INVALID_PROVIDER_DATA",
+      "Could not extract a valid Google Place ID for this business.",
+    );
 
   const parsedPlace = placeSchema.safeParse(
     await googleFetch(apiKey, `/places/${encodeURIComponent(placeId)}`, {
@@ -386,6 +427,11 @@ export async function resolveAndFetchPlace(
       "Google returned incomplete or invalid place/review data. No synthetic reviews were substituted.",
     );
   const d = parsedPlace.data;
+  if (d.id !== placeId)
+    throw new ScanError(
+      "INVALID_PROVIDER_DATA",
+      "Google returned a Place ID that does not match the requested business.",
+    );
   const reviews: PlaceReview[] = (d.reviews ?? []).map((r) => ({
     author: r.authorAttribution?.displayName ?? "Google user",
     authorUri: r.authorAttribution?.uri ?? null,

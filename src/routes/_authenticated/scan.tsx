@@ -9,7 +9,12 @@ import { toast } from "sonner";
 import { ReviewSelection } from "@/components/review-selection";
 import { LegalAnalysisPanel } from "@/components/legal-analysis";
 import { RemovalSummary } from "@/components/removal-summary";
-import { BusinessHeader, RatingAnalysis, RiskAnalysis } from "@/components/scan-result";
+import {
+  BusinessHeader,
+  ClientLeadAttribution,
+  RatingAnalysis,
+  RiskAnalysis,
+} from "@/components/scan-result";
 import { Button } from "@/components/ui/button";
 import { useFeatureSettings } from "@/lib/use-feature-settings";
 import { isGoogleMapsUrl, isGoogleReviewUrl } from "@/lib/google-url";
@@ -330,6 +335,8 @@ function errorTitle(code: string) {
         INVALID_URL: "Invalid Google URL",
         RESOLVE_FAILED: "Link could not be resolved",
         NOT_FOUND: "Business not found",
+        AMBIGUOUS_BUSINESS: "Choose an exact business",
+        INVALID_PROVIDER_DATA: "Google returned invalid business data",
         API_UNAVAILABLE: "Google API error",
         GOOGLE_API_NOT_CONFIGURED: "Google API not configured",
         RATE_LIMIT: "API quota / rate limit",
@@ -350,7 +357,10 @@ function ScanResult({ id }: { id: string }) {
   if (!data?.scan?.business_name) return null;
   if (isGoogleReviewUrl(data.scan.source_url)) {
     return data.scan.status === "complete" ? (
-      <SimpleScanReport scanId={id} />
+      <div className="space-y-5">
+        <ClientLeadAttribution scan={data.scan} />
+        <SimpleScanReport scanId={id} />
+      </div>
     ) : (
       <p className="surface p-5" role="status">
         Analyzing the specific review link. The report will appear once the scan is complete.
@@ -359,6 +369,7 @@ function ScanResult({ id }: { id: string }) {
   }
   return (
     <div className="space-y-5">
+      <ClientLeadAttribution scan={data.scan} />
       <BusinessHeader scan={data.scan} />
       <RatingAnalysis scan={data.scan} reviews={data.reviews} />
       <RemovalSummary metadata={data.report?.report_data} total={data.reviews.length} />

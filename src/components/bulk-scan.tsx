@@ -391,6 +391,7 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
                   {[
                     "#",
                     "Business",
+                    "Client referral",
                     "Rating",
                     "Reviews",
                     "1★",
@@ -414,6 +415,17 @@ export function BulkScan({ disabled }: { disabled: boolean }) {
                     <td className="p-2">{index + 1}</td>
                     <td className="p-2" title={job.url}>
                       {job.scan?.business_name ?? job.url}
+                    </td>
+                    <td className="min-w-48 p-2">
+                      {job.scan?.client_name || job.scan?.client_mobile ? (
+                        <p className="max-w-xs">
+                          Client: {job.scan.client_name ?? "—"} | Mobile:{" "}
+                          {job.scan.client_mobile ?? "—"} | Team Leader:{" "}
+                          {job.scan.team_leader_name ?? "—"}
+                        </p>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="p-2">{job.scan?.rating ?? "—"}</td>
                     <td className="p-2">

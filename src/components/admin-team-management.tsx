@@ -16,6 +16,7 @@ export function AdminTeamManagement() {
   const [leaderId, setLeaderId] = useState("");
   const [staffId, setStaffId] = useState("");
   const [staffLeaderId, setStaffLeaderId] = useState("");
+  const [bossSearch, setBossSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const query = useQuery({
     queryKey: ["admin-team-management"],
@@ -33,6 +34,21 @@ export function AdminTeamManagement() {
         staff: (staffResult.data ?? []) as Staff[],
         teams: (teamsResult.data ?? []) as Team[],
       };
+    },
+  });
+  const normalizedBossSearch = bossSearch.trim();
+  const validBossSearch = /^\d{4}(?:\d{2}){0,2}$/.test(normalizedBossSearch);
+  const bossLookup = useQuery({
+    queryKey: ["admin-boss-view", normalizedBossSearch],
+    enabled: Boolean(query.data && validBossSearch),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("staff")
+        .select("unique_id,name,email,photo_url,role")
+        .eq("unique_id", normalizedBossSearch)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
     },
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-team-management"] });
@@ -105,7 +121,10 @@ export function AdminTeamManagement() {
   const teamLeaderIds = new Set(query.data.teams.map((team) => team.team_leader_id));
   const staffById = new Map(query.data.staff.map((row) => [row.id, row]));
   const unassignedLeaders = leaders.filter(
-    (row) => !teamLeaderIds.has(row.id) && !row.manager_id && !row.team_leader_id,
+    (row) =>
+      !teamLeaderIds.has(row.id) &&
+      !row.team_leader_id &&
+      (!row.manager_id || row.manager_id === managerId),
   );
   const promotionCandidates = approved.filter(
     (row) =>
@@ -115,6 +134,7 @@ export function AdminTeamManagement() {
       !row.manager_id &&
       !row.team_leader_id,
   );
+  const bossMatch = bossLookup.data;
 
   return (
     <div className="space-y-5">
@@ -123,6 +143,58 @@ export function AdminTeamManagement() {
         subtitle="Only Superadmin can create teams, assign staff, and change team leadership."
       />
       <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="hover:translate-y-0 lg:col-span-2">
+          <CardContent className="space-y-3 p-5">
+            <h2 className="font-semibold">Boss View · Search by User ID</h2>
+            <label className="block space-y-1 text-sm">
+              Unique ID
+              <input
+                value={bossSearch}
+                onChange={(event) => setBossSearch(event.target.value)}
+                inputMode="numeric"
+                maxLength={8}
+                placeholder="Enter a 4-, 6-, or 8-digit ID"
+                className="h-10 w-full rounded-md border bg-background px-3"
+              />
+            </label>
+            {bossSearch && (
+              !validBossSearch ? (
+                <p className="text-sm text-muted-foreground">
+                  Enter a 4-, 6-, or 8-digit User ID.
+                </p>
+              ) : bossLookup.isPending ? (
+                <p className="text-sm text-muted-foreground">Searching…</p>
+              ) : bossLookup.error ? (
+                <p role="alert" className="text-sm text-destructive">
+                  Could not search user records: {bossLookup.error.message}
+                </p>
+              ) : bossMatch ? (
+                <div className="flex items-center gap-3 rounded-lg border p-3">
+                  {bossMatch.photo_url ? (
+                    <img
+                      src={bossMatch.photo_url}
+                      alt=""
+                      className="size-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="grid size-12 place-items-center rounded-full bg-muted text-xs">
+                      {bossMatch.unique_id}
+                    </span>
+                  )}
+                  <div className="min-w-0 text-sm">
+                    <p className="font-semibold">{bossMatch.name}</p>
+                    <p className="break-all text-muted-foreground">{bossMatch.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      ID {bossMatch.unique_id} · {bossMatch.role}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No user found with that ID.</p>
+              )
+            )}
+          </CardContent>
+        </Card>
         <Card className="hover:translate-y-0">
           <CardContent className="p-5">
             <h2 className="font-semibold">Create manager + team leader link</h2>
@@ -167,6 +239,7 @@ export function AdminTeamManagement() {
                     .map((row) => (
                       <option key={row.id} value={row.id}>
                         {row.name} · {row.email}
+                        {row.manager_id ? " (linked to this manager)" : ""}
                       </option>
                     ))}
                   {promotionCandidates

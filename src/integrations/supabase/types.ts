@@ -10,6 +10,296 @@ export type Database = {
   };
   public: {
     Tables: {
+      backlink_targets: {
+        Row: {
+          id: string;
+          competitor_url: string;
+          referring_page_url: string;
+          target_domain: string;
+          source_type: "editorial" | "guest_post" | "forum" | "directory" | "other";
+          anchor_text: string | null;
+          contact_email: string | null;
+          notes: string | null;
+          outreach_subject: string | null;
+          outreach_body: string | null;
+          outreach_status: "not_generated" | "draft";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          competitor_url: string;
+          referring_page_url: string;
+          target_domain: string;
+          source_type?: "editorial" | "guest_post" | "forum" | "directory" | "other";
+          anchor_text?: string | null;
+          contact_email?: string | null;
+          notes?: string | null;
+          outreach_subject?: string | null;
+          outreach_body?: string | null;
+          outreach_status?: "not_generated" | "draft";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          anchor_text?: string | null;
+          contact_email?: string | null;
+          notes?: string | null;
+          outreach_subject?: string | null;
+          outreach_body?: string | null;
+          outreach_status?: "not_generated" | "draft";
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      nlp_content_analyses: {
+        Row: {
+          id: string;
+          target_query: string;
+          article_text: string;
+          reference_excerpts: Json;
+          extracted_entities: Json;
+          missing_topics: Json;
+          semantic_score: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          target_query: string;
+          article_text: string;
+          reference_excerpts?: Json;
+          extracted_entities?: Json;
+          missing_topics?: Json;
+          semantic_score: number;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      country_hashtags: {
+        Row: {
+          id: string;
+          country_code: string;
+          hashtag: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          country_code: string;
+          hashtag: string;
+          created_at?: string;
+        };
+        Update: {
+          country_code?: string;
+          hashtag?: string;
+        };
+        Relationships: [];
+      };
+      review_location_pages: {
+        Row: {
+          id: string;
+          country_slug: string;
+          city_slug: string;
+          country_name: string;
+          city_name: string;
+          locale: string;
+          description: string;
+          page_content: Json;
+          status: "draft" | "published" | "archived";
+          published_at: string | null;
+          updated_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          country_slug: string;
+          city_slug: string;
+          country_name: string;
+          city_name: string;
+          locale: string;
+          description: string;
+          page_content: Json;
+          status?: "draft" | "published" | "archived";
+          published_at?: string | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          country_slug?: string;
+          city_slug?: string;
+          country_name?: string;
+          city_name?: string;
+          locale?: string;
+          description?: string;
+          page_content?: Json;
+          status?: "draft" | "published" | "archived";
+          published_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      blog_posts: {
+        Row: {
+          id: string;
+          title: string;
+          slug: string;
+          content: string;
+          meta_description: string;
+          published_at: string | null;
+          status: "draft" | "published" | "archived";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          slug: string;
+          content: string;
+          meta_description: string;
+          published_at?: string | null;
+          status?: "draft" | "published" | "archived";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          title?: string;
+          slug?: string;
+          content?: string;
+          meta_description?: string;
+          published_at?: string | null;
+          status?: "draft" | "published" | "archived";
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      seo_keywords: {
+        Row: {
+          id: string;
+          keyword: string;
+          country: string;
+          search_volume: number | null;
+          difficulty: number | null;
+          cpc: number | null;
+          intent: "informational" | "navigational" | "commercial" | "transactional";
+          locale: string;
+          slug: string;
+          location: string;
+          service: string;
+          industry: string;
+          source: "template" | "google_suggest" | "template+google_suggest";
+          related_keywords: string[];
+          entities: Json;
+          title: string;
+          description: string;
+          hashtags: string[];
+          translation_group: string | null;
+          page_content: Json | null;
+          status: "pending" | "draft" | "published" | "archived";
+          published_at: string | null;
+          updated_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          keyword: string;
+          country?: string;
+          search_volume?: number | null;
+          difficulty?: number | null;
+          cpc?: number | null;
+          intent?: "informational" | "navigational" | "commercial" | "transactional";
+          locale: string;
+          slug: string;
+          location?: string;
+          service?: string;
+          industry?: string;
+          source?: "template" | "google_suggest" | "template+google_suggest";
+          related_keywords?: string[];
+          entities?: Json;
+          title: string;
+          description: string;
+          hashtags?: string[];
+          translation_group?: string | null;
+          page_content?: Json | null;
+          status?: "pending" | "draft" | "published" | "archived";
+          published_at?: string | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          keyword?: string;
+          country?: string;
+          search_volume?: number | null;
+          difficulty?: number | null;
+          cpc?: number | null;
+          intent?: "informational" | "navigational" | "commercial" | "transactional";
+          locale?: string;
+          slug?: string;
+          location?: string;
+          service?: string;
+          industry?: string;
+          source?: "template" | "google_suggest" | "template+google_suggest";
+          related_keywords?: string[];
+          entities?: Json;
+          title?: string;
+          description?: string;
+          hashtags?: string[];
+          translation_group?: string | null;
+          page_content?: Json | null;
+          status?: "pending" | "draft" | "published" | "archived";
+          published_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      seo_api_keys: {
+        Row: {
+          id: string;
+          provider: "semrush" | "ahrefs" | "dataforseo";
+          api_key: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          provider: "semrush" | "ahrefs" | "dataforseo";
+          api_key: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          provider?: "semrush" | "ahrefs" | "dataforseo";
+          api_key?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      client_leads: {
+        Row: {
+          id: string;
+          review_url: string;
+          client_name: string;
+          client_mobile: string;
+          submitted_by_staff_id: string;
+          team_leader_name: string | null;
+          submitted_at: string;
+        };
+        Insert: {
+          id?: string;
+          review_url: string;
+          client_name: string;
+          client_mobile: string;
+          submitted_by_staff_id: string;
+          team_leader_name?: string | null;
+          submitted_at?: string;
+        };
+        Update: {
+          review_url?: string;
+          client_name?: string;
+          client_mobile?: string;
+          team_leader_name?: string | null;
+        };
+        Relationships: [];
+      };
       seo_worker_runs: {
         Row: {
           id: string;
@@ -502,9 +792,13 @@ export type Database = {
       staff: {
         Row: {
           id: string;
+          unique_id: string;
           name: string;
           mobile: string;
+          mobile_number: string;
           email: string;
+          photo_url: string | null;
+          team_id: string | null;
           region_city: string;
           region_state: string;
           status: string;
@@ -512,6 +806,9 @@ export type Database = {
           team_lead: string | null;
           manager_id: string | null;
           team_leader_id: string | null;
+          reports_to: string | null;
+          location_id: string | null;
+          login_alias: string | null;
           skills: string[];
           credits: number;
           live_status: "Available" | "Working" | "Offline";
@@ -534,15 +831,22 @@ export type Database = {
         };
         Insert: {
           id: string;
+          unique_id?: string;
           name: string;
           mobile: string;
+          mobile_number?: string;
           email: string;
+          photo_url?: string | null;
+          team_id?: string | null;
           region_city: string;
           region_state: string;
           role?: string;
           team_lead?: string | null;
           manager_id?: string | null;
           team_leader_id?: string | null;
+          reports_to?: string | null;
+          location_id?: string | null;
+          login_alias?: string | null;
           skills?: string[];
           credits?: number;
           live_status?: "Available" | "Working" | "Offline";
@@ -565,15 +869,22 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          unique_id?: string;
           name?: string;
           mobile?: string;
+          mobile_number?: string;
           email?: string;
+          photo_url?: string | null;
+          team_id?: string | null;
           region_city?: string;
           region_state?: string;
           role?: string;
           team_lead?: string | null;
           manager_id?: string | null;
           team_leader_id?: string | null;
+          reports_to?: string | null;
+          location_id?: string | null;
+          login_alias?: string | null;
           skills?: string[];
           credits?: number;
           live_status?: "Available" | "Working" | "Offline";
@@ -593,6 +904,37 @@ export type Database = {
           user_agent?: string | null;
           timezone?: string | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      locations: {
+        Row: {
+          id: string;
+          slug: string;
+          country: string | null;
+          state: string | null;
+          division: string | null;
+          district: string | null;
+          city: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          country?: string | null;
+          state?: string | null;
+          division?: string | null;
+          district?: string | null;
+          city?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          slug?: string;
+          country?: string | null;
+          state?: string | null;
+          division?: string | null;
+          district?: string | null;
+          city?: string | null;
         };
         Relationships: [];
       };
@@ -626,14 +968,18 @@ export type Database = {
       tasks: {
         Row: {
           id: string;
-          team_id: string;
-          manager_id: string;
-          team_leader_id: string;
+          team_id: string | null;
+          manager_id: string | null;
+          team_leader_id: string | null;
           assigned_to: string;
           assigned_role: string;
           created_by: string;
           title: string;
           description: string;
+          review_url: string | null;
+          review_text: string | null;
+          reviewer_name: string | null;
+          reviewer_profile_url: string | null;
           deadline_at: string | null;
           status: string;
           status_note: string | null;
@@ -643,14 +989,18 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          team_id: string;
-          manager_id: string;
-          team_leader_id: string;
+          team_id?: string | null;
+          manager_id?: string | null;
+          team_leader_id?: string | null;
           assigned_to: string;
           assigned_role: string;
           created_by: string;
           title: string;
           description?: string;
+          review_url?: string | null;
+          review_text?: string | null;
+          reviewer_name?: string | null;
+          reviewer_profile_url?: string | null;
           deadline_at?: string | null;
           status?: string;
           status_note?: string | null;
@@ -659,6 +1009,10 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          review_url?: string | null;
+          review_text?: string | null;
+          reviewer_name?: string | null;
+          reviewer_profile_url?: string | null;
           status?: string;
           status_note?: string | null;
           completed_at?: string | null;
@@ -678,6 +1032,26 @@ export type Database = {
         Insert: {
           id?: string;
           task_id: string;
+          staff_id: string;
+          earning_type: string;
+          amount_inr: number;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      staff_case_earnings: {
+        Row: {
+          id: string;
+          case_id: string;
+          staff_id: string;
+          earning_type: string;
+          amount_inr: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          case_id: string;
           staff_id: string;
           earning_type: string;
           amount_inr: number;
@@ -1860,6 +2234,7 @@ export type Database = {
           email_notifications: boolean;
           language: string;
           name: string;
+          parent_id: string | null;
           phone: string | null;
           status: string;
           timezone: string;
@@ -1880,6 +2255,7 @@ export type Database = {
           email_notifications?: boolean;
           language?: string;
           name?: string;
+          parent_id?: string | null;
           phone?: string | null;
           status?: string;
           timezone?: string;
@@ -1900,6 +2276,7 @@ export type Database = {
           email_notifications?: boolean;
           language?: string;
           name?: string;
+          parent_id?: string | null;
           phone?: string | null;
           status?: string;
           timezone?: string;
@@ -2308,6 +2685,9 @@ export type Database = {
           batch_id: string | null;
           business_id: string | null;
           business_name: string | null;
+          client_lead_id: string | null;
+          client_name: string | null;
+          client_mobile: string | null;
           category: string | null;
           completed_at: string | null;
           created_at: string;
@@ -2336,6 +2716,7 @@ export type Database = {
           started_at: string | null;
           status: string;
           total_reviews: number | null;
+          team_leader_name: string | null;
           user_id: string | null;
         };
         Insert: {
@@ -2345,6 +2726,9 @@ export type Database = {
           batch_id?: string | null;
           business_id?: string | null;
           business_name?: string | null;
+          client_lead_id?: string | null;
+          client_name?: string | null;
+          client_mobile?: string | null;
           category?: string | null;
           completed_at?: string | null;
           created_at?: string;
@@ -2373,6 +2757,7 @@ export type Database = {
           started_at?: string | null;
           status?: string;
           total_reviews?: number | null;
+          team_leader_name?: string | null;
           user_id?: string | null;
         };
         Update: {
@@ -2382,6 +2767,9 @@ export type Database = {
           batch_id?: string | null;
           business_id?: string | null;
           business_name?: string | null;
+          client_lead_id?: string | null;
+          client_name?: string | null;
+          client_mobile?: string | null;
           category?: string | null;
           completed_at?: string | null;
           created_at?: string;
@@ -2410,6 +2798,7 @@ export type Database = {
           started_at?: string | null;
           status?: string;
           total_reviews?: number | null;
+          team_leader_name?: string | null;
           user_id?: string | null;
         };
         Relationships: [
@@ -2521,6 +2910,36 @@ export type Database = {
       };
     };
     Functions: {
+      hierarchy_task_summary: {
+        Args: Record<string, never>;
+        Returns: {
+          total_tasks: number;
+          pending_tasks: number;
+          in_progress_tasks: number;
+          completed_tasks: number;
+          rejected_tasks: number;
+        }[];
+      };
+      hierarchy_direct_reports: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          name: string;
+          unique_id: string;
+          role: string;
+          status: string;
+          tasks_assigned: number;
+        }[];
+      };
+      create_hierarchy_review_task: {
+        Args: {
+          _assignee_id: string;
+          _review_url: string;
+          _title: string;
+          _description?: string;
+        };
+        Returns: string;
+      };
       record_submission_followup: {
         Args: { p_request_id: string; p_checked_at: string };
         Returns: boolean;
@@ -2554,6 +2973,10 @@ export type Database = {
       };
       report_access_level: { Args: Record<string, never>; Returns: string };
       internal_chat_super_admin_id: { Args: Record<string, never>; Returns: string };
+      internal_chat_user_ids: {
+        Args: Record<string, never>;
+        Returns: { user_id: string; unique_id: string }[];
+      };
       admin_edit_internal_message: {
         Args: { _message_id: string; _replacement: string };
         Returns: string;
@@ -2681,12 +3104,17 @@ export type Database = {
         Args: Record<string, never>;
         Returns: {
           id: string;
-          name: string;
-          email: string;
-          mobile: string;
-          region_city: string;
-          region_state: string;
-          created_at: string;
+          unique_id: string;
+        }[];
+      };
+      team_member_directory: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          unique_id: string;
+          role: string;
+          status: string;
+          team_id: string | null;
         }[];
       };
       team_leader_add_staff: { Args: { _staff_id: string }; Returns: string };
@@ -2695,6 +3123,7 @@ export type Database = {
           _title: string;
           _description: string;
           _assignees: string[];
+          _review_url: string;
           _deadline_at?: string | null;
         };
         Returns: number;

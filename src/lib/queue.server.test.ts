@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 const fixture = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn() }));
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: fixture }));
 vi.mock("./scan-core.server", () => ({ scanFetchCore: vi.fn(), scanAnalyzeCore: vi.fn() }));
-import { runWorker, CONCURRENCY } from "./queue.server";
+import { runWorker, CONCURRENCY, nextStep } from "./queue.server";
 afterEach(() => vi.clearAllMocks());
 describe("Rate-limited durable worker", () => {
   it("uses one worker concurrency to avoid concurrent Chromium rendering", () =>
@@ -19,5 +19,8 @@ describe("Rate-limited durable worker", () => {
     });
     expect(await runWorker()).toMatchObject({ ran: false, processed: 0 });
     expect(fixture.rpc).not.toHaveBeenCalled();
+  });
+  it("pauses instead of retrying jobs when the AI budget is exhausted", () => {
+    expect(nextStep("AI_BUDGET_LIMIT", 1)).toBe("pause");
   });
 });

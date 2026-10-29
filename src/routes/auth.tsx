@@ -117,8 +117,11 @@ function AuthPage() {
         if (updateError) throw updateError;
         await navigate({ to: "/dashboard", replace: true });
       } else {
+        const loginEmail = email.trim().includes("@")
+          ? email.trim()
+          : `${email.trim()}@ratingguard.online`;
         const { error: loginError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: loginEmail,
           password,
         });
         if (loginError) {
@@ -128,7 +131,11 @@ function AuthPage() {
           );
           throw loginError;
         }
-        await recordLogin();
+        try {
+          await recordLogin();
+        } catch (auditError) {
+          console.error("[auth] Staff login activity could not be recorded", auditError);
+        }
         await navigate({ to: "/dashboard", replace: true });
       }
     } catch (cause) {
@@ -231,18 +238,20 @@ function AuthPage() {
           </div>
           {mode !== "recovery" && (
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">
+                {mode === "login" ? "Email or user ID" : "Email"}
+              </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="email"
-                  type="email"
+                  type={mode === "login" ? "text" : "email"}
                   autoComplete="username"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-11 pl-9"
-                  placeholder="you@company.com"
+                  placeholder={mode === "login" ? "you@company.com or demo_global" : "you@company.com"}
                 />
               </div>
             </div>
