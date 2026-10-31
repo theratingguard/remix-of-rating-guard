@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Camera, Clock3, ImagePlus, KeyRound, LogOut, ShieldCheck, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { profileQuery } from "@/lib/profile";
+import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 import { APP_DOMAIN } from "@/lib/config";
 import { PageHeader, Avatar } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -852,8 +853,11 @@ function ProfilePage() {
                 value={language}
                 onChange={(event) => setLanguage(event.target.value)}
               >
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
+                {SUPPORTED_LANGUAGES.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">

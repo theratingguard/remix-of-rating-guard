@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Check, Globe2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { isLanguageCode, SUPPORTED_LANGUAGES, type LanguageCode } from "@/lib/languages";
 import { profileQuery } from "@/lib/profile";
 import {
   DropdownMenu,
@@ -16,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type Language = "en" | "hi" | "mr";
+type Language = LanguageCode;
 type NotificationTarget = "/chat" | "/admin/staff" | "/reports" | "/client/reports";
 type HeaderNotification = {
   id: string;
@@ -30,13 +31,13 @@ type NotificationSource = {
   errors: string[];
 };
 
-const languages: { id: Language; label: string; native: string }[] = [
-  { id: "en", label: "English", native: "English" },
-  { id: "hi", label: "Hindi", native: "हिन्दी" },
-  { id: "mr", label: "Marathi", native: "मराठी" },
-];
+const languages = SUPPORTED_LANGUAGES.map(({ code, label, native }) => ({
+  id: code,
+  label,
+  native,
+}));
 
-const translations: Record<Exclude<Language, "en">, Record<string, string>> = {
+const translations: Record<string, Record<string, string>> = {
   hi: {
     Dashboard: "डैशबोर्ड",
     "URL Scanner": "URL स्कैनर",
@@ -457,6 +458,186 @@ const translations: Record<Exclude<Language, "en">, Record<string, string>> = {
     "Could not copy the referral code. Select and copy it instead.":
       "रेफरल कोड कॉपी झाला नाही. तो निवडून कॉपी करा.",
   },
+  sw: {
+    Dashboard: "Dashibodi",
+    Reports: "Ripoti",
+    Settings: "Mipangilio",
+    Profile: "Wasifu",
+    Chats: "Mazungumzo",
+    "Language / भाषा": "Lugha",
+    Notifications: "Arifa",
+    "No new notifications": "Hakuna arifa mpya",
+    "Your overview": "Muhtasari wako",
+    "New scan": "Uchanganuzi mpya",
+    "Reviews scanned": "Maoni yaliyochanganuliwa",
+    "Reports submitted": "Ripoti zilizowasilishwa",
+    "Recent activity": "Shughuli za hivi karibuni",
+    Date: "Tarehe",
+    Business: "Biashara",
+    Action: "Kitendo",
+    Status: "Hali",
+    "No scans yet": "Bado hakuna uchanganuzi",
+    "Start your first scan": "Anza uchanganuzi wako wa kwanza",
+    "Search business or report": "Tafuta biashara au ripoti",
+    "No reports yet": "Bado hakuna ripoti",
+    Previous: "Iliyotangulia",
+    Next: "Ifuatayo",
+    "Account preferences": "Mapendeleo ya akaunti",
+    "Basic profile": "Wasifu wa msingi",
+    Name: "Jina",
+    Email: "Barua pepe",
+    "Save profile": "Hifadhi wasifu",
+    "Change password": "Badilisha nenosiri",
+    "Current password": "Nenosiri la sasa",
+    "New password": "Nenosiri jipya",
+    "Update password": "Sasisha nenosiri",
+    "Write a message…": "Andika ujumbe…",
+    "Send message": "Tuma ujumbe",
+  },
+  zu: {
+    Dashboard: "Ideshibhodi",
+    Reports: "Imibiko",
+    Settings: "Izilungiselelo",
+    Profile: "Iphrofayela",
+    Chats: "Izingxoxo",
+    "Language / भाषा": "Ulimi",
+    Notifications: "Izaziso",
+    "No new notifications": "Azikho izaziso ezintsha",
+    "Your overview": "Isifinyezo sakho",
+    "New scan": "Ukuskena okusha",
+    "Reviews scanned": "Izibuyekezo eziskeniwe",
+    "Reports submitted": "Imibiko ethunyelwe",
+    "Recent activity": "Umsebenzi wakamuva",
+    Date: "Usuku",
+    Business: "Ibhizinisi",
+    Action: "Isenzo",
+    Status: "Isimo",
+    "No scans yet": "Akukho okuskeniwe okwamanje",
+    "Start your first scan": "Qala ukuskena kwakho kokuqala",
+    "Search business or report": "Sesha ibhizinisi noma umbiko",
+    "No reports yet": "Ayikho imibiko okwamanje",
+    Previous: "Okwedlule",
+    Next: "Okulandelayo",
+    "Account preferences": "Izintandokazi ze-akhawunti",
+    "Basic profile": "Iphrofayela eyisisekelo",
+    Name: "Igama",
+    Email: "I-imeyili",
+    "Save profile": "Londoloza iphrofayela",
+    "Change password": "Shintsha iphasiwedi",
+    "Current password": "Iphasiwedi yamanje",
+    "New password": "Iphasiwedi entsha",
+    "Update password": "Buyekeza iphasiwedi",
+    "Write a message…": "Bhala umlayezo…",
+    "Send message": "Thumela umlayezo",
+  },
+  af: {
+    Dashboard: "Kontroleskerm",
+    Reports: "Verslae",
+    Settings: "Instellings",
+    Profile: "Profiel",
+    Chats: "Gesprekke",
+    "Language / भाषा": "Taal",
+    Notifications: "Kennisgewings",
+    "No new notifications": "Geen nuwe kennisgewings nie",
+    "Your overview": "Jou oorsig",
+    "New scan": "Nuwe skandering",
+    "Reviews scanned": "Resensies geskandeer",
+    "Reports submitted": "Verslae ingedien",
+    "Recent activity": "Onlangse aktiwiteit",
+    Date: "Datum",
+    Business: "Besigheid",
+    Action: "Aksie",
+    Status: "Status",
+    "No scans yet": "Nog geen skanderings nie",
+    "Start your first scan": "Begin jou eerste skandering",
+    "Search business or report": "Soek besigheid of verslag",
+    "No reports yet": "Nog geen verslae nie",
+    Previous: "Vorige",
+    Next: "Volgende",
+    "Account preferences": "Rekeningvoorkeure",
+    "Basic profile": "Basiese profiel",
+    Name: "Naam",
+    Email: "E-pos",
+    "Save profile": "Stoor profiel",
+    "Change password": "Verander wagwoord",
+    "Current password": "Huidige wagwoord",
+    "New password": "Nuwe wagwoord",
+    "Update password": "Dateer wagwoord op",
+    "Write a message…": "Skryf 'n boodskap…",
+    "Send message": "Stuur boodskap",
+  },
+  am: {
+    Dashboard: "ዳሽቦርድ",
+    Reports: "ሪፖርቶች",
+    Settings: "ቅንብሮች",
+    Profile: "መገለጫ",
+    Chats: "ውይይቶች",
+    "Language / भाषा": "ቋንቋ",
+    Notifications: "ማሳወቂያዎች",
+    "No new notifications": "አዲስ ማሳወቂያ የለም",
+    "Your overview": "የእርስዎ አጠቃላይ እይታ",
+    "New scan": "አዲስ ቅኝት",
+    "Reviews scanned": "የተቃኙ ግምገማዎች",
+    "Reports submitted": "የቀረቡ ሪፖርቶች",
+    "Recent activity": "የቅርብ ጊዜ እንቅስቃሴ",
+    Date: "ቀን",
+    Business: "ንግድ",
+    Action: "ተግባር",
+    Status: "ሁኔታ",
+    "No scans yet": "እስካሁን ቅኝት የለም",
+    "Start your first scan": "የመጀመሪያ ቅኝትዎን ይጀምሩ",
+    "Search business or report": "ንግድ ወይም ሪፖርት ይፈልጉ",
+    "No reports yet": "እስካሁን ሪፖርቶች የሉም",
+    Previous: "ቀዳሚ",
+    Next: "ቀጣይ",
+    "Account preferences": "የመለያ ምርጫዎች",
+    "Basic profile": "መሠረታዊ መገለጫ",
+    Name: "ስም",
+    Email: "ኢሜይል",
+    "Save profile": "መገለጫውን ያስቀምጡ",
+    "Change password": "የይለፍ ቃል ይቀይሩ",
+    "Current password": "የአሁኑ የይለፍ ቃል",
+    "New password": "አዲስ የይለፍ ቃል",
+    "Update password": "የይለፍ ቃል ያዘምኑ",
+    "Write a message…": "መልእክት ይጻፉ…",
+    "Send message": "መልእክት ይላኩ",
+  },
+  ha: {
+    Dashboard: "Allon sarrafawa",
+    Reports: "Rahotanni",
+    Settings: "Saituna",
+    Profile: "Bayanan martaba",
+    Chats: "Hirarraki",
+    "Language / भाषा": "Harshe",
+    Notifications: "Sanarwa",
+    "No new notifications": "Babu sabbin sanarwa",
+    "Your overview": "Takaitaccen bayani",
+    "New scan": "Sabon bincike",
+    "Reviews scanned": "Sharhi da aka bincika",
+    "Reports submitted": "Rahotannin da aka aika",
+    "Recent activity": "Ayyukan baya-bayan nan",
+    Date: "Kwanan wata",
+    Business: "Kasuwanci",
+    Action: "Aiki",
+    Status: "Matsayi",
+    "No scans yet": "Ba a yi bincike ba tukuna",
+    "Start your first scan": "Fara bincikenka na farko",
+    "Search business or report": "Nemo kasuwanci ko rahoto",
+    "No reports yet": "Babu rahotanni tukuna",
+    Previous: "Na baya",
+    Next: "Na gaba",
+    "Account preferences": "Zaɓin asusu",
+    "Basic profile": "Bayanan martaba na asali",
+    Name: "Suna",
+    Email: "Imel",
+    "Save profile": "Ajiye bayanan martaba",
+    "Change password": "Canja kalmar sirri",
+    "Current password": "Kalmar sirri ta yanzu",
+    "New password": "Sabuwar kalmar sirri",
+    "Update password": "Sabunta kalmar sirri",
+    "Write a message…": "Rubuta saƙo…",
+    "Send message": "Aika saƙo",
+  },
 };
 
 const originalText = new WeakMap<Text, { source: string; translated: string }>();
@@ -466,7 +647,7 @@ const originalAttributes = new WeakMap<
 >();
 
 function translateText(value: string, language: Language) {
-  return language === "en" ? value : (translations[language][value] ?? value);
+  return language === "en" ? value : (translations[language]?.[value] ?? value);
 }
 
 function applyDocumentLanguage(language: Language) {
@@ -559,12 +740,15 @@ async function loadNotifications(
   userId: string,
   isSuperAdmin: boolean,
   isClient: boolean,
+  preferredLanguage: Language,
 ): Promise<NotificationSource> {
   const errors: string[] = [];
   const requests: PromiseLike<HeaderNotification[]>[] = [
     supabase
       .from("internal_messages")
-      .select("id,sender_role,message,created_at")
+      .select(
+        "id,sender_role,message,original_message,translated_message,original_language,translated_language,created_at",
+      )
       .eq("receiver_id", userId)
       .eq("is_read", false)
       .order("created_at", { ascending: false })
@@ -577,7 +761,13 @@ async function loadNotifications(
         return data.map((message) => ({
           id: `message:${message.id}`,
           title: "New chat message",
-          description: `${message.sender_role}: ${message.message.slice(0, 120)}`,
+          description: `${message.sender_role}: ${(
+            message.original_language === preferredLanguage
+              ? message.original_message
+              : message.translated_language === preferredLanguage
+                ? message.translated_message
+                : message.message
+          ).slice(0, 120)}`,
           createdAt: message.created_at,
           target: "/chat" as const,
         }));
@@ -654,16 +844,17 @@ export function GlobalHeaderControls({
   const queryClient = useQueryClient();
   const { data: profile } = useQuery(profileQuery());
   const [language, setLanguage] = useState<Language>("en");
+  const preferredLanguage = isLanguageCode(profile?.language) ? profile.language : "en";
   const [seenIds, setSeenIds] = useState<Set<string>>(() => readSeenNotifications(userId));
   const notifications = useQuery({
-    queryKey: ["global-notifications", userId, isSuperAdmin, isClient],
-    queryFn: () => loadNotifications(userId, isSuperAdmin, isClient),
+    queryKey: ["global-notifications", userId, isSuperAdmin, isClient, preferredLanguage],
+    queryFn: () => loadNotifications(userId, isSuperAdmin, isClient, preferredLanguage),
     refetchInterval: 15_000,
   });
 
   useEffect(() => {
     const saved = profile?.language;
-    if (saved === "hi" || saved === "mr" || saved === "en") setLanguage(saved);
+    if (isLanguageCode(saved)) setLanguage(saved);
   }, [profile?.language]);
 
   useEffect(() => applyDocumentLanguage(language), [language]);
@@ -694,7 +885,7 @@ export function GlobalHeaderControls({
   const translated = (value: string) => translateText(value, language);
 
   async function selectLanguage(next: string) {
-    if (next !== "en" && next !== "hi" && next !== "mr") return;
+    if (!isLanguageCode(next)) return;
     setLanguage(next);
     const { error } = await supabase
       .from("profiles")
@@ -702,7 +893,7 @@ export function GlobalHeaderControls({
       .eq("user_id", userId);
     if (error) {
       setLanguage(
-        profile?.language === "hi" || profile?.language === "mr" ? profile.language : "en",
+        isLanguageCode(profile?.language) ? profile.language : "en",
       );
       toast.error("Could not save language preference. Please try again.");
       return;

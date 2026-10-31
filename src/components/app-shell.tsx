@@ -75,6 +75,42 @@ const staffNav = [
 ] as const;
 
 const clientNav = [{ to: "/client/outcomes", label: "Review Outcomes", Icon: Activity }] as const;
+const resellerNav = [
+  { href: "/reseller#overview", label: "Overview", Icon: LayoutDashboard },
+  { href: "/reseller#clients-team", label: "Clients & Team", Icon: Users },
+  { href: "/reseller#membership", label: "Membership", Icon: CircleDollarSign },
+  { href: "/reseller#referral-tools", label: "Referral Tools", Icon: Users },
+  { href: "/reseller#commissions", label: "Commissions", Icon: ClipboardList },
+  { href: "/reseller#payouts", label: "Payout History", Icon: Wallet },
+  { href: "/chat", label: "Chats", Icon: MessageCircle },
+] as const;
+
+function ResellerNavigation({
+  label = "Main navigation",
+  onNavigate,
+  className,
+}: {
+  label?: string;
+  onNavigate?: () => void;
+  className?: string;
+}) {
+  return (
+    <nav aria-label={label} className={className}>
+      {resellerNav.map(({ href, label: itemLabel, Icon }) => (
+        <a
+          key={itemLabel}
+          href={href}
+          onClick={onNavigate}
+          className="flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent sm:text-sm"
+        >
+          <Icon className="size-4 shrink-0" />
+          <span className="min-w-0">{itemLabel}</span>
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 const managerNav = [
   { to: "/manager", label: "Manager Dashboard", Icon: LayoutDashboard },
   { to: "/task-manager", label: "Task Manager", Icon: ClipboardList },
@@ -108,6 +144,7 @@ function SidebarBody({
   isStaff,
   isSuperAdmin,
   isClient,
+  isReseller,
   staffRole,
   userId,
   staffPendingCount,
@@ -117,6 +154,7 @@ function SidebarBody({
   isStaff: boolean;
   isSuperAdmin: boolean;
   isClient: boolean;
+  isReseller?: boolean;
   staffRole?: string | null;
   userId: string;
   staffPendingCount: number;
@@ -200,6 +238,8 @@ function SidebarBody({
               Wallet
             </Link>
           </>
+        ) : isReseller ? (
+          <ResellerNavigation onNavigate={onNavigate} className="flex flex-col gap-1" />
         ) : (isSuperAdmin
           ? adminNav
           : isClient
@@ -343,6 +383,7 @@ export function AppShell({
   isStaff,
   isSuperAdmin,
   isClient,
+  isReseller,
   staffRole,
   staffPendingCount,
   children,
@@ -352,6 +393,7 @@ export function AppShell({
   isStaff: boolean;
   isSuperAdmin: boolean;
   isClient: boolean;
+  isReseller?: boolean;
   staffRole?: string | null;
   staffPendingCount: number;
   children: ReactNode;
@@ -366,6 +408,7 @@ export function AppShell({
           isStaff={isStaff}
           isSuperAdmin={isSuperAdmin}
           isClient={isClient}
+          isReseller={isReseller ?? false}
           staffRole={staffRole ?? null}
           staffPendingCount={staffPendingCount}
         />
@@ -388,6 +431,12 @@ export function AppShell({
           </Button>
         </div>
       </header>
+      {isReseller && (
+        <ResellerNavigation
+          label="Reseller modules"
+          className="no-print sticky top-[57px] z-20 grid grid-cols-2 gap-1 border-b bg-sidebar p-2 sm:grid-cols-4 lg:hidden"
+        />
+      )}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-64 p-0">
           <SidebarBody
@@ -396,6 +445,7 @@ export function AppShell({
             isStaff={isStaff}
             isSuperAdmin={isSuperAdmin}
             isClient={isClient}
+            isReseller={isReseller ?? false}
             staffRole={staffRole ?? null}
             staffPendingCount={staffPendingCount}
             onNavigate={() => setOpen(false)}

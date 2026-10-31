@@ -231,16 +231,18 @@ function Layout() {
   }
   if (isReseller) {
     return (
-      <div>
-        <header className="flex h-14 items-center justify-between border-b bg-card/80 px-4 sm:px-6">
-          <Link to="/profile" className="flex items-center gap-2 font-semibold">
-            <img src="/logo.svg" alt="" width={32} height={32} />
-            Rating Guard
-          </Link>
-          <GlobalHeaderControls userId={user.id} isSuperAdmin={false} isClient={false} />
-        </header>
+      <AppShell
+        email={user.email ?? "Reseller"}
+        userId={user.id}
+        isStaff={false}
+        isSuperAdmin={false}
+        isClient={false}
+        isReseller
+        staffRole={null}
+        staffPendingCount={0}
+      >
         <Outlet />
-      </div>
+      </AppShell>
     );
   }
   return (
@@ -250,6 +252,7 @@ function Layout() {
       isStaff={isStaff}
       isSuperAdmin={isSuperAdmin}
       isClient={isClient}
+      isReseller={isReseller}
       staffRole={staffRole}
       staffPendingCount={pendingStaffCount}
     >

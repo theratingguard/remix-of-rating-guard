@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ResellerWorkspaceTools } from "@/components/reseller-workspace-tools";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -84,6 +85,15 @@ function ResellerDashboard() {
     },
     refetchInterval: 30_000,
   });
+  const walletQuery = useQuery({
+    queryKey: ["reseller-wallet-summary"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("reseller_wallet_summary");
+      if (error) throw error;
+      return data[0] ?? null;
+    },
+    refetchInterval: 30_000,
+  });
 
   useEffect(() => {
     if (profileQuery.data?.mobile) setMobile(profileQuery.data.mobile);
@@ -133,14 +143,8 @@ function ResellerDashboard() {
       .filter((item) => item.review_removal_order_id === null)
       .map((item) => item.referred_user_id),
   );
-  const earnedCents = referrals.reduce(
-    (total, item) => total + (item.review_removal_order_id ? item.amount_cents : 0),
-    0,
-  );
-  const availableCents = referrals.reduce(
-    (total, item) => total + (item.status === "available" ? item.amount_cents : 0),
-    0,
-  );
+  const earnedCents = walletQuery.data?.total_earned_cents ?? 0;
+  const availableCents = walletQuery.data?.available_cents ?? 0;
   const activeMembership = (membershipQuery.data ?? []).find(
     (membership) => membership.status === "active",
   );
@@ -155,6 +159,7 @@ function ResellerDashboard() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["reseller-commissions"] }),
         queryClient.invalidateQueries({ queryKey: ["reseller-payouts"] }),
+        queryClient.invalidateQueries({ queryKey: ["reseller-wallet-summary"] }),
       ]);
     } catch (error) {
       toast.error(
@@ -185,7 +190,10 @@ function ResellerDashboard() {
   }
 
   return (
-    <main className="mx-auto min-h-svh max-w-6xl space-y-7 bg-background px-4 py-8 text-foreground sm:px-8">
+    <div
+      id="overview"
+      className="mx-auto min-h-svh max-w-6xl space-y-7 bg-background px-4 py-8 text-foreground sm:px-8"
+    >
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-primary">Partner workspace</p>
@@ -203,7 +211,7 @@ function ResellerDashboard() {
         </Button>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="hover:translate-y-0">
           <CardContent className="flex items-center gap-4 p-5">
             <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -221,9 +229,26 @@ function ResellerDashboard() {
               <Wallet className="size-5" />
             </span>
             <div>
-              <p className="text-sm text-muted-foreground">Recorded removal commissions</p>
+              <p className="text-sm text-muted-foreground">Total earnings</p>
               <p className="mt-1 text-2xl font-bold">{formatUsd(earnedCents)}</p>
+              <p className="text-xs text-muted-foreground">
+                On hold: {formatUsd(walletQuery.data?.pending_commission_cents ?? 0)}
+              </p>
             </div>
+          </CardContent>
+        </Card>
+        <Card className="hover:translate-y-0">
+          <CardContent className="flex items-center justify-between gap-4 p-5">
+            <div>
+              <p className="text-sm text-muted-foreground">Payout status</p>
+              <p className="mt-1 text-lg font-bold">
+                {formatUsd(walletQuery.data?.pending_payout_cents ?? 0)} pending
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {formatUsd(walletQuery.data?.paid_payout_cents ?? 0)} paid
+              </p>
+            </div>
+            <Wallet className="size-5 text-primary" />
           </CardContent>
         </Card>
         <Card className="hover:translate-y-0">
@@ -234,7 +259,9 @@ function ResellerDashboard() {
             </div>
             <Button
               size="sm"
-              disabled={!activeMembership || payoutBusy || availableCents <= 0}
+              disabled={
+                !activeMembership || payoutBusy || availableCents <= 0 || walletQuery.isError
+              }
               onClick={() => void requestPayout()}
             >
               {payoutBusy ? "Requesting…" : "Request payout"}
@@ -242,8 +269,16 @@ function ResellerDashboard() {
           </CardContent>
         </Card>
       </div>
+      {walletQuery.error && (
+        <p role="alert" className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">
+          Wallet totals could not be loaded:{" "}
+          {walletQuery.error instanceof Error ? walletQuery.error.message : "Unknown error"}
+        </p>
+      )}
 
-      <Card className="hover:translate-y-0">
+      <ResellerWorkspaceTools />
+
+      <Card id="membership" className="scroll-mt-20 hover:translate-y-0">
         <CardContent className="p-5 sm:p-7">
           <h2 className="font-semibold">Membership status</h2>
           {membershipQuery.error ? (
@@ -286,7 +321,7 @@ function ResellerDashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
+      <div id="referral-tools" className="scroll-mt-20 grid gap-5 lg:grid-cols-[1fr_1fr]">
         <Card className="hover:translate-y-0">
           <CardContent className="space-y-5 p-5 sm:p-7">
             <div>
@@ -346,7 +381,7 @@ function ResellerDashboard() {
         </Card>
       </div>
 
-      <Card className="hover:translate-y-0">
+      <Card id="commissions" className="scroll-mt-20 hover:translate-y-0">
         <CardContent className="p-5 sm:p-7">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
@@ -409,7 +444,7 @@ function ResellerDashboard() {
           )}
         </CardContent>
       </Card>
-      <Card className="hover:translate-y-0">
+      <Card id="payouts" className="scroll-mt-20 hover:translate-y-0">
         <CardContent className="p-5 sm:p-7">
           <h2 className="font-semibold">Payout history</h2>
           {payoutQuery.error ? (
@@ -434,6 +469,6 @@ function ResellerDashboard() {
           )}
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

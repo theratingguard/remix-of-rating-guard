@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   LoaderCircle,
   LockKeyhole,
+  Languages,
   MessageCircle,
   Pencil,
   Send,
@@ -21,7 +22,10 @@ import {
   getInternalChatContacts,
   removeInternalChatMessage,
   requestInternalChatAutoReply,
+  sendInternalChatMessage,
 } from "@/lib/internal-chat.functions";
+import { languageName } from "@/lib/languages";
+import { profileQuery } from "@/lib/profile";
 import { Avatar } from "@/components/app-shell";
 import { Switch } from "@/components/ui/switch";
 
@@ -48,6 +52,7 @@ export function InternalChat({
 }) {
   const queryClient = useQueryClient();
   const getContacts = useServerFn(getInternalChatContacts);
+  const sendChatMessage = useServerFn(sendInternalChatMessage);
   const editMessage = useServerFn(editInternalChatMessage);
   const removeMessage = useServerFn(removeInternalChatMessage);
   const requestAiReply = useServerFn(requestInternalChatAutoReply);
@@ -59,6 +64,8 @@ export function InternalChat({
   const [sending, setSending] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(false);
   const [savingAi, setSavingAi] = useState(false);
+  const { data: profile } = useQuery(profileQuery());
+  const preferredLanguage = profile?.language ?? "en";
 
   const contactsQuery = useQuery({
     queryKey: ["internal-chat", "contacts"],
@@ -129,15 +136,9 @@ export function InternalChat({
         );
     });
     const sendPresence = () =>
-      supabase
-        .from("internal_chat_presence")
-        .upsert(
-          { user_id: userId, last_seen_at: new Date().toISOString() },
-          { onConflict: "user_id" },
-        )
-        .then(({ error }) => {
-          if (error) console.error("Could not update chat presence:", error.message);
-        });
+      supabase.rpc("touch_internal_chat_presence").then(({ error }) => {
+        if (error) console.error("Could not update chat presence:", error.message);
+      });
     void sendPresence();
     const timer = window.setInterval(() => void sendPresence(), 30_000);
     return () => {
@@ -244,34 +245,31 @@ export function InternalChat({
     }
     setSending(true);
     try {
-      const { data, error } = await supabase
-        .from("internal_messages")
-        .insert({
-          sender_id: userId,
-          sender_role: role,
-          receiver_id: receiverId,
-          message,
-        })
-        .select("id")
-        .single();
-      if (error) {
-        toast.error("Your message could not be sent. Please try again.");
-        return;
-      }
+      const { messageId } = await sendChatMessage({
+        data: { message, ...(isSuperAdmin ? { receiverId } : {}) },
+      });
       setDraft("");
       await queryClient.invalidateQueries({ queryKey: ["internal-chat"] });
       if (!isSuperAdmin) {
         try {
-          const result = await requestAiReply({ data: { messageId: data.id } });
+          const result = await requestAiReply({ data: { messageId } });
           if (result.generated) {
             await queryClient.invalidateQueries({ queryKey: ["internal-chat"] });
           }
-        } catch {
-          toast.error("Message sent. The AI assistant could not reply right now.");
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? `Message sent. ${error.message}`
+              : "Message sent. The AI assistant could not reply right now.",
+          );
         }
       }
-    } catch {
-      toast.error("Your message could not be sent. Please try again.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Your message could not be sent. Please try again.",
+      );
     } finally {
       setSending(false);
     }
@@ -436,6 +434,17 @@ export function InternalChat({
           {messages.map((message) => {
             const mine = message.sender_id === userId;
             const removed = message.deleted_by_superadmin;
+            const translated =
+              !mine &&
+              message.original_language !== preferredLanguage &&
+              message.translated_language === preferredLanguage;
+            const displayMessage = mine
+              ? message.original_message
+              : message.original_language === preferredLanguage
+                ? message.original_message
+                : message.translated_language === preferredLanguage
+                  ? message.translated_message
+                  : message.message;
             return (
               <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <article
@@ -464,9 +473,17 @@ export function InternalChat({
                       Removed from user view; original retained in the evidence audit.
                     </p>
                   ) : (
-                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-                      {message.message}
-                    </p>
+                    <>
+                      {translated && (
+                        <span className="mb-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Languages className="size-3" aria-hidden />
+                          Translated from {languageName(message.original_language)}
+                        </span>
+                      )}
+                      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                        {displayMessage}
+                      </p>
+                    </>
                   )}
                   <div
                     className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${mine ? "text-emerald-100" : "text-slate-500"}`}

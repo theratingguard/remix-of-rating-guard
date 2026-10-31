@@ -321,7 +321,9 @@ export function AdminTeamManagement() {
                   {query.data.teams.map((team) => (
                     <tr key={team.id} className="border-b last:border-0">
                       <td className="p-3">
-                        {staffById.get(team.manager_id)?.name ?? team.manager_id}
+                        {team.manager_id
+                          ? (staffById.get(team.manager_id)?.name ?? team.manager_id)
+                          : "Reseller-owned team"}
                       </td>
                       <td className="p-3">
                         {staffById.get(team.team_leader_id)?.name ?? team.team_leader_id}

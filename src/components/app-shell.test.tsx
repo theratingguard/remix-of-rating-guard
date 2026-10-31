@@ -215,4 +215,48 @@ describe("AppShell role navigation", () => {
     expect(navigation.queryByText("Evidence Vault")).not.toBeInTheDocument();
     expect(navigation.queryByText("Staff Activity")).not.toBeInTheDocument();
   });
+
+  it("shows reseller dashboard modules and account links", () => {
+    render(
+      <AppShell
+        email="reseller@example.com"
+        userId="reseller-id"
+        isStaff={false}
+        isSuperAdmin={false}
+        isClient={false}
+        isReseller
+        staffPendingCount={0}
+      >
+        <div>Page content</div>
+      </AppShell>,
+    );
+
+    const navigation = within(screen.getByRole("navigation", { name: "Main navigation" }));
+    expect(
+      navigation
+        .getAllByRole("link")
+        .map((link) => [link.textContent?.trim(), link.getAttribute("href")]),
+    ).toEqual([
+      ["Overview", "/reseller#overview"],
+      ["Clients & Team", "/reseller#clients-team"],
+      ["Membership", "/reseller#membership"],
+      ["Referral Tools", "/reseller#referral-tools"],
+      ["Commissions", "/reseller#commissions"],
+      ["Payout History", "/reseller#payouts"],
+      ["Chats", "/chat"],
+    ]);
+
+    const mobileNavigation = within(screen.getByRole("navigation", { name: "Reseller modules" }));
+    expect(
+      mobileNavigation.getAllByRole("link").map((link) => link.textContent?.trim()),
+    ).toEqual([
+      "Overview",
+      "Clients & Team",
+      "Membership",
+      "Referral Tools",
+      "Commissions",
+      "Payout History",
+      "Chats",
+    ]);
+  });
 });

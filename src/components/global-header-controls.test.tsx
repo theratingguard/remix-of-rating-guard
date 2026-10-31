@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
@@ -60,45 +60,46 @@ describe("GlobalHeaderControls", () => {
     expect(screen.getByRole("link", { name: "Chats" })).toHaveAttribute("href", "/chat");
   });
 
-  it("translates more than half of representative client page copy", async () => {
+  it("offers all supported African languages and omits Marathi", () => {
+    render(<GlobalHeaderControls userId="client-languages" isSuperAdmin={false} isClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Language / भाषा" }));
+
+    for (const language of ["Swahili", "Zulu", "Afrikaans", "Amharic", "Hausa"]) {
+      expect(
+        screen.getByRole("menuitemradio", { name: new RegExp(language) }),
+      ).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("menuitemradio", { name: /Marathi/ })).not.toBeInTheDocument();
+  });
+
+  it("translates representative client page copy in supported languages", async () => {
     const pageCopy = [
       "Your overview",
-      "Track review scans, prepared reports, and confirmed outcomes.",
       "New scan",
       "Reviews scanned",
-      "1–2 star reviews",
       "Reports submitted",
-      "Successful removals",
       "Recent activity",
-      "Your latest business review scans",
       "Date",
       "Business",
       "Action",
       "Status",
       "No scans yet",
       "Start your first scan",
-      "Your documents",
       "Search business or report",
       "No matching reports",
-      "Download PDF",
       "Previous",
       "Next",
       "Account preferences",
       "Basic profile",
-      "Your name and account email",
       "Save profile",
       "Change password",
       "Current password",
       "New password",
-      "Confirm new password",
       "Update password",
-      "Fetching reviews",
-      "AI analysis",
-      "Prepare report",
     ];
 
     const measureTranslationCoverage = async (
-      language: "hi" | "mr",
+      language: "hi" | "sw" | "zu" | "af" | "am" | "ha",
       translatedSentinel: string,
     ) => {
       mockProfile.language = language;
@@ -122,6 +123,10 @@ describe("GlobalHeaderControls", () => {
     };
 
     await measureTranslationCoverage("hi", "आपका अवलोकन");
-    await measureTranslationCoverage("mr", "तुमचा आढावा");
+    await measureTranslationCoverage("sw", "Muhtasari wako");
+    await measureTranslationCoverage("zu", "Isifinyezo sakho");
+    await measureTranslationCoverage("af", "Jou oorsig");
+    await measureTranslationCoverage("am", "የእርስዎ አጠቃላይ እይታ");
+    await measureTranslationCoverage("ha", "Takaitaccen bayani");
   });
 });

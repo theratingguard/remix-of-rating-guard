@@ -499,7 +499,7 @@ export const addStaffAsTeamLeader = createServerFn({ method: "POST" })
       role: "Staff",
       status: "pending",
       teamId: team.id,
-      managerId: team.manager_id,
+      managerId: team.manager_id ?? undefined,
       teamLeaderId: team.team_leader_id,
     });
     logEvent("info", "team-leader.staff.created", "Team Leader added a pending staff account");
@@ -535,7 +535,9 @@ export const getUserCreationOptions = createServerFn({ method: "GET" })
       ),
       teams: (teamsResult.data ?? []).map((team) => ({
         ...team,
-        manager_name: names.get(team.manager_id) ?? "Manager",
+        manager_name: team.manager_id
+          ? (names.get(team.manager_id) ?? "Manager")
+          : "Reseller-owned team",
         team_leader_name: names.get(team.team_leader_id) ?? "Team Leader",
       })),
     };
@@ -581,7 +583,7 @@ export const addUserAsSuperAdmin = createServerFn({ method: "POST" })
       if (error) throw new Error(`Could not verify the selected team: ${error.message}`);
       if (!team) throw new Error("Select an active team.");
       teamId = team.id;
-      managerId = team.manager_id;
+      managerId = team.manager_id ?? undefined;
       teamLeaderId = team.team_leader_id;
     }
 

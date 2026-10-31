@@ -508,6 +508,10 @@ export type Database = {
           sender_role: "staff" | "client" | "reseller" | "superadmin" | "ai";
           receiver_id: string;
           message: string;
+          original_message: string;
+          translated_message: string;
+          original_language: "en" | "hi" | "sw" | "zu" | "af" | "am" | "ha";
+          translated_language: "en" | "hi" | "sw" | "zu" | "af" | "am" | "ha";
           is_read: boolean;
           is_locked: boolean;
           deleted_by_superadmin: boolean;
@@ -520,6 +524,10 @@ export type Database = {
           sender_role: "staff" | "client" | "reseller" | "superadmin" | "ai";
           receiver_id: string;
           message: string;
+          original_message: string;
+          translated_message: string;
+          original_language: "en" | "hi" | "sw" | "zu" | "af" | "am" | "ha";
+          translated_language: "en" | "hi" | "sw" | "zu" | "af" | "am" | "ha";
           is_read?: boolean;
           is_locked?: boolean;
           deleted_by_superadmin?: boolean;
@@ -528,6 +536,11 @@ export type Database = {
         };
         Update: {
           is_read?: boolean;
+          message?: string;
+          original_message?: string;
+          translated_message?: string;
+          original_language?: "en" | "hi" | "sw" | "zu" | "af" | "am" | "ha";
+          translated_language?: "en" | "hi" | "sw" | "zu" | "af" | "am" | "ha";
         };
         Relationships: [];
       };
@@ -585,6 +598,38 @@ export type Database = {
         Update: {
           mobile?: string | null;
           status?: "pending" | "approved" | "rejected" | "suspended";
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      reseller_businesses: {
+        Row: {
+          id: string;
+          reseller_id: string;
+          business_id: string;
+          owner_name: string;
+          owner_email: string;
+          owner_mobile: string;
+          team_leader_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          reseller_id: string;
+          business_id: string;
+          owner_name: string;
+          owner_email: string;
+          owner_mobile: string;
+          team_leader_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          owner_name?: string;
+          owner_email?: string;
+          owner_mobile?: string;
+          team_leader_id?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -941,7 +986,8 @@ export type Database = {
       teams: {
         Row: {
           id: string;
-          manager_id: string;
+          manager_id: string | null;
+          reseller_id: string | null;
           team_leader_id: string;
           is_active: boolean;
           created_by: string;
@@ -950,7 +996,8 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          manager_id: string;
+          manager_id?: string | null;
+          reseller_id?: string | null;
           team_leader_id: string;
           is_active?: boolean;
           created_by: string;
@@ -958,7 +1005,8 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          manager_id?: string;
+          manager_id?: string | null;
+          reseller_id?: string | null;
           team_leader_id?: string;
           is_active?: boolean;
           updated_at?: string;
@@ -2973,6 +3021,7 @@ export type Database = {
       };
       report_access_level: { Args: Record<string, never>; Returns: string };
       internal_chat_super_admin_id: { Args: Record<string, never>; Returns: string };
+      touch_internal_chat_presence: { Args: Record<string, never>; Returns: undefined };
       internal_chat_user_ids: {
         Args: Record<string, never>;
         Returns: { user_id: string; unique_id: string }[];
@@ -3036,6 +3085,16 @@ export type Database = {
       admin_activate_reseller_membership: {
         Args: { _membership_id: string; _payment_reference: string };
         Returns: string;
+      };
+      reseller_wallet_summary: {
+        Args: Record<string, never>;
+        Returns: {
+          total_earned_cents: number;
+          available_cents: number;
+          pending_commission_cents: number;
+          pending_payout_cents: number;
+          paid_payout_cents: number;
+        }[];
       };
       can_read_report_owner: { Args: { owner_id: string }; Returns: boolean };
       private_report_summaries: {
