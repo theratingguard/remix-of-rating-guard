@@ -16,6 +16,16 @@ type Commission = Tables<"reseller_commissions">;
 type Order = Tables<"review_removal_orders">;
 type Payout = Tables<"payout_requests">;
 type PlanDraft = { annualFee: string; commission: string; active: boolean };
+type ResellerWorkSummary = {
+  reseller_id: string;
+  account_name: string;
+  account_email: string;
+  status: Profile["status"];
+  clients_added: number;
+  team_leaders: number;
+  tasks_assigned: number;
+  commissions_earned_cents: number;
+};
 
 function orderReferenceKey(order: Order) {
   return `${order.status === "payment_due" ? "payment" : "google"}-${order.id}`;
@@ -38,6 +48,15 @@ export function AdminResellersPage() {
   const [references, setReferences] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin", "reseller"] });
+  const workSummaryQuery = useQuery({
+    queryKey: ["admin", "reseller", "work-summary"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_reseller_work_summary");
+      if (error) throw error;
+      return data as ResellerWorkSummary[];
+    },
+    refetchInterval: 30_000,
+  });
   const profilesQuery = useQuery({
     queryKey: ["admin", "reseller", "profiles"],
     queryFn: async () => {
@@ -163,6 +182,7 @@ export function AdminResellersPage() {
   const profileById = new Map(profiles.map((profile) => [profile.user_id, profile]));
   const planById = new Map(plans.map((plan) => [plan.id, plan]));
   const loading =
+    workSummaryQuery.isPending ||
     profilesQuery.isPending ||
     plansQuery.isPending ||
     membershipsQuery.isPending ||
@@ -170,6 +190,7 @@ export function AdminResellersPage() {
     ordersQuery.isPending ||
     payoutsQuery.isPending;
   const loadError = [
+    workSummaryQuery.error,
     profilesQuery.error,
     plansQuery.error,
     membershipsQuery.error,
@@ -183,7 +204,7 @@ export function AdminResellersPage() {
       <header>
         <p className="text-sm font-medium text-primary">Partner administration</p>
         <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">
-          Resellers & commerce
+          Reseller Manager
         </h1>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
           Record only independently verified payments and Google decisions. This dashboard does not
@@ -204,6 +225,53 @@ export function AdminResellersPage() {
         <div className="grid min-h-36 place-items-center">
           <LoaderCircle className="size-6 animate-spin" />
         </div>
+      )}
+
+      {!workSummaryQuery.isPending && !workSummaryQuery.error && (
+        <Card id="reseller-manager" className="scroll-mt-20 hover:translate-y-0">
+          <CardContent className="p-5 sm:p-7">
+            <h2 className="mb-4 font-semibold">
+              Reseller activity ({workSummaryQuery.data?.length ?? 0})
+            </h2>
+            {!workSummaryQuery.data?.length ? (
+              <p className="rounded-xl border border-dashed p-7 text-center text-sm text-muted-foreground">
+                No reseller accounts have been recorded.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[880px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b text-xs text-muted-foreground">
+                      <th className="p-3">Reseller</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3">Clients added</th>
+                      <th className="p-3">Team Leaders</th>
+                      <th className="p-3">Tasks assigned</th>
+                      <th className="p-3">Commissions earned</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workSummaryQuery.data.map((reseller) => (
+                      <tr key={reseller.reseller_id} className="border-b last:border-0">
+                        <td className="p-3">
+                          <span className="block font-medium">{reseller.account_name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {reseller.account_email}
+                          </span>
+                        </td>
+                        <td className="p-3 capitalize">{reseller.status}</td>
+                        <td className="p-3">{reseller.clients_added}</td>
+                        <td className="p-3">{reseller.team_leaders}</td>
+                        <td className="p-3">{reseller.tasks_assigned}</td>
+                        <td className="p-3">{formatUsd(reseller.commissions_earned_cents)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {!plansQuery.isPending && !plansQuery.error && (

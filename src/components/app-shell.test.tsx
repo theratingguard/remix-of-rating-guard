@@ -54,7 +54,7 @@ const adminLinks = [
   ["Team Management", "/admin/team-management"],
   ["Task Manager", "/admin/task-manager"],
   ["SEO Automation", "/admin/seo-automation"],
-  ["Resellers", "/admin/resellers"],
+  ["Reseller Manager", "/admin/resellers"],
   ["Staff Activity", "/admin/staff-activity"],
   ["Chats", "/chat"],
 ];

@@ -39,6 +39,11 @@ Production uses Nitro's Node server behind Nginx/systemd. Build with
 `npm run build`, then run `npm start`. Preserve private environment files and
 the previous output before replacing a deployed build.
 
+Before deploying the reseller workspace, chat-presence fix, and Reseller
+Manager, apply the matching `supabase/migrations/2026110104*.sql` through
+`2026110107*.sql` migrations to the linked Supabase project. Verify the
+migrations in Supabase before restarting the app.
+
 ## SEO automation
 
 Apply `supabase/migrations/20261020043000_seo_automation.sql` before enabling

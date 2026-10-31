@@ -3096,6 +3096,19 @@ export type Database = {
           paid_payout_cents: number;
         }[];
       };
+      admin_reseller_work_summary: {
+        Args: Record<string, never>;
+        Returns: {
+          reseller_id: string;
+          account_name: string;
+          account_email: string;
+          status: "pending" | "approved" | "rejected" | "suspended";
+          clients_added: number;
+          team_leaders: number;
+          tasks_assigned: number;
+          commissions_earned_cents: number;
+        }[];
+      };
       can_read_report_owner: { Args: { owner_id: string }; Returns: boolean };
       private_report_summaries: {
         Args: Record<string, never>;

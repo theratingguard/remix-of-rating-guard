@@ -52,7 +52,7 @@ const adminNav = [
   { to: "/admin/team-management", label: "Team Management", Icon: Users },
   { to: "/admin/task-manager", label: "Task Manager", Icon: ClipboardList },
   { to: "/admin/seo-automation", label: "SEO Automation", Icon: Sparkles },
-  { to: "/admin/resellers", label: "Resellers", Icon: CircleDollarSign },
+  { to: "/admin/resellers", label: "Reseller Manager", Icon: CircleDollarSign },
   { to: "/admin/staff-activity", label: "Staff Activity", Icon: Activity },
   { to: "/chat", label: "Chats", Icon: MessageCircle },
 ] as const;
