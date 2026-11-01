@@ -19,6 +19,7 @@ export const Route = createFileRoute("/_authenticated")({
       .maybeSingle();
     if (staffError) throw new Error(`Could not determine staff navigation: ${staffError.message}`);
     const accountRole = data.user.app_metadata["role"] ?? data.user.user_metadata?.["role"];
+    const accountType = data.user.user_metadata?.["account_type"];
     const expectsStaffProfile =
       accountRole === "staff" ||
       getHierarchyRole(accountRole) !== null ||
@@ -35,8 +36,8 @@ export const Route = createFileRoute("/_authenticated")({
     const hierarchyRole = getHierarchyRole(staff?.role);
     const role = accountRole;
     const isClient = role === "client";
-    let isReseller = role === "reseller";
-    if (!role && !staff && !isClient) {
+    let isReseller = role === "reseller" || (!role && accountType === "reseller");
+    if (!isReseller && !role && !staff && !isClient) {
       const { data: resellerProfile, error: resellerProfileError } = await supabase
         .from("reseller_profiles")
         .select("user_id")
