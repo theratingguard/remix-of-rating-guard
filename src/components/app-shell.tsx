@@ -29,6 +29,7 @@ import {
   MessageCircle,
   Sparkles,
   UserPlus,
+  KeyRound,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -53,6 +54,7 @@ const adminNav = [
   { to: "/settings", label: "Settings", Icon: Settings },
   { to: "/admin/staff", label: "Staff Approvals", Icon: Users },
   { to: "/admin/team-management", label: "Team Management", Icon: Users },
+  { to: "/admin/role-permissions", label: "Role Permissions", Icon: KeyRound },
   { to: "/admin/task-manager", label: "Task Manager", Icon: ClipboardList },
   { to: "/admin/seo-automation", label: "SEO Automation", Icon: Sparkles },
   { to: "/admin/resellers", label: "Reseller Manager", Icon: CircleDollarSign },
@@ -451,7 +453,12 @@ export function AppShell({
           <Brand />
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <GlobalHeaderControls userId={userId} isSuperAdmin={isSuperAdmin} isClient={isClient} />
+          <GlobalHeaderControls
+            userId={userId}
+            isSuperAdmin={isSuperAdmin}
+            isClient={isClient}
+            staffRole={staffRole ?? null}
+          />
           {isSuperAdmin && (
             <Button size="sm" asChild className="hidden sm:inline-flex">
               <Link to="/scan" search={{}}>
@@ -487,7 +494,12 @@ export function AppShell({
       </Sheet>
       <main className="lg:pl-[200px]">
         <header className="no-print hidden h-14 items-center justify-end border-b bg-card/80 px-6 lg:flex">
-          <GlobalHeaderControls userId={userId} isSuperAdmin={isSuperAdmin} isClient={isClient} />
+          <GlobalHeaderControls
+            userId={userId}
+            isSuperAdmin={isSuperAdmin}
+            isClient={isClient}
+            staffRole={staffRole ?? null}
+          />
         </header>
         <div className="mx-auto max-w-[1720px] px-4 py-5 sm:px-6">{children}</div>
       </main>

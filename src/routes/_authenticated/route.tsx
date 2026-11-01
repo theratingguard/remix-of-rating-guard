@@ -1,4 +1,12 @@
-import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  redirect,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
 import { ClientLayout } from "@/components/client-layout";
@@ -40,12 +48,25 @@ export const Route = createFileRoute("/_authenticated")({
     if (!isReseller && !role && !staff && !isClient) {
       const { data: resellerProfile, error: resellerProfileError } = await supabase
         .from("reseller_profiles")
-        .select("user_id")
+        .select("user_id,status")
         .eq("user_id", data.user.id)
         .maybeSingle();
       if (resellerProfileError)
         throw new Error(`Could not determine reseller navigation: ${resellerProfileError.message}`);
       isReseller = Boolean(resellerProfile);
+    }
+    let isResellerSuspended = false;
+    if (isReseller) {
+      const { data: resellerProfile, error: resellerProfileError } = await supabase
+        .from("reseller_profiles")
+        .select("status")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+      if (resellerProfileError)
+        throw new Error(
+          `Could not determine reseller account status: ${resellerProfileError.message}`,
+        );
+      isResellerSuspended = resellerProfile?.status === "suspended";
     }
     if (location.pathname === "/dashboard") {
       if (isSuperAdmin) throw redirect({ to: "/admin/staff", replace: true });
@@ -142,7 +163,8 @@ export const Route = createFileRoute("/_authenticated")({
       hierarchyDashboardPath,
       "/profile",
       "/staff/wallet",
-      ...(hierarchyRole === "team_member" ? ["/staff/tasks", "/staff/evidence"] : []),
+      "/staff/tasks",
+      ...(hierarchyRole === "team_member" ? ["/staff/evidence"] : []),
     ];
     const hierarchyPathAllowed = !hierarchyRole || hierarchyPaths.includes(location.pathname);
     if (isStaff && hierarchyRole && !hierarchyPathAllowed) {
@@ -168,6 +190,7 @@ export const Route = createFileRoute("/_authenticated")({
       isSuperAdmin,
       isClient,
       isReseller,
+      isResellerSuspended,
       pendingStaffCount,
       staffRole: staff?.role ?? null,
       staffStatus: staff?.status ?? null,
@@ -178,6 +201,48 @@ export const Route = createFileRoute("/_authenticated")({
   component: Layout,
 });
 
+function SuspendedResellerScreen() {
+  const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+
+  async function signOut() {
+    setSigningOut(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setSigningOut(false);
+      setSignOutError(`Could not end the suspended reseller session: ${error.message}`);
+      return;
+    }
+    await navigate({ to: "/auth", replace: true });
+  }
+
+  return (
+    <main className="grid min-h-screen place-items-center p-6">
+      <section className="w-full max-w-lg space-y-4 rounded-2xl border bg-card p-6 text-center shadow-sm">
+        <h1 className="font-display text-2xl font-bold">Reseller access suspended</h1>
+        <p className="text-sm text-muted-foreground">
+          This reseller account is suspended. Contact the Super Admin if you believe this is a
+          mistake.
+        </p>
+        {signOutError && (
+          <p role="alert" className="text-sm text-destructive">
+            {signOutError}
+          </p>
+        )}
+        <button
+          type="button"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          disabled={signingOut}
+          onClick={() => void signOut()}
+        >
+          {signingOut ? "Signing out…" : "Sign out"}
+        </button>
+      </section>
+    </main>
+  );
+}
+
 function Layout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const {
@@ -186,12 +251,14 @@ function Layout() {
     isSuperAdmin,
     isClient,
     isReseller,
+    isResellerSuspended,
     staffRole,
     pendingStaffCount,
     staffStatus,
     rejectReason,
     staffNotice,
   } = Route.useRouteContext();
+  if (isResellerSuspended) return <SuspendedResellerScreen />;
   if (isStaff && staffStatus !== "active" && staffStatus !== "approved") {
     if (pathname === "/profile") {
       return (
@@ -209,6 +276,7 @@ function Layout() {
         </div>
       );
     }
+
     return (
       <div>
         <header className="flex h-14 items-center justify-between border-b bg-card/80 px-4 sm:px-6">
@@ -226,6 +294,7 @@ function Layout() {
       </div>
     );
   }
+
   if (isClient) {
     return pathname === "/profile" ? (
       <ClientLayout email={user.email ?? "Client account"} userId={user.id}>

@@ -27,6 +27,7 @@ import {
 } from "@/lib/staff-case.functions";
 import { AdminStaffChat } from "@/components/admin-staff-chat";
 import { AdminStaffPhaseTwo } from "@/components/admin-staff-phase-two";
+import { BroadcastComposer } from "@/components/broadcast-composer";
 import { SuperAdminAddUserForm } from "@/components/super-admin-add-user-form";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
@@ -1181,6 +1182,7 @@ export function AdminStaffPage() {
           </Link>
         }
       />
+      <BroadcastComposer />
       <SuperAdminAddUserForm
         onCreated={async () => {
           await queryClient.invalidateQueries({ queryKey: adminStaffKey });

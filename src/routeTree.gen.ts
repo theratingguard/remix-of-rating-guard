@@ -36,6 +36,7 @@ import { Route as AuthenticatedStorageRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
 import { Route as AuthenticatedTaskManagerRouteImport } from './routes/_authenticated/task-manager'
 import { Route as AuthenticatedTeamLeaderRouteImport } from './routes/_authenticated/team-leader'
+import { Route as ApiBroadcastRouteImport } from './routes/api/broadcast'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiScanWorkerRouteImport } from './routes/api/scan-worker'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
@@ -49,6 +50,7 @@ import { Route as AuthenticatedAdminCasesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminInvestigatorsRouteImport } from './routes/_authenticated/admin.investigators'
 import { Route as AuthenticatedAdminResellerRouteImport } from './routes/_authenticated/admin.reseller'
 import { Route as AuthenticatedAdminResellersRouteImport } from './routes/_authenticated/admin.resellers'
+import { Route as AuthenticatedAdminRolePermissionsRouteImport } from './routes/_authenticated/admin.role-permissions'
 import { Route as AuthenticatedAdminSeoAutomationRouteImport } from './routes/_authenticated/admin.seo-automation'
 import { Route as AuthenticatedAdminStaffRouteImport } from './routes/_authenticated/admin.staff'
 import { Route as AuthenticatedAdminStaffActivityRouteImport } from './routes/_authenticated/admin.staff-activity'
@@ -244,6 +246,11 @@ const AuthenticatedTeamLeaderRoute = AuthenticatedTeamLeaderRouteImport.update({
   path: '/team-leader',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiBroadcastRoute = ApiBroadcastRouteImport.update({
+  id: '/api/broadcast',
+  path: '/api/broadcast',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -312,6 +319,12 @@ const AuthenticatedAdminResellersRoute =
   AuthenticatedAdminResellersRouteImport.update({
     id: '/admin/resellers',
     path: '/admin/resellers',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminRolePermissionsRoute =
+  AuthenticatedAdminRolePermissionsRouteImport.update({
+    id: '/admin/role-permissions',
+    path: '/admin/role-permissions',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminSeoAutomationRoute =
@@ -648,6 +661,7 @@ export interface FileRoutesByFullPath {
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/task-manager': typeof AuthenticatedTaskManagerRoute
   '/team-leader': typeof AuthenticatedTeamLeaderRoute
+  '/api/broadcast': typeof ApiBroadcastRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -661,6 +675,7 @@ export interface FileRoutesByFullPath {
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/admin/reseller': typeof AuthenticatedAdminResellerRoute
   '/admin/resellers': typeof AuthenticatedAdminResellersRoute
+  '/admin/role-permissions': typeof AuthenticatedAdminRolePermissionsRoute
   '/admin/seo-automation': typeof AuthenticatedAdminSeoAutomationRoute
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
@@ -744,6 +759,7 @@ export interface FileRoutesByTo {
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/task-manager': typeof AuthenticatedTaskManagerRoute
   '/team-leader': typeof AuthenticatedTeamLeaderRoute
+  '/api/broadcast': typeof ApiBroadcastRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -757,6 +773,7 @@ export interface FileRoutesByTo {
   '/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/admin/reseller': typeof AuthenticatedAdminResellerRoute
   '/admin/resellers': typeof AuthenticatedAdminResellersRoute
+  '/admin/role-permissions': typeof AuthenticatedAdminRolePermissionsRoute
   '/admin/seo-automation': typeof AuthenticatedAdminSeoAutomationRoute
   '/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
@@ -842,6 +859,7 @@ export interface FileRoutesById {
   '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
   '/_authenticated/task-manager': typeof AuthenticatedTaskManagerRoute
   '/_authenticated/team-leader': typeof AuthenticatedTeamLeaderRoute
+  '/api/broadcast': typeof ApiBroadcastRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -855,6 +873,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/investigators': typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   '/_authenticated/admin/reseller': typeof AuthenticatedAdminResellerRoute
   '/_authenticated/admin/resellers': typeof AuthenticatedAdminResellersRoute
+  '/_authenticated/admin/role-permissions': typeof AuthenticatedAdminRolePermissionsRoute
   '/_authenticated/admin/seo-automation': typeof AuthenticatedAdminSeoAutomationRoute
   '/_authenticated/admin/staff': typeof AuthenticatedAdminStaffRouteWithChildren
   '/_authenticated/admin/staff-activity': typeof AuthenticatedAdminStaffActivityRoute
@@ -940,6 +959,7 @@ export interface FileRouteTypes {
     | '/submissions'
     | '/task-manager'
     | '/team-leader'
+    | '/api/broadcast'
     | '/api/health'
     | '/api/scan-worker'
     | '/blog/$slug'
@@ -953,6 +973,7 @@ export interface FileRouteTypes {
     | '/admin/investigators'
     | '/admin/reseller'
     | '/admin/resellers'
+    | '/admin/role-permissions'
     | '/admin/seo-automation'
     | '/admin/staff'
     | '/admin/staff-activity'
@@ -1036,6 +1057,7 @@ export interface FileRouteTypes {
     | '/submissions'
     | '/task-manager'
     | '/team-leader'
+    | '/api/broadcast'
     | '/api/health'
     | '/api/scan-worker'
     | '/blog/$slug'
@@ -1049,6 +1071,7 @@ export interface FileRouteTypes {
     | '/admin/investigators'
     | '/admin/reseller'
     | '/admin/resellers'
+    | '/admin/role-permissions'
     | '/admin/seo-automation'
     | '/admin/staff'
     | '/admin/staff-activity'
@@ -1133,6 +1156,7 @@ export interface FileRouteTypes {
     | '/_authenticated/submissions'
     | '/_authenticated/task-manager'
     | '/_authenticated/team-leader'
+    | '/api/broadcast'
     | '/api/health'
     | '/api/scan-worker'
     | '/blog/$slug'
@@ -1146,6 +1170,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/investigators'
     | '/_authenticated/admin/reseller'
     | '/_authenticated/admin/resellers'
+    | '/_authenticated/admin/role-permissions'
     | '/_authenticated/admin/seo-automation'
     | '/_authenticated/admin/staff'
     | '/_authenticated/admin/staff-activity'
@@ -1215,6 +1240,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ResponsibleUseRoute: typeof ResponsibleUseRoute
   TermsRoute: typeof TermsRoute
+  ApiBroadcastRoute: typeof ApiBroadcastRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiScanWorkerRoute: typeof ApiScanWorkerRoute
   BlogSlugRoute: typeof BlogSlugRoute
@@ -1435,6 +1461,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeamLeaderRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/broadcast': {
+      id: '/api/broadcast'
+      path: '/api/broadcast'
+      fullPath: '/api/broadcast'
+      preLoaderRoute: typeof ApiBroadcastRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -1524,6 +1557,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/resellers'
       fullPath: '/admin/resellers'
       preLoaderRoute: typeof AuthenticatedAdminResellersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/role-permissions': {
+      id: '/_authenticated/admin/role-permissions'
+      path: '/admin/role-permissions'
+      fullPath: '/admin/role-permissions'
+      preLoaderRoute: typeof AuthenticatedAdminRolePermissionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/seo-automation': {
@@ -2002,6 +2042,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminInvestigatorsRoute: typeof AuthenticatedAdminInvestigatorsRouteWithChildren
   AuthenticatedAdminResellerRoute: typeof AuthenticatedAdminResellerRoute
   AuthenticatedAdminResellersRoute: typeof AuthenticatedAdminResellersRoute
+  AuthenticatedAdminRolePermissionsRoute: typeof AuthenticatedAdminRolePermissionsRoute
   AuthenticatedAdminSeoAutomationRoute: typeof AuthenticatedAdminSeoAutomationRoute
   AuthenticatedAdminStaffRoute: typeof AuthenticatedAdminStaffRouteWithChildren
   AuthenticatedAdminStaffActivityRoute: typeof AuthenticatedAdminStaffActivityRoute
@@ -2054,6 +2095,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedAdminInvestigatorsRouteWithChildren,
   AuthenticatedAdminResellerRoute: AuthenticatedAdminResellerRoute,
   AuthenticatedAdminResellersRoute: AuthenticatedAdminResellersRoute,
+  AuthenticatedAdminRolePermissionsRoute:
+    AuthenticatedAdminRolePermissionsRoute,
   AuthenticatedAdminSeoAutomationRoute: AuthenticatedAdminSeoAutomationRoute,
   AuthenticatedAdminStaffRoute: AuthenticatedAdminStaffRouteWithChildren,
   AuthenticatedAdminStaffActivityRoute: AuthenticatedAdminStaffActivityRoute,
@@ -2109,6 +2152,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ResponsibleUseRoute: ResponsibleUseRoute,
   TermsRoute: TermsRoute,
+  ApiBroadcastRoute: ApiBroadcastRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiScanWorkerRoute: ApiScanWorkerRoute,
   BlogSlugRoute: BlogSlugRoute,

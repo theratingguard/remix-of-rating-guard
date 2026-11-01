@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/app-shell";
+import { BroadcastComposer } from "@/components/broadcast-composer";
 import { ManagerAddMemberForm } from "@/components/manager-add-member-form";
 import { TeamLeaderAddStaffForm } from "@/components/team-leader-add-staff-form";
 import { supabase } from "@/integrations/supabase/client";
@@ -401,6 +402,9 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
     return (
       <div className="space-y-8">
         <TaskManagerForm data={data} refresh={refresh} />
+        {(data.isSuperadmin || data.profile?.role.toLowerCase() !== "team member") && (
+          <BroadcastComposer />
+        )}
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Assigned tasks</h2>
           <TasksList
@@ -436,6 +440,7 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
           title="Team Leader Dashboard"
           subtitle={`Team performance · ${data.profile?.name ?? "Team Leader"}`}
         />
+        <BroadcastComposer />
         <section className="grid gap-3 sm:grid-cols-3">
           <Metric
             title="Staff members"
@@ -508,6 +513,7 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
           </Button>
         }
       />
+      {mode === "manager" && <BroadcastComposer />}
       <nav aria-label="Manager dashboard sections" className="flex flex-wrap gap-2 border-b pb-3">
         {(
           [

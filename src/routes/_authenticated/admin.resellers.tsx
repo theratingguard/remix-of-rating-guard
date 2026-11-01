@@ -1,12 +1,23 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { LoaderCircle, Save } from "lucide-react";
+import { z } from "zod";
+import { Ban, CheckCircle2, Eye, LoaderCircle, Save, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { setAdminResellerStatus } from "@/lib/admin-reseller.functions";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"reseller_profiles">;
@@ -26,7 +37,41 @@ type ResellerWorkSummary = {
   tasks_assigned: number;
   commissions_earned_cents: number;
 };
-
+const resellerDetailsSchema = z.object({
+  clients: z.array(
+    z.object({
+      business_id: z.string(),
+      business_name: z.string(),
+      owner_name: z.string(),
+      owner_email: z.string(),
+      owner_mobile: z.string(),
+      team_leader_name: z.string().nullable(),
+      created_at: z.string(),
+    }),
+  ),
+  team_leaders: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string().nullable(),
+      unique_id: z.string(),
+      status: z.string(),
+      team_id: z.string(),
+      is_active: z.boolean(),
+    }),
+  ),
+  team_members: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string().nullable(),
+      unique_id: z.string(),
+      status: z.string(),
+      team_id: z.string(),
+      team_leader_name: z.string(),
+    }),
+  ),
+});
 function orderReferenceKey(order: Order) {
   return `${order.status === "payment_due" ? "payment" : "google"}-${order.id}`;
 }
@@ -44,16 +89,21 @@ function formatUsd(cents: number) {
 
 export function AdminResellersPage() {
   const queryClient = useQueryClient();
+  const setResellerStatus = useServerFn(setAdminResellerStatus);
   const [planDrafts, setPlanDrafts] = useState<Record<string, PlanDraft>>({});
   const [references, setReferences] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
+  const [detailsReseller, setDetailsReseller] = useState<ResellerWorkSummary | null>(null);
+  const [planReseller, setPlanReseller] = useState<ResellerWorkSummary | null>(null);
+  const [planSelection, setPlanSelection] = useState("");
+  const [payoutTarget, setPayoutTarget] = useState<Payout | null>(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin", "reseller"] });
   const workSummaryQuery = useQuery({
     queryKey: ["admin", "reseller", "work-summary"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("admin_reseller_work_summary");
       if (error) throw error;
-      return data as ResellerWorkSummary[];
+      return data;
     },
     refetchInterval: 30_000,
   });
@@ -66,7 +116,7 @@ export function AdminResellersPage() {
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      return data as Profile[];
+      return data;
     },
     refetchInterval: 30_000,
   });
@@ -78,7 +128,7 @@ export function AdminResellersPage() {
         .select("*")
         .order("annual_fee_cents");
       if (error) throw error;
-      return data as Plan[];
+      return data;
     },
   });
   const membershipsQuery = useQuery({
@@ -90,7 +140,7 @@ export function AdminResellersPage() {
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      return data as Membership[];
+      return data;
     },
     refetchInterval: 30_000,
   });
@@ -103,7 +153,7 @@ export function AdminResellersPage() {
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      return data as Commission[];
+      return data;
     },
     refetchInterval: 30_000,
   });
@@ -116,7 +166,7 @@ export function AdminResellersPage() {
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      return data as Order[];
+      return data;
     },
     refetchInterval: 30_000,
   });
@@ -129,9 +179,21 @@ export function AdminResellersPage() {
         .order("requested_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      return data as Payout[];
+      return data;
     },
     refetchInterval: 30_000,
+  });
+  const detailsQuery = useQuery({
+    queryKey: ["admin", "reseller", "details", detailsReseller?.reseller_id],
+    enabled: Boolean(detailsReseller),
+    queryFn: async () => {
+      if (!detailsReseller) throw new Error("Select a reseller before loading details.");
+      const { data, error } = await supabase.rpc("admin_reseller_details", {
+        _reseller_id: detailsReseller.reseller_id,
+      });
+      if (error) throw error;
+      return resellerDetailsSchema.parse(data);
+    },
   });
 
   useEffect(() => {
@@ -155,15 +217,17 @@ export function AdminResellersPage() {
     key: string,
     action: () => PromiseLike<{ error: { message: string } | null }>,
     success: string,
-  ) {
+  ): Promise<boolean> {
     setSaving(key);
     try {
       const result = await action();
       if (result.error) throw result.error;
       toast.success(success);
       await refresh();
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Action could not be completed.");
+      return false;
     } finally {
       setSaving(null);
     }
@@ -181,6 +245,16 @@ export function AdminResellersPage() {
   const payouts = payoutsQuery.data ?? [];
   const profileById = new Map(profiles.map((profile) => [profile.user_id, profile]));
   const planById = new Map(plans.map((plan) => [plan.id, plan]));
+  const membershipByReseller = new Map<string, Membership>();
+  for (const membership of memberships) {
+    const current = membershipByReseller.get(membership.reseller_id);
+    if (
+      ["active", "pending_payment"].includes(membership.status) &&
+      (!current || (membership.status === "active" && current.status !== "active"))
+    ) {
+      membershipByReseller.set(membership.reseller_id, membership);
+    }
+  }
   const loading =
     workSummaryQuery.isPending ||
     profilesQuery.isPending ||
@@ -239,15 +313,16 @@ export function AdminResellersPage() {
               </p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[880px] text-left text-sm">
+                <table className="w-full min-w-[1280px] text-left text-sm">
                   <thead>
                     <tr className="border-b text-xs text-muted-foreground">
                       <th className="p-3">Reseller</th>
-                      <th className="p-3">Status</th>
                       <th className="p-3">Clients added</th>
                       <th className="p-3">Team Leaders</th>
                       <th className="p-3">Tasks assigned</th>
-                      <th className="p-3">Commissions earned</th>
+                      <th className="p-3">Commissions earned (USD)</th>
+                      <th className="p-3">Account status</th>
+                      <th className="p-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -259,11 +334,111 @@ export function AdminResellersPage() {
                             {reseller.account_email}
                           </span>
                         </td>
-                        <td className="p-3 capitalize">{reseller.status}</td>
                         <td className="p-3">{reseller.clients_added}</td>
                         <td className="p-3">{reseller.team_leaders}</td>
                         <td className="p-3">{reseller.tasks_assigned}</td>
                         <td className="p-3">{formatUsd(reseller.commissions_earned_cents)}</td>
+                        <td className="p-3">
+                          <span className="rounded-full border px-2.5 py-1 text-xs capitalize">
+                            {reseller.status === "approved" ? "Active" : reseller.status}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setDetailsReseller(reseller)}
+                            >
+                              <Eye className="size-4" />
+                              View Details
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={
+                                reseller.status === "suspended" ||
+                                reseller.status === "rejected" ||
+                                !plans.some((plan) => plan.is_active)
+                              }
+                              onClick={() => {
+                                setPlanReseller(reseller);
+                                setPlanSelection(
+                                  membershipByReseller.get(reseller.reseller_id)?.plan_id ??
+                                    plans.find((plan) => plan.is_active)?.id ??
+                                    "",
+                                );
+                              }}
+                            >
+                              Change Plan
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={saving === `profile-${reseller.reseller_id}`}
+                              onClick={() =>
+                                void runAction(
+                                  `profile-${reseller.reseller_id}`,
+                                  () =>
+                                    setResellerStatus({
+                                      data: {
+                                        resellerId: reseller.reseller_id,
+                                        decision:
+                                          reseller.status === "suspended" ||
+                                          reseller.status === "rejected"
+                                            ? "approved"
+                                            : "suspended",
+                                      },
+                                    }).then(() => ({ error: null })),
+                                  reseller.status === "suspended" || reseller.status === "rejected"
+                                    ? "Reseller activated and login access restored."
+                                    : "Reseller suspended and login access blocked.",
+                                )
+                              }
+                            >
+                              {reseller.status === "suspended" || reseller.status === "rejected" ? (
+                                <CheckCircle2 className="size-4" />
+                              ) : (
+                                <Ban className="size-4" />
+                              )}
+                              {reseller.status === "suspended" || reseller.status === "rejected"
+                                ? "Activate"
+                                : "Suspend"}
+                            </Button>
+                            {(() => {
+                              const actionablePayout = payouts.find(
+                                (payout) =>
+                                  payout.reseller_id === reseller.reseller_id &&
+                                  ["requested", "approved"].includes(payout.status),
+                              );
+                              return (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!actionablePayout}
+                                  title={
+                                    actionablePayout
+                                      ? "Release this payout after confirming the transfer"
+                                      : "No payout awaiting release"
+                                  }
+                                  onClick={() => {
+                                    if (actionablePayout) {
+                                      setPayoutTarget(actionablePayout);
+                                      setReferences((current) => ({
+                                        ...current,
+                                        [`payout-${actionablePayout.id}`]:
+                                          current[`payout-${actionablePayout.id}`] ?? "",
+                                      }));
+                                    }
+                                  }}
+                                >
+                                  <WalletCards className="size-4" />
+                                  Release Payout
+                                </Button>
+                              );
+                            })()}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -273,6 +448,213 @@ export function AdminResellersPage() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog
+        open={Boolean(detailsReseller)}
+        onOpenChange={(open) => {
+          if (!open) setDetailsReseller(null);
+        }}
+      >
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reseller details</DialogTitle>
+            <DialogDescription>
+              {detailsReseller?.account_name} · {detailsReseller?.account_email}
+            </DialogDescription>
+          </DialogHeader>
+          {detailsQuery.isPending ? (
+            <div className="grid min-h-32 place-items-center">
+              <LoaderCircle className="size-6 animate-spin" />
+            </div>
+          ) : detailsQuery.error ? (
+            <p role="alert" className="text-sm text-destructive">
+              Could not load reseller details: {detailsQuery.error.message}
+            </p>
+          ) : detailsQuery.data ? (
+            <div className="space-y-6">
+              <section className="space-y-3">
+                <h3 className="font-semibold">Clients ({detailsQuery.data.clients.length})</h3>
+                {detailsQuery.data.clients.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No clients have been added.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {detailsQuery.data.clients.map((client) => (
+                      <li key={client.business_id} className="rounded-lg border p-3 text-sm">
+                        <p className="font-medium">{client.business_name}</p>
+                        <p className="text-muted-foreground">
+                          {client.owner_name} · {client.owner_email} · {client.owner_mobile}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Team Leader: {client.team_leader_name ?? "Unassigned"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section className="space-y-3">
+                <h3 className="font-semibold">
+                  Team Leaders ({detailsQuery.data.team_leaders.length})
+                </h3>
+                {detailsQuery.data.team_leaders.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No Team Leaders have been added.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {detailsQuery.data.team_leaders.map((leader) => (
+                      <li key={leader.id} className="rounded-lg border p-3 text-sm">
+                        <p className="font-medium">{leader.name} · {leader.unique_id}</p>
+                        <p className="text-muted-foreground">
+                          {leader.email ?? "No email"} · {leader.status} ·{" "}
+                          {leader.is_active ? "Team active" : "Team inactive"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section className="space-y-3">
+                <h3 className="font-semibold">
+                  Team Members ({detailsQuery.data.team_members.length})
+                </h3>
+                {detailsQuery.data.team_members.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No Team Members have been added.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {detailsQuery.data.team_members.map((member) => (
+                      <li key={member.id} className="rounded-lg border p-3 text-sm">
+                        <p className="font-medium">{member.name} · {member.unique_id}</p>
+                        <p className="text-muted-foreground">
+                          {member.email ?? "No email"} · {member.status} · Leader:{" "}
+                          {member.team_leader_name}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(planReseller)}
+        onOpenChange={(open) => {
+          if (!open) setPlanReseller(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change reseller plan</DialogTitle>
+            <DialogDescription>
+              {planReseller?.account_name} · select an active plan. Existing paid membership dates
+              and payment references are retained.
+            </DialogDescription>
+          </DialogHeader>
+          <label className="space-y-2 text-sm">
+            <span>Plan</span>
+            <Select value={planSelection} onValueChange={setPlanSelection}>
+              <SelectTrigger aria-label="Reseller plan">
+                <SelectValue placeholder="Choose a plan" />
+              </SelectTrigger>
+              <SelectContent>
+                {plans
+                  .filter((plan) => plan.is_active)
+                  .map((plan) => (
+                    <SelectItem key={plan.id} value={plan.id}>
+                      {plan.name} · {formatUsd(plan.annual_fee_cents)} / year
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </label>
+          <Button
+            disabled={
+              !planReseller ||
+              !planSelection ||
+              saving === `change-plan-${planReseller?.reseller_id}`
+            }
+            onClick={() => {
+              if (!planReseller) return;
+              void runAction(
+                `change-plan-${planReseller.reseller_id}`,
+                () =>
+                  supabase.rpc("admin_change_reseller_plan", {
+                    _reseller_id: planReseller.reseller_id,
+                    _plan_id: planSelection,
+                  }),
+                "Reseller plan updated.",
+              ).then((success) => {
+                if (success) setPlanReseller(null);
+              });
+            }}
+          >
+            {saving === `change-plan-${planReseller?.reseller_id}` && (
+              <LoaderCircle className="size-4 animate-spin" />
+            )}
+            Save plan
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(payoutTarget)}
+        onOpenChange={(open) => {
+          if (!open) setPayoutTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Release payout</DialogTitle>
+            <DialogDescription>
+              Confirm the actual transfer reference before marking this payout as paid.
+            </DialogDescription>
+          </DialogHeader>
+          {payoutTarget && (
+            <>
+              <p className="text-sm">
+                Amount: <strong>{formatUsd(payoutTarget.amount_cents)}</strong>
+              </p>
+              <Input
+                aria-label={`Payout payment reference ${payoutTarget.id}`}
+                value={references[`payout-${payoutTarget.id}`] ?? ""}
+                onChange={(event) =>
+                  setReferences((current) => ({
+                    ...current,
+                    [`payout-${payoutTarget.id}`]: event.target.value,
+                  }))
+                }
+                placeholder="Verified payout reference"
+              />
+              <Button
+                disabled={
+                  referenceFor(`payout-${payoutTarget.id}`).length < 8 ||
+                  saving === `payout-${payoutTarget.id}`
+                }
+                onClick={() => {
+                  const payout = payoutTarget;
+                  void runAction(
+                    `payout-${payout.id}`,
+                    () =>
+                      supabase.rpc("admin_release_reseller_payout", {
+                        _payout_id: payout.id,
+                        _payment_reference: referenceFor(`payout-${payout.id}`),
+                      }),
+                    "Payout recorded as paid.",
+                  ).then((success) => {
+                    if (success) setPayoutTarget(null);
+                  });
+                }}
+              >
+                {saving === `payout-${payoutTarget.id}` && (
+                  <LoaderCircle className="size-4 animate-spin" />
+                )}
+                Release Payout
+              </Button>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {!plansQuery.isPending && !plansQuery.error && (
         <Card className="hover:translate-y-0">
@@ -421,10 +803,17 @@ export function AdminResellersPage() {
                                   void runAction(
                                     `profile-${profile.user_id}`,
                                     () =>
-                                      supabase.rpc("admin_review_reseller", {
-                                        _reseller_id: profile.user_id,
-                                        _decision: decision,
-                                      }),
+                                      decision === "rejected"
+                                        ? supabase.rpc("admin_review_reseller", {
+                                            _reseller_id: profile.user_id,
+                                            _decision: decision,
+                                          })
+                                        : setResellerStatus({
+                                            data: {
+                                              resellerId: profile.user_id,
+                                              decision,
+                                            },
+                                          }).then(() => ({ error: null })),
                                     `Reseller ${decision}.`,
                                   )
                                 }

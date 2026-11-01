@@ -1068,6 +1068,32 @@ export type Database = {
         };
         Relationships: [];
       };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          message: string;
+          is_read: boolean;
+          task_id: string | null;
+          review_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          message: string;
+          is_read?: boolean;
+          task_id?: string | null;
+          review_url?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          is_read?: boolean;
+        };
+        Relationships: [];
+      };
       team_task_earnings: {
         Row: {
           id: string;
@@ -2958,6 +2984,14 @@ export type Database = {
       };
     };
     Functions: {
+      admin_rbac_overview: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      admin_rbac_update_role_permissions: {
+        Args: { _role_id: string; _permission_keys: string[] };
+        Returns: Json;
+      };
       hierarchy_task_summary: {
         Args: Record<string, never>;
         Returns: {
@@ -2967,6 +3001,22 @@ export type Database = {
           completed_tasks: number;
           rejected_tasks: number;
         }[];
+      };
+      broadcast_staff_options: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      broadcast_staff: {
+        Args: {
+          _title: string;
+          _message: string;
+          _audience: string;
+          _team_id?: string | null;
+          _role?: string | null;
+          _review_url?: string | null;
+          _create_task?: boolean;
+        };
+        Returns: Json;
       };
       hierarchy_direct_reports: {
         Args: Record<string, never>;
@@ -3082,6 +3132,15 @@ export type Database = {
         Args: { _reseller_id: string; _decision: string };
         Returns: string;
       };
+      admin_change_reseller_plan: {
+        Args: { _reseller_id: string; _plan_id: string };
+        Returns: string;
+      };
+      admin_release_reseller_payout: {
+        Args: { _payout_id: string; _payment_reference: string };
+        Returns: string;
+      };
+      admin_reseller_details: { Args: { _reseller_id: string }; Returns: Json };
       admin_activate_reseller_membership: {
         Args: { _membership_id: string; _payment_reference: string };
         Returns: string;

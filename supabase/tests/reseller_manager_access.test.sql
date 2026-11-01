@@ -1,6 +1,6 @@
 begin;
 
-select plan(15);
+select plan(23);
 
 select ok(
   to_regclass('public.reseller_businesses') is not null,
@@ -91,6 +91,72 @@ select ok(
     and pg_get_functiondef('public.admin_reseller_work_summary()'::regprocedure)
       ilike '%super_admin%',
   'manager summary checks Super Admin access before returning reseller details'
+);
+select ok(
+  exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'reseller_profiles'
+      and column_name = 'status'
+  ),
+  'reseller accounts have a persisted management status'
+);
+select ok(
+  (select prosecdef
+   from pg_proc
+   where oid = 'public.admin_reseller_details(uuid)'::regprocedure),
+  'reseller detail lookup is a guarded security-definer function'
+);
+select ok(
+  pg_get_functiondef('public.admin_reseller_details(uuid)'::regprocedure)
+    ilike '%report_access_level%'
+    and pg_get_functiondef('public.admin_reseller_details(uuid)'::regprocedure)
+      ilike '%super_admin%',
+  'client and team details require Super Admin access'
+);
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.admin_reseller_details(uuid)',
+    'EXECUTE'
+  ),
+  'anonymous callers cannot read reseller client or team details'
+);
+select ok(
+  (select prosecdef
+   from pg_proc
+   where oid = 'public.admin_change_reseller_plan(uuid,text)'::regprocedure)
+    and pg_get_functiondef('public.admin_change_reseller_plan(uuid,text)'::regprocedure)
+      ilike '%report_access_level%'
+    and pg_get_functiondef('public.admin_change_reseller_plan(uuid,text)'::regprocedure)
+      ilike '%super_admin%',
+  'plan changes execute only through the Super Admin guarded function'
+);
+select ok(
+  pg_get_functiondef('public.admin_reseller_work_summary()'::regprocedure)
+    ilike '%normalize_hierarchy_role%'
+    and pg_get_functiondef('public.admin_reseller_work_summary()'::regprocedure)
+      ilike '%team_leader%',
+  'team leader totals count actual Team Leader staff records'
+);
+select ok(
+  (select prosecdef
+   from pg_proc
+   where oid = 'public.admin_release_reseller_payout(uuid,text)'::regprocedure)
+    and pg_get_functiondef('public.admin_release_reseller_payout(uuid,text)'::regprocedure)
+      ilike '%report_access_level%'
+    and pg_get_functiondef('public.admin_release_reseller_payout(uuid,text)'::regprocedure)
+      ilike '%super_admin%',
+  'payout release requires the guarded Super Admin function'
+);
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.admin_release_reseller_payout(uuid,text)',
+    'EXECUTE'
+  ),
+  'anonymous callers cannot release reseller payouts'
 );
 select ok(
   to_regclass('public.internal_chat_presence') is not null

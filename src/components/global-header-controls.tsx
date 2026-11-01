@@ -18,13 +18,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 type Language = LanguageCode;
-type NotificationTarget = "/chat" | "/admin/staff" | "/reports" | "/client/reports";
+type NotificationTarget =
+  | "/chat"
+  | "/admin/staff"
+  | "/reports"
+  | "/client/reports"
+  | "/staff/tasks"
+  | "/task-manager"
+  | "/admin/task-manager"
+  | "/dashboard";
 type HeaderNotification = {
   id: string;
   title: string;
   description: string;
   createdAt: string;
   target: NotificationTarget;
+  notificationId?: string;
+  taskId?: string | null;
+  reviewUrl?: string | null;
 };
 type NotificationSource = {
   items: HeaderNotification[];
@@ -741,6 +752,7 @@ async function loadNotifications(
   isSuperAdmin: boolean,
   isClient: boolean,
   preferredLanguage: Language,
+  staffRole: string | null,
 ): Promise<NotificationSource> {
   const errors: string[] = [];
   const requests: PromiseLike<HeaderNotification[]>[] = [
@@ -761,15 +773,38 @@ async function loadNotifications(
         return data.map((message) => ({
           id: `message:${message.id}`,
           title: "New chat message",
-          description: `${message.sender_role}: ${(
-            message.original_language === preferredLanguage
-              ? message.original_message
-              : message.translated_language === preferredLanguage
-                ? message.translated_message
-                : message.message
+          description: `${message.sender_role}: ${(message.original_language === preferredLanguage
+            ? message.original_message
+            : message.translated_language === preferredLanguage
+              ? message.translated_message
+              : message.message
           ).slice(0, 120)}`,
           createdAt: message.created_at,
           target: "/chat" as const,
+        }));
+      }),
+    supabase
+      .from("notifications")
+      .select("id,title,message,created_at,task_id,review_url")
+      .eq("user_id", userId)
+      .eq("is_read", false)
+      .order("created_at", { ascending: false })
+      .limit(10)
+      .then(({ data, error }) => {
+        if (error) {
+          errors.push("Broadcast notifications are unavailable.");
+          return [];
+        }
+        const target: NotificationTarget = isSuperAdmin ? "/admin/task-manager" : "/staff/tasks";
+        return data.map((notification) => ({
+          id: `broadcast:${notification.id}`,
+          notificationId: notification.id,
+          title: notification.task_id ? `Task: ${notification.title}` : notification.title,
+          description: notification.message.slice(0, 240),
+          createdAt: notification.created_at,
+          target: notification.task_id ? target : "/dashboard",
+          taskId: notification.task_id,
+          reviewUrl: notification.review_url,
         }));
       }),
   ];
@@ -835,10 +870,12 @@ export function GlobalHeaderControls({
   userId,
   isSuperAdmin,
   isClient,
+  staffRole = null,
 }: {
   userId: string;
   isSuperAdmin: boolean;
   isClient: boolean;
+  staffRole?: string | null;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -847,8 +884,15 @@ export function GlobalHeaderControls({
   const preferredLanguage = isLanguageCode(profile?.language) ? profile.language : "en";
   const [seenIds, setSeenIds] = useState<Set<string>>(() => readSeenNotifications(userId));
   const notifications = useQuery({
-    queryKey: ["global-notifications", userId, isSuperAdmin, isClient, preferredLanguage],
-    queryFn: () => loadNotifications(userId, isSuperAdmin, isClient, preferredLanguage),
+    queryKey: [
+      "global-notifications",
+      userId,
+      isSuperAdmin,
+      isClient,
+      preferredLanguage,
+      staffRole,
+    ],
+    queryFn: () => loadNotifications(userId, isSuperAdmin, isClient, preferredLanguage, staffRole),
     refetchInterval: 15_000,
   });
 
@@ -866,7 +910,7 @@ export function GlobalHeaderControls({
       const stored = localStorage.getItem(key);
       if (stored === null) {
         const baseline = notifications.data.items
-          .filter((item) => !item.id.startsWith("message:"))
+          .filter((item) => !item.id.startsWith("message:") && !item.id.startsWith("broadcast:"))
           .map((item) => item.id);
         localStorage.setItem(key, JSON.stringify(baseline));
         setSeenIds(new Set(baseline));
@@ -892,16 +936,28 @@ export function GlobalHeaderControls({
       .update({ language: next, updated_at: new Date().toISOString() })
       .eq("user_id", userId);
     if (error) {
-      setLanguage(
-        isLanguageCode(profile?.language) ? profile.language : "en",
-      );
+      setLanguage(isLanguageCode(profile?.language) ? profile.language : "en");
       toast.error("Could not save language preference. Please try again.");
       return;
     }
     await queryClient.invalidateQueries({ queryKey: ["profile"] });
   }
 
-  function markSeenAndNavigate(item: HeaderNotification) {
+  async function markSeenAndNavigate(item: HeaderNotification) {
+    if (item.notificationId) {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", item.notificationId)
+        .eq("user_id", userId);
+      if (error) {
+        toast.error(`Could not mark this notification as read: ${error.message}`);
+        return;
+      }
+      await queryClient.invalidateQueries({
+        queryKey: ["global-notifications", userId],
+      });
+    }
     const next = new Set(seenIds);
     next.add(item.id);
     setSeenIds(next);
@@ -954,7 +1010,7 @@ export function GlobalHeaderControls({
           {notifications.data?.items.map((item) => (
             <DropdownMenuItem
               key={item.id}
-              onSelect={() => markSeenAndNavigate(item)}
+              onSelect={() => void markSeenAndNavigate(item)}
               className="cursor-pointer items-start gap-3 whitespace-normal py-3"
             >
               <span
@@ -962,9 +1018,25 @@ export function GlobalHeaderControls({
               />
               <span className="min-w-0 flex-1">
                 <span className="block font-medium">{translated(item.title)}</span>
+                {item.taskId && (
+                  <span className="mt-0.5 block text-xs font-medium text-primary">
+                    Open assigned task
+                  </span>
+                )}
                 <span className="mt-0.5 block break-words text-xs text-muted-foreground">
                   {item.description}
                 </span>
+                {item.reviewUrl && (
+                  <a
+                    href={item.reviewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-block text-xs text-primary underline"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    Open Google review
+                  </a>
+                )}
                 <time className="mt-1 block text-[10px] text-muted-foreground">
                   {new Date(item.createdAt).toLocaleString()}
                 </time>

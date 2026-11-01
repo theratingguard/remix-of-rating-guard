@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { BroadcastComposer } from "@/components/broadcast-composer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -199,7 +200,7 @@ export function HierarchyDashboard({ routeRole }: { routeRole: string }) {
       <main className="min-w-0 space-y-5">
         <PageHeader
           title={HIERARCHY_ROLE_LABELS[role]}
-          description="Manage the next level of the reporting chain and assign review work to direct reports."
+          subtitle="Manage the next level of the reporting chain and assign review work to direct reports."
           action={
             childRole ? (
               <Button onClick={() => setAddOpen((open) => !open)}>
@@ -210,8 +211,13 @@ export function HierarchyDashboard({ routeRole }: { routeRole: string }) {
           }
         />
 
+        {role !== "team_member" && <BroadcastComposer />}
+
         {dashboard.isError && (
-          <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">
+          <p
+            role="alert"
+            className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive"
+          >
             {dashboard.error.message}
           </p>
         )}
@@ -225,22 +231,53 @@ export function HierarchyDashboard({ routeRole }: { routeRole: string }) {
                   The new account reports directly to you. Its role is selected by the server.
                 </p>
               </div>
-              <form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => void submitMember(event)}>
+              <form
+                className="grid gap-4 sm:grid-cols-2"
+                onSubmit={(event) => void submitMember(event)}
+              >
                 <div className="space-y-2">
                   <Label htmlFor="hierarchy-member-name">Full name</Label>
-                  <Input id="hierarchy-member-name" name="name" autoComplete="name" required maxLength={120} />
+                  <Input
+                    id="hierarchy-member-name"
+                    name="name"
+                    autoComplete="name"
+                    required
+                    maxLength={120}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="hierarchy-member-email">Email</Label>
-                  <Input id="hierarchy-member-email" name="email" type="email" autoComplete="email" required maxLength={320} />
+                  <Input
+                    id="hierarchy-member-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    maxLength={320}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="hierarchy-member-mobile">Mobile number</Label>
-                  <Input id="hierarchy-member-mobile" name="mobileNumber" type="tel" required minLength={6} maxLength={32} />
+                  <Input
+                    id="hierarchy-member-mobile"
+                    name="mobileNumber"
+                    type="tel"
+                    required
+                    minLength={6}
+                    maxLength={32}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="hierarchy-member-password">Temporary password</Label>
-                  <Input id="hierarchy-member-password" name="password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} />
+                  <Input
+                    id="hierarchy-member-password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    minLength={8}
+                    maxLength={128}
+                  />
                 </div>
                 <div className="flex gap-2 sm:col-span-2">
                   <Button type="submit" disabled={busy}>
@@ -255,11 +292,30 @@ export function HierarchyDashboard({ routeRole }: { routeRole: string }) {
           </Card>
         )}
 
-        <section aria-label="Hierarchy summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard icon={<Users aria-hidden className="size-5 text-primary" />} label="Direct reports" value={dashboard.isPending ? "…" : reports.length} />
-          <SummaryCard icon={<ClipboardList aria-hidden className="size-5 text-primary" />} label="Assigned tasks" value={dashboard.isPending ? "…" : (summary?.total_tasks ?? 0)} />
-          <SummaryCard icon={<ClipboardList aria-hidden className="size-5 text-primary" />} label="In progress" value={dashboard.isPending ? "…" : (summary?.in_progress_tasks ?? 0)} />
-          <SummaryCard icon={<ClipboardList aria-hidden className="size-5 text-primary" />} label="Completed" value={dashboard.isPending ? "…" : (summary?.completed_tasks ?? 0)} />
+        <section
+          aria-label="Hierarchy summary"
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        >
+          <SummaryCard
+            icon={<Users aria-hidden className="size-5 text-primary" />}
+            label="Direct reports"
+            value={dashboard.isPending ? "…" : reports.length}
+          />
+          <SummaryCard
+            icon={<ClipboardList aria-hidden className="size-5 text-primary" />}
+            label="Assigned tasks"
+            value={dashboard.isPending ? "…" : (summary?.total_tasks ?? 0)}
+          />
+          <SummaryCard
+            icon={<ClipboardList aria-hidden className="size-5 text-primary" />}
+            label="In progress"
+            value={dashboard.isPending ? "…" : (summary?.in_progress_tasks ?? 0)}
+          />
+          <SummaryCard
+            icon={<ClipboardList aria-hidden className="size-5 text-primary" />}
+            label="Completed"
+            value={dashboard.isPending ? "…" : (summary?.completed_tasks ?? 0)}
+          />
         </section>
 
         <Card>
@@ -296,7 +352,9 @@ export function HierarchyDashboard({ routeRole }: { routeRole: string }) {
                       <tr className="border-b last:border-0" key={member.id}>
                         <td className="py-3 pr-4 font-medium">{member.name}</td>
                         <td className="py-3 pr-4 font-mono">{member.unique_id}</td>
-                        <td className="py-3 pr-4">{HIERARCHY_ROLE_LABELS[getHierarchyRole(member.role) ?? "team_member"]}</td>
+                        <td className="py-3 pr-4">
+                          {HIERARCHY_ROLE_LABELS[getHierarchyRole(member.role) ?? "team_member"]}
+                        </td>
                         <td className="py-3 pr-4 capitalize">{member.status}</td>
                         <td className="py-3 pr-4">{member.tasks_assigned}</td>
                         <td className="py-3">
@@ -304,7 +362,9 @@ export function HierarchyDashboard({ routeRole }: { routeRole: string }) {
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() => setAssigningTo(assigningTo === member.id ? null : member.id)}
+                            onClick={() =>
+                              setAssigningTo(assigningTo === member.id ? null : member.id)
+                            }
                           >
                             Assign review
                           </Button>
@@ -323,24 +383,45 @@ export function HierarchyDashboard({ routeRole }: { routeRole: string }) {
             <CardContent className="space-y-4 p-5">
               <h2 className="font-semibold">Assign a review URL</h2>
               <p className="text-sm text-muted-foreground">
-                Assignment is restricted to the selected direct report. The review must already exist in Rating Guard.
+                Assignment is restricted to the selected direct report. The review must already
+                exist in Rating Guard.
               </p>
-              <form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => void submitTask(event, assigningTo)}>
+              <form
+                className="grid gap-4 sm:grid-cols-2"
+                onSubmit={(event) => void submitTask(event, assigningTo)}
+              >
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="hierarchy-task-url">Google review URL</Label>
-                  <Input id="hierarchy-task-url" name="reviewUrl" type="url" required maxLength={2048} placeholder="https://www.google.com/maps/…" />
+                  <Input
+                    id="hierarchy-task-url"
+                    name="reviewUrl"
+                    type="url"
+                    required
+                    maxLength={2048}
+                    placeholder="https://www.google.com/maps/…"
+                  />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="hierarchy-task-title">Task title</Label>
-                  <Input id="hierarchy-task-title" name="title" required maxLength={160} defaultValue="Review policy report" />
+                  <Input
+                    id="hierarchy-task-title"
+                    name="title"
+                    required
+                    maxLength={160}
+                    defaultValue="Review policy report"
+                  />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="hierarchy-task-description">Instructions (optional)</Label>
                   <Textarea id="hierarchy-task-description" name="description" maxLength={5000} />
                 </div>
                 <div className="flex gap-2 sm:col-span-2">
-                  <Button type="submit" disabled={busy}>{busy ? "Assigning…" : "Assign task"}</Button>
-                  <Button type="button" variant="outline" onClick={() => setAssigningTo(null)}>Cancel</Button>
+                  <Button type="submit" disabled={busy}>
+                    {busy ? "Assigning…" : "Assign task"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setAssigningTo(null)}>
+                    Cancel
+                  </Button>
                 </div>
               </form>
             </CardContent>
@@ -357,7 +438,9 @@ export function HierarchyDashboard({ routeRole }: { routeRole: string }) {
               <div>
                 <h2 className="font-semibold">Wallet</h2>
                 <p>{profile?.credits ?? 0} earned credits</p>
-                <Link className="text-sm underline" to="/staff/wallet">Open wallet</Link>
+                <Link className="text-sm underline" to="/staff/wallet">
+                  Open wallet
+                </Link>
               </div>
             </CardContent>
           </Card>
