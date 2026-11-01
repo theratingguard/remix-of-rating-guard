@@ -4,10 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ClientLayout } from "@/components/client-layout";
 import { StaffApprovalScreen } from "@/components/staff-dashboard";
 import { GlobalHeaderControls } from "@/components/global-header-controls";
-import {
-  getHierarchyDashboardPath,
-  getHierarchyRole,
-} from "@/lib/management-hierarchy";
+import { getHierarchyDashboardPath, getHierarchyRole } from "@/lib/management-hierarchy";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -21,8 +18,7 @@ export const Route = createFileRoute("/_authenticated")({
       .eq("id", data.user.id)
       .maybeSingle();
     if (staffError) throw new Error(`Could not determine staff navigation: ${staffError.message}`);
-    const accountRole =
-      data.user.app_metadata["role"] ?? data.user.user_metadata?.["role"];
+    const accountRole = data.user.app_metadata["role"] ?? data.user.user_metadata?.["role"];
     const expectsStaffProfile =
       accountRole === "staff" ||
       getHierarchyRole(accountRole) !== null ||
@@ -37,9 +33,19 @@ export const Route = createFileRoute("/_authenticated")({
     const isSuperAdmin = accessLevel === "super_admin";
     const staffRole = (staff?.role ?? "").toLowerCase().replaceAll("_", " ");
     const hierarchyRole = getHierarchyRole(staff?.role);
-    const role = data.user.app_metadata["role"];
+    const role = accountRole;
     const isClient = role === "client";
-    const isReseller = role === "reseller";
+    let isReseller = role === "reseller";
+    if (!role && !staff && !isClient) {
+      const { data: resellerProfile, error: resellerProfileError } = await supabase
+        .from("reseller_profiles")
+        .select("user_id")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+      if (resellerProfileError)
+        throw new Error(`Could not determine reseller navigation: ${resellerProfileError.message}`);
+      isReseller = Boolean(resellerProfile);
+    }
     if (location.pathname === "/dashboard") {
       if (isSuperAdmin) throw redirect({ to: "/admin/staff", replace: true });
       if (hierarchyRole)
@@ -137,8 +143,7 @@ export const Route = createFileRoute("/_authenticated")({
       "/staff/wallet",
       ...(hierarchyRole === "team_member" ? ["/staff/tasks", "/staff/evidence"] : []),
     ];
-    const hierarchyPathAllowed =
-      !hierarchyRole || hierarchyPaths.includes(location.pathname);
+    const hierarchyPathAllowed = !hierarchyRole || hierarchyPaths.includes(location.pathname);
     if (isStaff && hierarchyRole && !hierarchyPathAllowed) {
       throw redirect({ href: hierarchyDashboardPath!, replace: true });
     }

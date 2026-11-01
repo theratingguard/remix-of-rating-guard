@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { postUserCreation } from "@/lib/user-creation.client";
+import { postUserCreation } from "@/lib/user-creation";
 
 export function TeamLeaderAddStaffForm({ hasActiveTeam }: { hasActiveTeam: boolean }) {
   const [name, setName] = useState("");

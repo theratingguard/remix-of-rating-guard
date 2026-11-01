@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Building2, LoaderCircle, Plus, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,21 @@ export function ResellerWorkspaceTools() {
     refetchInterval: 30_000,
   });
   const workspace = workspaceQuery.data;
+
+  useEffect(() => {
+    const requestedAction = new URLSearchParams(window.location.search).get("workspaceAction");
+    if (
+      requestedAction === "business" ||
+      requestedAction === "leader" ||
+      requestedAction === "member"
+    ) {
+      setAction(requestedAction);
+      return;
+    }
+    if (requestedAction === "assign") {
+      document.getElementById("reseller-assign-work")?.scrollIntoView();
+    }
+  }, []);
 
   async function refreshWorkspace() {
     await queryClient.invalidateQueries({ queryKey: ["reseller-workspace"] });
@@ -171,13 +186,16 @@ export function ResellerWorkspaceTools() {
                 title={!workspace?.teamLeaders.length ? "Add a Team Leader first." : undefined}
                 onClick={() => setAction(action === "member" ? null : "member")}
               >
-                <UserPlus className="mr-2 size-4" /> Add Staff/Member
+                <UserPlus className="mr-2 size-4" /> Add Staff
               </Button>
             </div>
           </div>
 
           {workspaceQuery.error && (
-            <p role="alert" className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">
+            <p
+              role="alert"
+              className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive"
+            >
               Reseller clients and team could not be loaded: {errorText(workspaceQuery.error)}
             </p>
           )}
@@ -208,7 +226,13 @@ export function ResellerWorkspaceTools() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reseller-owner-email">Owner email</Label>
-                <Input id="reseller-owner-email" name="ownerEmail" type="email" maxLength={320} required />
+                <Input
+                  id="reseller-owner-email"
+                  name="ownerEmail"
+                  type="email"
+                  maxLength={320}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reseller-owner-mobile">Owner phone</Label>
@@ -251,11 +275,23 @@ export function ResellerWorkspaceTools() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reseller-leader-email">Login email</Label>
-                <Input id="reseller-leader-email" name="email" type="email" maxLength={320} required />
+                <Input
+                  id="reseller-leader-email"
+                  name="email"
+                  type="email"
+                  maxLength={320}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reseller-leader-mobile">Mobile number</Label>
-                <Input id="reseller-leader-mobile" name="mobileNumber" type="tel" maxLength={32} required />
+                <Input
+                  id="reseller-leader-mobile"
+                  name="mobileNumber"
+                  type="tel"
+                  maxLength={32}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reseller-leader-password">Initial password</Label>
@@ -310,11 +346,23 @@ export function ResellerWorkspaceTools() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reseller-member-email">Login email</Label>
-                <Input id="reseller-member-email" name="email" type="email" maxLength={320} required />
+                <Input
+                  id="reseller-member-email"
+                  name="email"
+                  type="email"
+                  maxLength={320}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reseller-member-mobile">Mobile number</Label>
-                <Input id="reseller-member-mobile" name="mobileNumber" type="tel" maxLength={32} required />
+                <Input
+                  id="reseller-member-mobile"
+                  name="mobileNumber"
+                  type="tel"
+                  maxLength={32}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reseller-member-password">Initial password</Label>
@@ -343,7 +391,7 @@ export function ResellerWorkspaceTools() {
         </CardContent>
       </Card>
 
-      <Card className="hover:translate-y-0">
+      <Card id="reseller-assign-work" className="scroll-mt-20 hover:translate-y-0">
         <CardContent className="p-5 sm:p-7">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
@@ -428,10 +476,17 @@ export function ResellerWorkspaceTools() {
             ) : (
               <ul className="mt-3 space-y-2">
                 {workspace.teamLeaders.map((leader) => (
-                  <li key={leader.id} className="flex flex-wrap justify-between gap-2 rounded-lg border p-3 text-sm">
+                  <li
+                    key={leader.id}
+                    className="flex flex-wrap justify-between gap-2 rounded-lg border p-3 text-sm"
+                  >
                     <span>
-                      <span className="block font-medium">{leader.name} · {leader.uniqueId}</span>
-                      <span className="text-muted-foreground">{leader.email} · {leader.status}</span>
+                      <span className="block font-medium">
+                        {leader.name} · {leader.uniqueId}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {leader.email} · {leader.status}
+                      </span>
                     </span>
                     <span className="text-muted-foreground">{leader.memberCount} members</span>
                   </li>
@@ -444,14 +499,23 @@ export function ResellerWorkspaceTools() {
           <CardContent className="p-5 sm:p-7">
             <h2 className="font-semibold">My Staff/Members</h2>
             {!workspace?.teamMembers.length ? (
-              <p className="mt-3 text-sm text-muted-foreground">No Staff/Member accounts have been added.</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                No Staff/Member accounts have been added.
+              </p>
             ) : (
               <ul className="mt-3 space-y-2">
                 {workspace.teamMembers.map((member) => (
-                  <li key={member.id} className="flex flex-wrap justify-between gap-2 rounded-lg border p-3 text-sm">
+                  <li
+                    key={member.id}
+                    className="flex flex-wrap justify-between gap-2 rounded-lg border p-3 text-sm"
+                  >
                     <span>
-                      <span className="block font-medium">{member.name} · {member.uniqueId}</span>
-                      <span className="text-muted-foreground">{member.email} · {member.status}</span>
+                      <span className="block font-medium">
+                        {member.name} · {member.uniqueId}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {member.email} · {member.status}
+                      </span>
                     </span>
                     <span className="text-muted-foreground">{member.teamLeaderName}</span>
                   </li>

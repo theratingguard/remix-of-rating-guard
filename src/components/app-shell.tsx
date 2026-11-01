@@ -15,17 +15,20 @@ import {
   Globe2,
   CircleHelp,
   Users,
+  Building2,
   ListChecks,
   HardDrive,
   CircleDollarSign,
   ClipboardList,
   UserRound,
+  Wallet,
   Activity,
   FolderLock,
   GitCommitHorizontal,
   ShieldCheck,
   MessageCircle,
   Sparkles,
+  UserPlus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -78,6 +81,26 @@ const clientNav = [{ to: "/client/outcomes", label: "Review Outcomes", Icon: Act
 const resellerNav = [
   { href: "/reseller#overview", label: "Overview", Icon: LayoutDashboard },
   { href: "/reseller#clients-team", label: "Clients & Team", Icon: Users },
+  {
+    href: "/reseller?workspaceAction=business#clients-team",
+    label: "Add Business",
+    Icon: Building2,
+  },
+  {
+    href: "/reseller?workspaceAction=leader#clients-team",
+    label: "Add Team Leader",
+    Icon: Users,
+  },
+  {
+    href: "/reseller?workspaceAction=member#clients-team",
+    label: "Add Staff",
+    Icon: UserPlus,
+  },
+  {
+    href: "/reseller?workspaceAction=assign#reseller-assign-work",
+    label: "Assign Work",
+    Icon: ClipboardList,
+  },
   { href: "/reseller#membership", label: "Membership", Icon: CircleDollarSign },
   { href: "/reseller#referral-tools", label: "Referral Tools", Icon: Users },
   { href: "/reseller#commissions", label: "Commissions", Icon: ClipboardList },
@@ -192,114 +215,124 @@ function SidebarBody({
     navigate({ to: "/auth", replace: true });
   }
   return (
-    <div className="flex h-full flex-col gap-6 p-4">
+    <div className="flex h-full min-h-0 flex-col gap-6 overflow-y-auto p-4">
       <Brand />
-      <nav className="flex flex-col gap-1" aria-label="Main navigation">
-        {isStaff && hierarchyRole ? (
-          <>
-            <Link
-              to="/dashboard/$role"
-              params={{ role: hierarchyDashboardSegment }}
-              onClick={onNavigate}
-              className="flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2 text-sm font-medium text-sidebar-accent-foreground"
-            >
-              <LayoutDashboard className="h-4 w-4 shrink-0" />
-              {HIERARCHY_ROLE_LABELS[hierarchyRole]} Dashboard
-            </Link>
-            {hierarchyRole === "team_member" && (
-              <>
-                <Link
-                  to="/staff/tasks"
-                  onClick={onNavigate}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-                  activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
-                >
-                  <ClipboardList className="h-4 w-4 shrink-0" />
-                  My Tasks
-                </Link>
-                <Link
-                  to="/staff/evidence"
-                  onClick={onNavigate}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-                  activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
-                >
-                  <FolderLock className="h-4 w-4 shrink-0" />
-                  Evidence
-                </Link>
-              </>
-            )}
-            <Link
-              to="/staff/wallet"
-              onClick={onNavigate}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-              activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
-            >
-              <CircleDollarSign className="h-4 w-4 shrink-0" />
-              Wallet
-            </Link>
-          </>
-        ) : isReseller ? (
-          <ResellerNavigation onNavigate={onNavigate} className="flex flex-col gap-1" />
-        ) : (isSuperAdmin
-          ? adminNav
-          : isClient
-            ? clientNav
-            : isStaff && staffRole?.toLowerCase() === "manager"
-              ? managerNav
-              : isStaff &&
-                  ["team leader", "team_leader", "team lead", "tl"].includes(
-                    staffRole?.toLowerCase() ?? "",
-                  )
-                ? teamLeaderNav
-                : isStaff
-                  ? staffNav
-                  : []
-        ).map((item) => {
-          const { to, label, Icon } = item;
-          const linkClass =
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
-          const activeProps = {
-            className:
-              "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
-          };
-          if ("search" in item)
-            return (
+      {isReseller ? (
+        <ResellerNavigation
+          label="Main navigation"
+          className="flex flex-col gap-1"
+          {...(onNavigate ? { onNavigate } : {})}
+        />
+      ) : (
+        <nav className="flex flex-col gap-1" aria-label="Main navigation">
+          {isStaff && hierarchyRole ? (
+            <>
               <Link
-                key={label}
-                to="/scan"
-                search={{ mode: "bulk" }}
-                activeOptions={{ exact: true, includeSearch: true }}
+                to="/dashboard/$role"
+                params={{ role: hierarchyDashboardSegment }}
                 onClick={onNavigate}
-                className={linkClass}
-                activeProps={activeProps}
+                className="flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2 text-sm font-medium text-sidebar-accent-foreground"
               >
-                <Icon className="h-4 w-4 shrink-0" /> {label}
+                <LayoutDashboard className="h-4 w-4 shrink-0" />
+                {HIERARCHY_ROLE_LABELS[hierarchyRole]} Dashboard
               </Link>
-            );
-          return (
-            <Link
-              key={label}
-              to={to}
-              {...(to === "/scan" ? { activeOptions: { exact: true, includeSearch: true } } : {})}
-              onClick={onNavigate}
-              className={linkClass}
-              activeProps={activeProps}
-            >
-              <Icon className="h-4 w-4 shrink-0" /> {label}
-              {label === "Staff Approvals" && staffPendingCount > 0 && (
-                <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">
-                  {staffPendingCount}
-                </span>
+              {hierarchyRole === "team_member" && (
+                <>
+                  <Link
+                    to="/staff/tasks"
+                    onClick={onNavigate}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                    activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
+                  >
+                    <ClipboardList className="h-4 w-4 shrink-0" />
+                    My Tasks
+                  </Link>
+                  <Link
+                    to="/staff/evidence"
+                    onClick={onNavigate}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                    activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
+                  >
+                    <FolderLock className="h-4 w-4 shrink-0" />
+                    Evidence
+                  </Link>
+                </>
               )}
-              {label === "Chats" && (unreadChats.data ?? 0) > 0 && (
-                <span className="ml-auto rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] text-white">
-                  {unreadChats.data}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </nav>
+              <Link
+                to="/staff/wallet"
+                onClick={onNavigate}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
+              >
+                <CircleDollarSign className="h-4 w-4 shrink-0" />
+                Wallet
+              </Link>
+            </>
+          ) : (
+            (isSuperAdmin
+              ? adminNav
+              : isClient
+                ? clientNav
+                : isStaff && staffRole?.toLowerCase() === "manager"
+                  ? managerNav
+                  : isStaff &&
+                      ["team leader", "team_leader", "team lead", "tl"].includes(
+                        staffRole?.toLowerCase() ?? "",
+                      )
+                    ? teamLeaderNav
+                    : isStaff
+                      ? staffNav
+                      : []
+            ).map((item) => {
+              const { to, label, Icon } = item;
+              const linkClass =
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent";
+              const activeProps = {
+                className:
+                  "bg-sidebar-accent !text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--primary)]",
+              };
+              if ("search" in item)
+                return (
+                  <Link
+                    key={label}
+                    to="/scan"
+                    search={{ mode: "bulk" }}
+                    activeOptions={{ exact: true, includeSearch: true }}
+                    onClick={onNavigate}
+                    className={linkClass}
+                    activeProps={activeProps}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" /> {label}
+                  </Link>
+                );
+              return (
+                <Link
+                  key={label}
+                  to={to}
+                  {...(to === "/scan"
+                    ? { activeOptions: { exact: true, includeSearch: true } }
+                    : {})}
+                  onClick={onNavigate}
+                  className={linkClass}
+                  activeProps={activeProps}
+                >
+                  <Icon className="h-4 w-4 shrink-0" /> {label}
+                  {label === "Staff Approvals" && staffPendingCount > 0 && (
+                    <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">
+                      {staffPendingCount}
+                    </span>
+                  )}
+                  {label === "Chats" && (unreadChats.data ?? 0) > 0 && (
+                    <span className="ml-auto rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] text-white">
+                      {unreadChats.data}
+                    </span>
+                  )}
+                </Link>
+              );
+            })
+          )}
+        </nav>
+      )}
       {!isSuperAdmin ? (
         <div className="mt-auto border-t pt-4">
           <Link

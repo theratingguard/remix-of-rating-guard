@@ -88,7 +88,7 @@ describe("AppShell role navigation", () => {
     expect(screen.queryByText("Settings")).not.toBeInTheDocument();
   });
 
-  it("renders manager-only team and task navigation", () => {
+  it("renders team-manager dashboard navigation without elevated task controls", () => {
     render(
       <AppShell
         email="manager@example.com"
@@ -108,17 +108,14 @@ describe("AppShell role navigation", () => {
         .getAllByRole("link")
         .map((link) => [link.textContent?.trim(), link.getAttribute("href")]),
     ).toEqual([
-      ["Manager Dashboard", "/manager"],
-      ["Task Manager", "/task-manager"],
-      ["Earnings", "/staff/wallet"],
-      ["Profile", "/profile"],
-      ["Chats", "/chat"],
+      ["Team Manager Dashboard", "/dashboard/$role"],
+      ["Wallet", "/staff/wallet"],
     ]);
-    expect(navigation.queryByText("Team Leader Dashboard")).not.toBeInTheDocument();
+    expect(navigation.queryByText("Task Manager")).not.toBeInTheDocument();
     expect(navigation.queryByText("Team Management")).not.toBeInTheDocument();
   });
 
-  it("renders team-leader workflow navigation without staff removal controls", () => {
+  it("renders team-leader dashboard navigation without team-manager controls", () => {
     render(
       <AppShell
         email="leader@example.com"
@@ -138,13 +135,11 @@ describe("AppShell role navigation", () => {
         .getAllByRole("link")
         .map((link) => [link.textContent?.trim(), link.getAttribute("href")]),
     ).toEqual([
-      ["Team Leader Dashboard", "/team-leader"],
-      ["Task Manager", "/task-manager"],
-      ["My Tasks", "/staff/tasks"],
-      ["Earnings", "/staff/wallet"],
-      ["Profile", "/profile"],
-      ["Chats", "/chat"],
+      ["Team Leader Dashboard", "/dashboard/$role"],
+      ["Wallet", "/staff/wallet"],
     ]);
+    expect(navigation.queryByText("Task Manager")).not.toBeInTheDocument();
+    expect(navigation.queryByText("My Tasks")).not.toBeInTheDocument();
     expect(navigation.queryByText("Staff Approvals")).not.toBeInTheDocument();
     expect(navigation.queryByText("Team Management")).not.toBeInTheDocument();
   });
@@ -239,6 +234,10 @@ describe("AppShell role navigation", () => {
     ).toEqual([
       ["Overview", "/reseller#overview"],
       ["Clients & Team", "/reseller#clients-team"],
+      ["Add Business", "/reseller?workspaceAction=business#clients-team"],
+      ["Add Team Leader", "/reseller?workspaceAction=leader#clients-team"],
+      ["Add Staff", "/reseller?workspaceAction=member#clients-team"],
+      ["Assign Work", "/reseller?workspaceAction=assign#reseller-assign-work"],
       ["Membership", "/reseller#membership"],
       ["Referral Tools", "/reseller#referral-tools"],
       ["Commissions", "/reseller#commissions"],
@@ -247,11 +246,13 @@ describe("AppShell role navigation", () => {
     ]);
 
     const mobileNavigation = within(screen.getByRole("navigation", { name: "Reseller modules" }));
-    expect(
-      mobileNavigation.getAllByRole("link").map((link) => link.textContent?.trim()),
-    ).toEqual([
+    expect(mobileNavigation.getAllByRole("link").map((link) => link.textContent?.trim())).toEqual([
       "Overview",
       "Clients & Team",
+      "Add Business",
+      "Add Team Leader",
+      "Add Staff",
+      "Assign Work",
       "Membership",
       "Referral Tools",
       "Commissions",

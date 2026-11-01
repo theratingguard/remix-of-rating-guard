@@ -58,6 +58,7 @@ import { ResellerWorkspaceTools } from "./reseller-workspace-tools";
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState({}, "", "/");
   vi.clearAllMocks();
 });
 
@@ -86,9 +87,20 @@ describe("Reseller workspace actions", () => {
     cleanup();
 
     render(<ResellerWorkspaceTools />);
-    fireEvent.click(screen.getByRole("button", { name: "Add Staff/Member" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add Staff" }));
     expect(screen.getByLabelText("Team Leader")).toBeInTheDocument();
     expect(screen.getByLabelText("Staff/Member name")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["business", "Business name"],
+    ["leader", "Team Leader name"],
+    ["member", "Staff/Member name"],
+  ])("opens the %s form from a sidebar action link", (action, label) => {
+    window.history.replaceState({}, "", `/reseller?workspaceAction=${action}#clients-team`);
+    render(<ResellerWorkspaceTools />);
+
+    expect(screen.getByLabelText(label)).toBeInTheDocument();
   });
 
   it("offers a business assignment selector for a reseller Team Leader", () => {

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getUserCreationOptions } from "@/lib/user-creation.functions";
-import { postUserCreation } from "@/lib/user-creation.client";
+import { postUserCreation } from "@/lib/user-creation";
 
 type UserRole = "Global Manager" | "Team Leader" | "Staff";
 
@@ -66,8 +66,7 @@ export function SuperAdminAddUserForm({ onCreated }: { onCreated: () => Promise<
     }
   }
 
-  const missingAssignment =
-    (role === "Staff" && !teamId) || (role === "Team Leader" && !managerId);
+  const missingAssignment = (role === "Staff" && !teamId) || (role === "Team Leader" && !managerId);
 
   return (
     <section className="surface space-y-4 p-4 sm:p-6">
@@ -218,7 +217,9 @@ export function SuperAdminAddUserForm({ onCreated }: { onCreated: () => Promise<
         <div className="sm:col-span-2">
           <Button
             type="submit"
-            disabled={busy || !mobileNumber.trim() || !photo || missingAssignment || !!options.error}
+            disabled={
+              busy || !mobileNumber.trim() || !photo || missingAssignment || !!options.error
+            }
           >
             {busy && <LoaderCircle className="mr-2 size-4 animate-spin" aria-hidden />}
             {busy ? "Creating account…" : "Add User"}

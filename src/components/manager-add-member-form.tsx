@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { postUserCreation } from "@/lib/user-creation.client";
+import { postUserCreation } from "@/lib/user-creation";
 
 type CreatedMember = {
   unique_id: string;
@@ -61,8 +61,8 @@ export function ManagerAddMemberForm({ onCreated }: { onCreated: () => Promise<v
         <div>
           <h2 className="font-semibold">Add Member</h2>
           <p className="text-sm text-muted-foreground">
-            Team Managers can add only direct-report Team Leaders. New accounts remain pending
-            until approved by a Super Admin.
+            Team Managers can add only direct-report Team Leaders. New accounts remain pending until
+            approved by a Super Admin.
           </p>
         </div>
         {createdMember && (

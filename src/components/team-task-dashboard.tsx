@@ -92,13 +92,9 @@ function useTeamData(mode: Mode) {
       const teamIds = scopedTeams.map((team) => team.id);
       let members: TeamMember[] = [];
       let tasks: Task[] = [];
-      const isTeamManager = [
-        "manager",
-        "team manager",
-        "team leader",
-        "team lead",
-        "tl",
-      ].includes(role);
+      const isTeamManager = ["manager", "team manager", "team leader", "team lead", "tl"].includes(
+        role,
+      );
       if (teamIds.length > 0 || isSuperadmin || isTeamManager) {
         let taskQuery = supabase.from("tasks").select("*");
         if (!isSuperadmin) taskQuery = taskQuery.in("team_id", teamIds);
@@ -266,7 +262,8 @@ function TasksList({
                 {task.deadline_at && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     Deadline: {new Date(task.deadline_at).toLocaleString()}
-                  )}
+                  </p>
+                )}
                 {task.status_note && (
                   <p className="mt-2 text-sm text-destructive">Note: {task.status_note}</p>
                 )}
@@ -340,9 +337,9 @@ function Earnings({ entries }: { entries: Earning[] }) {
 export function TeamTaskDashboard({ mode }: { mode: Mode }) {
   const queryClient = useQueryClient();
   const query = useTeamData(mode);
-  const [managerSection, setManagerSection] = useState<
-    "overview" | "leaders" | "staff" | "tasks"
-  >("overview");
+  const [managerSection, setManagerSection] = useState<"overview" | "leaders" | "staff" | "tasks">(
+    "overview",
+  );
   const data = query.data;
   const assignedTasks = data?.tasks ?? [];
   const completed = assignedTasks.filter((task) => task.status === "completed").length;
@@ -468,9 +465,7 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
                   key={staff.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
                 >
-                  <span>
-                    User ID: {staff.unique_id}
-                  </span>
+                  <span>User ID: {staff.unique_id}</span>
                   <Button size="sm" onClick={() => void addStaff(staff.id)}>
                     Assign to my team
                   </Button>
@@ -514,12 +509,14 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
         }
       />
       <nav aria-label="Manager dashboard sections" className="flex flex-wrap gap-2 border-b pb-3">
-        {([
-          ["overview", "Overview"],
-          ["leaders", "My Team Leaders"],
-          ["staff", "My Staff"],
-          ["tasks", "Task Tracking"],
-        ] as const).map(([section, label]) => (
+        {(
+          [
+            ["overview", "Overview"],
+            ["leaders", "My Team Leaders"],
+            ["staff", "My Staff"],
+            ["tasks", "Task Tracking"],
+          ] as const
+        ).map(([section, label]) => (
           <Button
             key={section}
             size="sm"
@@ -546,8 +543,8 @@ export function TeamTaskDashboard({ mode }: { mode: Mode }) {
           <Earnings entries={data.earnings} />
           <p className="text-sm text-muted-foreground">
             Approval decisions and any evidence-based review actions remain with authorized
-            administrators. Task completion does not establish that a third-party review violates
-            a platform policy.
+            administrators. Task completion does not establish that a third-party review violates a
+            platform policy.
           </p>
         </>
       )}
@@ -588,9 +585,7 @@ function ManagerStaffGroups({ rows, teams }: { rows: TeamMember[]; teams: Team[]
     const assignedLeaderIds = new Set(teams.map((team) => team.team_leader_id));
     for (const row of rows) {
       if (
-        ["team leader", "team lead", "tl"].includes(
-          row.role.toLowerCase().replaceAll("_", " "),
-        ) &&
+        ["team leader", "team lead", "tl"].includes(row.role.toLowerCase().replaceAll("_", " ")) &&
         assignedLeaderIds.has(row.id) &&
         row.team_id
       )
@@ -604,7 +599,7 @@ function ManagerStaffGroups({ rows, teams }: { rows: TeamMember[]; teams: Team[]
         )
       )
         continue;
-      const leader = row.team_id ? leaders.get(row.team_id) ?? null : null;
+      const leader = row.team_id ? (leaders.get(row.team_id) ?? null) : null;
       const key = row.team_id ?? "unassigned";
       const current = grouped.get(key) ?? { leader, staff: [] };
       current.staff.push(row);
@@ -619,7 +614,9 @@ function ManagerStaffGroups({ rows, teams }: { rows: TeamMember[]; teams: Team[]
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">My Staff</h2>
-        <p className="text-sm text-muted-foreground">Staff are grouped by their visible team leader.</p>
+        <p className="text-sm text-muted-foreground">
+          Staff are grouped by their visible team leader.
+        </p>
       </div>
       {groups.length === 0 ? (
         <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -635,7 +632,8 @@ function ManagerStaffGroups({ rows, teams }: { rows: TeamMember[]; teams: Team[]
                 </h3>
                 {leader && (
                   <span className="rounded-full border px-2.5 py-1 text-xs capitalize">
-                    Leader · {leader.status === "pending" ? "Pending Super Admin Approval" : leader.status}
+                    Leader ·{" "}
+                    {leader.status === "pending" ? "Pending Super Admin Approval" : leader.status}
                   </span>
                 )}
               </div>
@@ -682,14 +680,23 @@ function ManagerTaskTracker({ tasks, members }: { tasks: Task[]; members: TeamMe
                   <td className="p-3 font-medium">{task.title}</td>
                   <td className="max-w-xs break-all p-3">
                     {task.review_url ? (
-                      <a href={task.review_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                      <a
+                        href={task.review_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline"
+                      >
                         Open URL
                       </a>
-                    ) : "—"}
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="p-3">{byId.get(task.assigned_to)?.unique_id ?? "Staff member"}</td>
                   <td className="p-3 capitalize">{task.status.replaceAll("_", " ")}</td>
-                  <td className="whitespace-nowrap p-3">{new Date(task.updated_at).toLocaleString()}</td>
+                  <td className="whitespace-nowrap p-3">
+                    {new Date(task.updated_at).toLocaleString()}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -965,7 +972,7 @@ function TaskManagerForm({
                           )
                         }
                       />
-                      {(data.isSuperadmin ? member.name ?? member.unique_id : member.unique_id)} ·{" "}
+                      {data.isSuperadmin ? (member.name ?? member.unique_id) : member.unique_id} ·{" "}
                       {member.role}
                     </label>
                   ))}

@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function postUserCreation<T>(path: string, data: unknown): Promise<T> {
+  if (typeof window === "undefined")
+    throw new Error("User creation requests must be sent from a browser session.");
+
   const { data: authData, error: authError } = await supabase.auth.getSession();
   if (authError) throw new Error(`Could not verify your session: ${authError.message}`);
   if (!authData.session) throw new Error("Sign in before creating a user.");

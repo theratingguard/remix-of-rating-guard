@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as GetStartedRouteImport } from './routes/get-started'
@@ -22,7 +23,6 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedClientRouteRouteImport } from './routes/_authenticated/client/route'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedDashboardRoleRouteImport } from './routes/_authenticated/dashboard.$role'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedHomepagePreviewRouteImport } from './routes/_authenticated/homepage-preview'
 import { Route as AuthenticatedManagerRouteImport } from './routes/_authenticated/manager'
@@ -38,8 +38,11 @@ import { Route as AuthenticatedTaskManagerRouteImport } from './routes/_authenti
 import { Route as AuthenticatedTeamLeaderRouteImport } from './routes/_authenticated/team-leader'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiScanWorkerRouteImport } from './routes/api/scan-worker'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ResellerRegisterRouteImport } from './routes/reseller.register'
 import { Route as StaffRegisterRouteImport } from './routes/staff.register'
+import { Route as LocaleServiceSlugRouteImport } from './routes/$locale.service.$slug'
 import { Route as AuthenticatedAdminAssignRouteImport } from './routes/_authenticated/admin.assign'
 import { Route as AuthenticatedAdminCaseAssignmentRouteImport } from './routes/_authenticated/admin.case-assignment'
 import { Route as AuthenticatedAdminCasesRouteImport } from './routes/_authenticated/admin.cases'
@@ -56,6 +59,7 @@ import { Route as AuthenticatedClientOutcomesRouteImport } from './routes/_authe
 import { Route as AuthenticatedClientReportsRouteImport } from './routes/_authenticated/client/reports'
 import { Route as AuthenticatedClientScanRouteImport } from './routes/_authenticated/client/scan'
 import { Route as AuthenticatedClientSettingsRouteImport } from './routes/_authenticated/client/settings'
+import { Route as AuthenticatedDashboardRoleRouteImport } from './routes/_authenticated/dashboard.$role'
 import { Route as AuthenticatedInvestigatorCasesRouteImport } from './routes/_authenticated/investigator.cases'
 import { Route as AuthenticatedInvestigatorLoginRouteImport } from './routes/_authenticated/investigator.login'
 import { Route as AuthenticatedInvestigatorProfileRouteImport } from './routes/_authenticated/investigator.profile'
@@ -77,19 +81,25 @@ import { Route as AuthenticatedStaffTasksRouteImport } from './routes/_authentic
 import { Route as AuthenticatedStaffTimelineRouteImport } from './routes/_authenticated/staff.timeline'
 import { Route as AuthenticatedStaffTodayRouteImport } from './routes/_authenticated/staff.today'
 import { Route as AuthenticatedStaffWalletRouteImport } from './routes/_authenticated/staff.wallet'
+import { Route as ApiAdminGenerateBacklinkOutreachRouteImport } from './routes/api/admin/generate-backlink-outreach'
+import { Route as ApiAdminGenerateBlogRouteImport } from './routes/api/admin/generate-blog'
 import { Route as ApiExtensionReportRouteImport } from './routes/api/extension/report'
 import { Route as ApiExtensionStatusRouteImport } from './routes/api/extension/status'
 import { Route as ApiExtensionSubmissionRouteImport } from './routes/api/extension/submission'
 import { Route as ApiHierarchyAddMemberRouteImport } from './routes/api/hierarchy/add-member'
 import { Route as ApiHierarchyAssignTaskRouteImport } from './routes/api/hierarchy/assign-task'
 import { Route as ApiHierarchyGetTeamRouteImport } from './routes/api/hierarchy/get-team'
+import { Route as ApiManagerAddMemberRouteImport } from './routes/api/manager/add-member'
 import { Route as ApiStaffGeocodeRouteImport } from './routes/api/staff/geocode'
 import { Route as ApiStorageDeleteRouteImport } from './routes/api/storage/delete'
 import { Route as ApiStorageDownloadRouteImport } from './routes/api/storage/download'
 import { Route as ApiStorageListRouteImport } from './routes/api/storage/list'
 import { Route as ApiStorageStatsRouteImport } from './routes/api/storage/stats'
 import { Route as ApiStorageUploadRouteImport } from './routes/api/storage/upload'
+import { Route as ApiSuperAdminAddUserRouteImport } from './routes/api/super-admin/add-user'
+import { Route as ApiTeamLeaderAddStaffRouteImport } from './routes/api/team-leader/add-staff'
 import { Route as ApiWorkersStatusRouteImport } from './routes/api/workers/status'
+import { Route as RemoveGoogleReviewCountryCityRouteImport } from './routes/remove-google-review.$country.$city'
 import { Route as AuthenticatedAdminInvestigatorsIdRouteImport } from './routes/_authenticated/admin.investigators.$id'
 import { Route as AuthenticatedAdminStaffIdRouteImport } from './routes/_authenticated/admin.staff.$id'
 import { Route as ApiExtensionReportIdRouteImport } from './routes/api/extension/report.$id'
@@ -102,6 +112,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -160,12 +175,6 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedDashboardRoleRoute =
-  AuthenticatedDashboardRoleRouteImport.update({
-    id: '/dashboard/$role',
-    path: '/dashboard/$role',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   id: '/history',
   path: '/history',
@@ -245,6 +254,16 @@ const ApiScanWorkerRoute = ApiScanWorkerRouteImport.update({
   path: '/api/scan-worker',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResellerRegisterRoute = ResellerRegisterRouteImport.update({
   id: '/reseller/register',
   path: '/reseller/register',
@@ -253,6 +272,11 @@ const ResellerRegisterRoute = ResellerRegisterRouteImport.update({
 const StaffRegisterRoute = StaffRegisterRouteImport.update({
   id: '/staff/register',
   path: '/staff/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocaleServiceSlugRoute = LocaleServiceSlugRouteImport.update({
+  id: '/$locale/service/$slug',
+  path: '/$locale/service/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminAssignRoute =
@@ -347,6 +371,12 @@ const AuthenticatedClientSettingsRoute =
     id: '/settings',
     path: '/settings',
     getParentRoute: () => AuthenticatedClientRouteRoute,
+  } as any)
+const AuthenticatedDashboardRoleRoute =
+  AuthenticatedDashboardRoleRouteImport.update({
+    id: '/$role',
+    path: '/$role',
+    getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
 const AuthenticatedInvestigatorCasesRoute =
   AuthenticatedInvestigatorCasesRouteImport.update({
@@ -470,6 +500,17 @@ const AuthenticatedStaffWalletRoute =
     path: '/staff/wallet',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiAdminGenerateBacklinkOutreachRoute =
+  ApiAdminGenerateBacklinkOutreachRouteImport.update({
+    id: '/api/admin/generate-backlink-outreach',
+    path: '/api/admin/generate-backlink-outreach',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAdminGenerateBlogRoute = ApiAdminGenerateBlogRouteImport.update({
+  id: '/api/admin/generate-blog',
+  path: '/api/admin/generate-blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiExtensionReportRoute = ApiExtensionReportRouteImport.update({
   id: '/api/extension/report',
   path: '/api/extension/report',
@@ -498,6 +539,11 @@ const ApiHierarchyAssignTaskRoute = ApiHierarchyAssignTaskRouteImport.update({
 const ApiHierarchyGetTeamRoute = ApiHierarchyGetTeamRouteImport.update({
   id: '/api/hierarchy/get-team',
   path: '/api/hierarchy/get-team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiManagerAddMemberRoute = ApiManagerAddMemberRouteImport.update({
+  id: '/api/manager/add-member',
+  path: '/api/manager/add-member',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStaffGeocodeRoute = ApiStaffGeocodeRouteImport.update({
@@ -530,11 +576,27 @@ const ApiStorageUploadRoute = ApiStorageUploadRouteImport.update({
   path: '/api/storage/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSuperAdminAddUserRoute = ApiSuperAdminAddUserRouteImport.update({
+  id: '/api/super-admin/add-user',
+  path: '/api/super-admin/add-user',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTeamLeaderAddStaffRoute = ApiTeamLeaderAddStaffRouteImport.update({
+  id: '/api/team-leader/add-staff',
+  path: '/api/team-leader/add-staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWorkersStatusRoute = ApiWorkersStatusRouteImport.update({
   id: '/api/workers/status',
   path: '/api/workers/status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RemoveGoogleReviewCountryCityRoute =
+  RemoveGoogleReviewCountryCityRouteImport.update({
+    id: '/remove-google-review/$country/$city',
+    path: '/remove-google-review/$country/$city',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAdminInvestigatorsIdRoute =
   AuthenticatedAdminInvestigatorsIdRouteImport.update({
     id: '/$id',
@@ -561,6 +623,7 @@ const ApiPublicHooksScanWorkerRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/get-started': typeof GetStartedRoute
@@ -571,8 +634,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/client': typeof AuthenticatedClientRouteRouteWithChildren
   '/chat': typeof AuthenticatedChatRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/dashboard/$role': typeof AuthenticatedDashboardRoleRoute
+  '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/manager': typeof AuthenticatedManagerRoute
@@ -588,8 +650,11 @@ export interface FileRoutesByFullPath {
   '/team-leader': typeof AuthenticatedTeamLeaderRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
+  '/blog/': typeof BlogIndexRoute
+  '/$locale/service/$slug': typeof LocaleServiceSlugRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/admin/cases': typeof AuthenticatedAdminCasesRoute
@@ -606,6 +671,7 @@ export interface FileRoutesByFullPath {
   '/client/reports': typeof AuthenticatedClientReportsRoute
   '/client/scan': typeof AuthenticatedClientScanRoute
   '/client/settings': typeof AuthenticatedClientSettingsRoute
+  '/dashboard/$role': typeof AuthenticatedDashboardRoleRoute
   '/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
   '/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
   '/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
@@ -626,19 +692,25 @@ export interface FileRoutesByFullPath {
   '/staff/timeline': typeof AuthenticatedStaffTimelineRoute
   '/staff/today': typeof AuthenticatedStaffTodayRoute
   '/staff/wallet': typeof AuthenticatedStaffWalletRoute
+  '/api/admin/generate-backlink-outreach': typeof ApiAdminGenerateBacklinkOutreachRoute
+  '/api/admin/generate-blog': typeof ApiAdminGenerateBlogRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
   '/api/hierarchy/add-member': typeof ApiHierarchyAddMemberRoute
   '/api/hierarchy/assign-task': typeof ApiHierarchyAssignTaskRoute
   '/api/hierarchy/get-team': typeof ApiHierarchyGetTeamRoute
+  '/api/manager/add-member': typeof ApiManagerAddMemberRoute
   '/api/staff/geocode': typeof ApiStaffGeocodeRoute
   '/api/storage/delete': typeof ApiStorageDeleteRoute
   '/api/storage/download': typeof ApiStorageDownloadRoute
   '/api/storage/list': typeof ApiStorageListRoute
   '/api/storage/stats': typeof ApiStorageStatsRoute
   '/api/storage/upload': typeof ApiStorageUploadRoute
+  '/api/super-admin/add-user': typeof ApiSuperAdminAddUserRoute
+  '/api/team-leader/add-staff': typeof ApiTeamLeaderAddStaffRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
+  '/remove-google-review/$country/$city': typeof RemoveGoogleReviewCountryCityRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
   '/admin/investigators/$id': typeof AuthenticatedAdminInvestigatorsIdRoute
   '/admin/staff/$id': typeof AuthenticatedAdminStaffIdRoute
@@ -647,6 +719,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/get-started': typeof GetStartedRoute
@@ -657,8 +730,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/client': typeof AuthenticatedClientRouteRouteWithChildren
   '/chat': typeof AuthenticatedChatRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/dashboard/$role': typeof AuthenticatedDashboardRoleRoute
+  '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/history': typeof AuthenticatedHistoryRoute
   '/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/manager': typeof AuthenticatedManagerRoute
@@ -674,8 +746,11 @@ export interface FileRoutesByTo {
   '/team-leader': typeof AuthenticatedTeamLeaderRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
+  '/blog': typeof BlogIndexRoute
+  '/$locale/service/$slug': typeof LocaleServiceSlugRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/admin/cases': typeof AuthenticatedAdminCasesRoute
@@ -692,6 +767,7 @@ export interface FileRoutesByTo {
   '/client/reports': typeof AuthenticatedClientReportsRoute
   '/client/scan': typeof AuthenticatedClientScanRoute
   '/client/settings': typeof AuthenticatedClientSettingsRoute
+  '/dashboard/$role': typeof AuthenticatedDashboardRoleRoute
   '/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
   '/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
   '/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
@@ -712,19 +788,25 @@ export interface FileRoutesByTo {
   '/staff/timeline': typeof AuthenticatedStaffTimelineRoute
   '/staff/today': typeof AuthenticatedStaffTodayRoute
   '/staff/wallet': typeof AuthenticatedStaffWalletRoute
+  '/api/admin/generate-backlink-outreach': typeof ApiAdminGenerateBacklinkOutreachRoute
+  '/api/admin/generate-blog': typeof ApiAdminGenerateBlogRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
   '/api/hierarchy/add-member': typeof ApiHierarchyAddMemberRoute
   '/api/hierarchy/assign-task': typeof ApiHierarchyAssignTaskRoute
   '/api/hierarchy/get-team': typeof ApiHierarchyGetTeamRoute
+  '/api/manager/add-member': typeof ApiManagerAddMemberRoute
   '/api/staff/geocode': typeof ApiStaffGeocodeRoute
   '/api/storage/delete': typeof ApiStorageDeleteRoute
   '/api/storage/download': typeof ApiStorageDownloadRoute
   '/api/storage/list': typeof ApiStorageListRoute
   '/api/storage/stats': typeof ApiStorageStatsRoute
   '/api/storage/upload': typeof ApiStorageUploadRoute
+  '/api/super-admin/add-user': typeof ApiSuperAdminAddUserRoute
+  '/api/team-leader/add-staff': typeof ApiTeamLeaderAddStaffRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
+  '/remove-google-review/$country/$city': typeof RemoveGoogleReviewCountryCityRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
   '/admin/investigators/$id': typeof AuthenticatedAdminInvestigatorsIdRoute
   '/admin/staff/$id': typeof AuthenticatedAdminStaffIdRoute
@@ -735,6 +817,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/get-started': typeof GetStartedRoute
@@ -745,8 +828,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_authenticated/client': typeof AuthenticatedClientRouteRouteWithChildren
   '/_authenticated/chat': typeof AuthenticatedChatRoute
-  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/dashboard/$role': typeof AuthenticatedDashboardRoleRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/homepage-preview': typeof AuthenticatedHomepagePreviewRoute
   '/_authenticated/manager': typeof AuthenticatedManagerRoute
@@ -762,8 +844,11 @@ export interface FileRoutesById {
   '/_authenticated/team-leader': typeof AuthenticatedTeamLeaderRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
+  '/blog/': typeof BlogIndexRoute
+  '/$locale/service/$slug': typeof LocaleServiceSlugRoute
   '/_authenticated/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/_authenticated/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
   '/_authenticated/admin/cases': typeof AuthenticatedAdminCasesRoute
@@ -780,6 +865,7 @@ export interface FileRoutesById {
   '/_authenticated/client/reports': typeof AuthenticatedClientReportsRoute
   '/_authenticated/client/scan': typeof AuthenticatedClientScanRoute
   '/_authenticated/client/settings': typeof AuthenticatedClientSettingsRoute
+  '/_authenticated/dashboard/$role': typeof AuthenticatedDashboardRoleRoute
   '/_authenticated/investigator/cases': typeof AuthenticatedInvestigatorCasesRoute
   '/_authenticated/investigator/login': typeof AuthenticatedInvestigatorLoginRoute
   '/_authenticated/investigator/profile': typeof AuthenticatedInvestigatorProfileRoute
@@ -800,19 +886,25 @@ export interface FileRoutesById {
   '/_authenticated/staff/timeline': typeof AuthenticatedStaffTimelineRoute
   '/_authenticated/staff/today': typeof AuthenticatedStaffTodayRoute
   '/_authenticated/staff/wallet': typeof AuthenticatedStaffWalletRoute
+  '/api/admin/generate-backlink-outreach': typeof ApiAdminGenerateBacklinkOutreachRoute
+  '/api/admin/generate-blog': typeof ApiAdminGenerateBlogRoute
   '/api/extension/report': typeof ApiExtensionReportRouteWithChildren
   '/api/extension/status': typeof ApiExtensionStatusRoute
   '/api/extension/submission': typeof ApiExtensionSubmissionRoute
   '/api/hierarchy/add-member': typeof ApiHierarchyAddMemberRoute
   '/api/hierarchy/assign-task': typeof ApiHierarchyAssignTaskRoute
   '/api/hierarchy/get-team': typeof ApiHierarchyGetTeamRoute
+  '/api/manager/add-member': typeof ApiManagerAddMemberRoute
   '/api/staff/geocode': typeof ApiStaffGeocodeRoute
   '/api/storage/delete': typeof ApiStorageDeleteRoute
   '/api/storage/download': typeof ApiStorageDownloadRoute
   '/api/storage/list': typeof ApiStorageListRoute
   '/api/storage/stats': typeof ApiStorageStatsRoute
   '/api/storage/upload': typeof ApiStorageUploadRoute
+  '/api/super-admin/add-user': typeof ApiSuperAdminAddUserRoute
+  '/api/team-leader/add-staff': typeof ApiTeamLeaderAddStaffRoute
   '/api/workers/status': typeof ApiWorkersStatusRoute
+  '/remove-google-review/$country/$city': typeof RemoveGoogleReviewCountryCityRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
   '/_authenticated/admin/investigators/$id': typeof AuthenticatedAdminInvestigatorsIdRoute
   '/_authenticated/admin/staff/$id': typeof AuthenticatedAdminStaffIdRoute
@@ -823,6 +915,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/auth'
     | '/contact'
     | '/get-started'
@@ -834,7 +927,6 @@ export interface FileRouteTypes {
     | '/client'
     | '/chat'
     | '/dashboard'
-    | '/dashboard/$role'
     | '/history'
     | '/homepage-preview'
     | '/manager'
@@ -850,8 +942,11 @@ export interface FileRouteTypes {
     | '/team-leader'
     | '/api/health'
     | '/api/scan-worker'
+    | '/blog/$slug'
     | '/reseller/register'
     | '/staff/register'
+    | '/blog/'
+    | '/$locale/service/$slug'
     | '/admin/assign'
     | '/admin/case-assignment'
     | '/admin/cases'
@@ -868,6 +963,7 @@ export interface FileRouteTypes {
     | '/client/reports'
     | '/client/scan'
     | '/client/settings'
+    | '/dashboard/$role'
     | '/investigator/cases'
     | '/investigator/login'
     | '/investigator/profile'
@@ -888,19 +984,25 @@ export interface FileRouteTypes {
     | '/staff/timeline'
     | '/staff/today'
     | '/staff/wallet'
+    | '/api/admin/generate-backlink-outreach'
+    | '/api/admin/generate-blog'
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
     | '/api/hierarchy/add-member'
     | '/api/hierarchy/assign-task'
     | '/api/hierarchy/get-team'
+    | '/api/manager/add-member'
     | '/api/staff/geocode'
     | '/api/storage/delete'
     | '/api/storage/download'
     | '/api/storage/list'
     | '/api/storage/stats'
     | '/api/storage/upload'
+    | '/api/super-admin/add-user'
+    | '/api/team-leader/add-staff'
     | '/api/workers/status'
+    | '/remove-google-review/$country/$city'
     | '/reports/'
     | '/admin/investigators/$id'
     | '/admin/staff/$id'
@@ -909,6 +1011,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/auth'
     | '/contact'
     | '/get-started'
@@ -920,7 +1023,6 @@ export interface FileRouteTypes {
     | '/client'
     | '/chat'
     | '/dashboard'
-    | '/dashboard/$role'
     | '/history'
     | '/homepage-preview'
     | '/manager'
@@ -936,8 +1038,11 @@ export interface FileRouteTypes {
     | '/team-leader'
     | '/api/health'
     | '/api/scan-worker'
+    | '/blog/$slug'
     | '/reseller/register'
     | '/staff/register'
+    | '/blog'
+    | '/$locale/service/$slug'
     | '/admin/assign'
     | '/admin/case-assignment'
     | '/admin/cases'
@@ -954,6 +1059,7 @@ export interface FileRouteTypes {
     | '/client/reports'
     | '/client/scan'
     | '/client/settings'
+    | '/dashboard/$role'
     | '/investigator/cases'
     | '/investigator/login'
     | '/investigator/profile'
@@ -974,19 +1080,25 @@ export interface FileRouteTypes {
     | '/staff/timeline'
     | '/staff/today'
     | '/staff/wallet'
+    | '/api/admin/generate-backlink-outreach'
+    | '/api/admin/generate-blog'
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
     | '/api/hierarchy/add-member'
     | '/api/hierarchy/assign-task'
     | '/api/hierarchy/get-team'
+    | '/api/manager/add-member'
     | '/api/staff/geocode'
     | '/api/storage/delete'
     | '/api/storage/download'
     | '/api/storage/list'
     | '/api/storage/stats'
     | '/api/storage/upload'
+    | '/api/super-admin/add-user'
+    | '/api/team-leader/add-staff'
     | '/api/workers/status'
+    | '/remove-google-review/$country/$city'
     | '/reports'
     | '/admin/investigators/$id'
     | '/admin/staff/$id'
@@ -996,6 +1108,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/about'
     | '/auth'
     | '/contact'
     | '/get-started'
@@ -1007,7 +1120,6 @@ export interface FileRouteTypes {
     | '/_authenticated/client'
     | '/_authenticated/chat'
     | '/_authenticated/dashboard'
-    | '/_authenticated/dashboard/$role'
     | '/_authenticated/history'
     | '/_authenticated/homepage-preview'
     | '/_authenticated/manager'
@@ -1023,8 +1135,11 @@ export interface FileRouteTypes {
     | '/_authenticated/team-leader'
     | '/api/health'
     | '/api/scan-worker'
+    | '/blog/$slug'
     | '/reseller/register'
     | '/staff/register'
+    | '/blog/'
+    | '/$locale/service/$slug'
     | '/_authenticated/admin/assign'
     | '/_authenticated/admin/case-assignment'
     | '/_authenticated/admin/cases'
@@ -1041,6 +1156,7 @@ export interface FileRouteTypes {
     | '/_authenticated/client/reports'
     | '/_authenticated/client/scan'
     | '/_authenticated/client/settings'
+    | '/_authenticated/dashboard/$role'
     | '/_authenticated/investigator/cases'
     | '/_authenticated/investigator/login'
     | '/_authenticated/investigator/profile'
@@ -1061,19 +1177,25 @@ export interface FileRouteTypes {
     | '/_authenticated/staff/timeline'
     | '/_authenticated/staff/today'
     | '/_authenticated/staff/wallet'
+    | '/api/admin/generate-backlink-outreach'
+    | '/api/admin/generate-blog'
     | '/api/extension/report'
     | '/api/extension/status'
     | '/api/extension/submission'
     | '/api/hierarchy/add-member'
     | '/api/hierarchy/assign-task'
     | '/api/hierarchy/get-team'
+    | '/api/manager/add-member'
     | '/api/staff/geocode'
     | '/api/storage/delete'
     | '/api/storage/download'
     | '/api/storage/list'
     | '/api/storage/stats'
     | '/api/storage/upload'
+    | '/api/super-admin/add-user'
+    | '/api/team-leader/add-staff'
     | '/api/workers/status'
+    | '/remove-google-review/$country/$city'
     | '/_authenticated/reports/'
     | '/_authenticated/admin/investigators/$id'
     | '/_authenticated/admin/staff/$id'
@@ -1084,6 +1206,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
   GetStartedRoute: typeof GetStartedRoute
@@ -1094,21 +1217,30 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiScanWorkerRoute: typeof ApiScanWorkerRoute
+  BlogSlugRoute: typeof BlogSlugRoute
   ResellerRegisterRoute: typeof ResellerRegisterRoute
   StaffRegisterRoute: typeof StaffRegisterRoute
+  BlogIndexRoute: typeof BlogIndexRoute
+  LocaleServiceSlugRoute: typeof LocaleServiceSlugRoute
+  ApiAdminGenerateBacklinkOutreachRoute: typeof ApiAdminGenerateBacklinkOutreachRoute
+  ApiAdminGenerateBlogRoute: typeof ApiAdminGenerateBlogRoute
   ApiExtensionReportRoute: typeof ApiExtensionReportRouteWithChildren
   ApiExtensionStatusRoute: typeof ApiExtensionStatusRoute
   ApiExtensionSubmissionRoute: typeof ApiExtensionSubmissionRoute
   ApiHierarchyAddMemberRoute: typeof ApiHierarchyAddMemberRoute
   ApiHierarchyAssignTaskRoute: typeof ApiHierarchyAssignTaskRoute
   ApiHierarchyGetTeamRoute: typeof ApiHierarchyGetTeamRoute
+  ApiManagerAddMemberRoute: typeof ApiManagerAddMemberRoute
   ApiStaffGeocodeRoute: typeof ApiStaffGeocodeRoute
   ApiStorageDeleteRoute: typeof ApiStorageDeleteRoute
   ApiStorageDownloadRoute: typeof ApiStorageDownloadRoute
   ApiStorageListRoute: typeof ApiStorageListRoute
   ApiStorageStatsRoute: typeof ApiStorageStatsRoute
   ApiStorageUploadRoute: typeof ApiStorageUploadRoute
+  ApiSuperAdminAddUserRoute: typeof ApiSuperAdminAddUserRoute
+  ApiTeamLeaderAddStaffRoute: typeof ApiTeamLeaderAddStaffRoute
   ApiWorkersStatusRoute: typeof ApiWorkersStatusRoute
+  RemoveGoogleReviewCountryCityRoute: typeof RemoveGoogleReviewCountryCityRoute
   ApiPublicHooksScanWorkerRoute: typeof ApiPublicHooksScanWorkerRoute
 }
 
@@ -1126,6 +1258,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -1203,13 +1342,6 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/dashboard/$role': {
-      id: '/_authenticated/dashboard/$role'
-      path: '/dashboard/$role'
-      fullPath: '/dashboard/$role'
-      preLoaderRoute: typeof AuthenticatedDashboardRoleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/history': {
@@ -1317,6 +1449,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiScanWorkerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reseller/register': {
       id: '/reseller/register'
       path: '/reseller/register'
@@ -1329,6 +1475,13 @@ declare module '@tanstack/react-router' {
       path: '/staff/register'
       fullPath: '/staff/register'
       preLoaderRoute: typeof StaffRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$locale/service/$slug': {
+      id: '/$locale/service/$slug'
+      path: '/$locale/service/$slug'
+      fullPath: '/$locale/service/$slug'
+      preLoaderRoute: typeof LocaleServiceSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/assign': {
@@ -1442,6 +1595,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/client/settings'
       preLoaderRoute: typeof AuthenticatedClientSettingsRouteImport
       parentRoute: typeof AuthenticatedClientRouteRoute
+    }
+    '/_authenticated/dashboard/$role': {
+      id: '/_authenticated/dashboard/$role'
+      path: '/$role'
+      fullPath: '/dashboard/$role'
+      preLoaderRoute: typeof AuthenticatedDashboardRoleRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
     }
     '/_authenticated/investigator/cases': {
       id: '/_authenticated/investigator/cases'
@@ -1590,6 +1750,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStaffWalletRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/admin/generate-backlink-outreach': {
+      id: '/api/admin/generate-backlink-outreach'
+      path: '/api/admin/generate-backlink-outreach'
+      fullPath: '/api/admin/generate-backlink-outreach'
+      preLoaderRoute: typeof ApiAdminGenerateBacklinkOutreachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/generate-blog': {
+      id: '/api/admin/generate-blog'
+      path: '/api/admin/generate-blog'
+      fullPath: '/api/admin/generate-blog'
+      preLoaderRoute: typeof ApiAdminGenerateBlogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/extension/report': {
       id: '/api/extension/report'
       path: '/api/extension/report'
@@ -1630,6 +1804,13 @@ declare module '@tanstack/react-router' {
       path: '/api/hierarchy/get-team'
       fullPath: '/api/hierarchy/get-team'
       preLoaderRoute: typeof ApiHierarchyGetTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/manager/add-member': {
+      id: '/api/manager/add-member'
+      path: '/api/manager/add-member'
+      fullPath: '/api/manager/add-member'
+      preLoaderRoute: typeof ApiManagerAddMemberRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/staff/geocode': {
@@ -1674,11 +1855,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStorageUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/super-admin/add-user': {
+      id: '/api/super-admin/add-user'
+      path: '/api/super-admin/add-user'
+      fullPath: '/api/super-admin/add-user'
+      preLoaderRoute: typeof ApiSuperAdminAddUserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/team-leader/add-staff': {
+      id: '/api/team-leader/add-staff'
+      path: '/api/team-leader/add-staff'
+      fullPath: '/api/team-leader/add-staff'
+      preLoaderRoute: typeof ApiTeamLeaderAddStaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/workers/status': {
       id: '/api/workers/status'
       path: '/api/workers/status'
       fullPath: '/api/workers/status'
       preLoaderRoute: typeof ApiWorkersStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/remove-google-review/$country/$city': {
+      id: '/remove-google-review/$country/$city'
+      path: '/remove-google-review/$country/$city'
+      fullPath: '/remove-google-review/$country/$city'
+      preLoaderRoute: typeof RemoveGoogleReviewCountryCityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/investigators/$id': {
@@ -1734,6 +1936,20 @@ const AuthenticatedClientRouteRouteWithChildren =
     AuthenticatedClientRouteRouteChildren,
   )
 
+interface AuthenticatedDashboardRouteChildren {
+  AuthenticatedDashboardRoleRoute: typeof AuthenticatedDashboardRoleRoute
+}
+
+const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
+  {
+    AuthenticatedDashboardRoleRoute: AuthenticatedDashboardRoleRoute,
+  }
+
+const AuthenticatedDashboardRouteWithChildren =
+  AuthenticatedDashboardRoute._addFileChildren(
+    AuthenticatedDashboardRouteChildren,
+  )
+
 interface AuthenticatedAdminInvestigatorsRouteChildren {
   AuthenticatedAdminInvestigatorsIdRoute: typeof AuthenticatedAdminInvestigatorsIdRoute
 }
@@ -1766,8 +1982,7 @@ const AuthenticatedAdminStaffRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedClientRouteRoute: typeof AuthenticatedClientRouteRouteWithChildren
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
-  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedDashboardRoleRoute: typeof AuthenticatedDashboardRoleRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRouteWithChildren
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedHomepagePreviewRoute: typeof AuthenticatedHomepagePreviewRoute
   AuthenticatedManagerRoute: typeof AuthenticatedManagerRoute
@@ -1818,8 +2033,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedClientRouteRoute: AuthenticatedClientRouteRouteWithChildren,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
-  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedDashboardRoleRoute: AuthenticatedDashboardRoleRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRouteWithChildren,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedHomepagePreviewRoute: AuthenticatedHomepagePreviewRoute,
   AuthenticatedManagerRoute: AuthenticatedManagerRoute,
@@ -1886,6 +2100,7 @@ const ApiExtensionReportRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
   GetStartedRoute: GetStartedRoute,
@@ -1896,21 +2111,30 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiScanWorkerRoute: ApiScanWorkerRoute,
+  BlogSlugRoute: BlogSlugRoute,
   ResellerRegisterRoute: ResellerRegisterRoute,
   StaffRegisterRoute: StaffRegisterRoute,
+  BlogIndexRoute: BlogIndexRoute,
+  LocaleServiceSlugRoute: LocaleServiceSlugRoute,
+  ApiAdminGenerateBacklinkOutreachRoute: ApiAdminGenerateBacklinkOutreachRoute,
+  ApiAdminGenerateBlogRoute: ApiAdminGenerateBlogRoute,
   ApiExtensionReportRoute: ApiExtensionReportRouteWithChildren,
   ApiExtensionStatusRoute: ApiExtensionStatusRoute,
   ApiExtensionSubmissionRoute: ApiExtensionSubmissionRoute,
   ApiHierarchyAddMemberRoute: ApiHierarchyAddMemberRoute,
   ApiHierarchyAssignTaskRoute: ApiHierarchyAssignTaskRoute,
   ApiHierarchyGetTeamRoute: ApiHierarchyGetTeamRoute,
+  ApiManagerAddMemberRoute: ApiManagerAddMemberRoute,
   ApiStaffGeocodeRoute: ApiStaffGeocodeRoute,
   ApiStorageDeleteRoute: ApiStorageDeleteRoute,
   ApiStorageDownloadRoute: ApiStorageDownloadRoute,
   ApiStorageListRoute: ApiStorageListRoute,
   ApiStorageStatsRoute: ApiStorageStatsRoute,
   ApiStorageUploadRoute: ApiStorageUploadRoute,
+  ApiSuperAdminAddUserRoute: ApiSuperAdminAddUserRoute,
+  ApiTeamLeaderAddStaffRoute: ApiTeamLeaderAddStaffRoute,
   ApiWorkersStatusRoute: ApiWorkersStatusRoute,
+  RemoveGoogleReviewCountryCityRoute: RemoveGoogleReviewCountryCityRoute,
   ApiPublicHooksScanWorkerRoute: ApiPublicHooksScanWorkerRoute,
 }
 export const routeTree = rootRouteImport
