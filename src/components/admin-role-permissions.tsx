@@ -116,7 +116,7 @@ export function AdminRolePermissions() {
     <div className="space-y-6">
       <PageHeader
         title="Role Permissions"
-        subtitle="Review role access and update the capabilities used by tenant security policies."
+        subtitle="Review role access and update the permission grants configured for each scope."
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
