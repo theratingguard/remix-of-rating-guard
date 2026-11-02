@@ -1,4 +1,4 @@
-export const REPLY_MODEL = "gpt-4.1-mini";
+export const REPLY_MODEL = "ratingguard-reply";
 export const REPLY_TONES = [
   "professional",
   "friendly",

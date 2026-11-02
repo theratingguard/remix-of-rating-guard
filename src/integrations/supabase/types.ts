@@ -2967,6 +2967,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      reply_training_data: {
+        Row: {
+          id: string;
+          seed_key: string;
+          question: string;
+          answer: string;
+          rating_band: number;
+          industry: string;
+          issue_type: string;
+          embedding: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          seed_key: string;
+          question: string;
+          answer: string;
+          rating_band: number;
+          industry: string;
+          issue_type: string;
+          embedding?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          question?: string;
+          answer?: string;
+          rating_band?: number;
+          industry?: string;
+          issue_type?: string;
+          embedding?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       removal_history: {
@@ -2991,6 +3024,22 @@ export type Database = {
       admin_rbac_update_role_permissions: {
         Args: { _role_id: string; _permission_keys: string[] };
         Returns: Json;
+      };
+      match_reply_training_data: {
+        Args: {
+          query_embedding: string;
+          query_rating: number;
+          query_industry: string;
+          match_count?: number;
+        };
+        Returns: {
+          question: string;
+          answer: string;
+          rating_band: number;
+          industry: string;
+          issue_type: string;
+          similarity: number;
+        }[];
       };
       hierarchy_task_summary: {
         Args: Record<string, never>;

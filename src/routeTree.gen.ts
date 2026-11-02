@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BecomeAResellerRouteImport } from './routes/become-a-reseller'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as GetStartedRouteImport } from './routes/get-started'
 import { Route as JoinRouteImport } from './routes/join'
@@ -39,6 +40,7 @@ import { Route as AuthenticatedTeamLeaderRouteImport } from './routes/_authentic
 import { Route as ApiBroadcastRouteImport } from './routes/api/broadcast'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiScanWorkerRouteImport } from './routes/api/scan-worker'
+import { Route as BecomeAResellerCountryRouteImport } from './routes/become-a-reseller.$country'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ResellerRegisterRouteImport } from './routes/reseller.register'
@@ -102,6 +104,7 @@ import { Route as ApiSuperAdminAddUserRouteImport } from './routes/api/super-adm
 import { Route as ApiTeamLeaderAddStaffRouteImport } from './routes/api/team-leader/add-staff'
 import { Route as ApiWorkersStatusRouteImport } from './routes/api/workers/status'
 import { Route as RemoveGoogleReviewCountryCityRouteImport } from './routes/remove-google-review.$country.$city'
+import { Route as LocaleRemoveGoogleReviewCountryCityRouteImport } from './routes/$locale.remove-google-review.$country.$city'
 import { Route as AuthenticatedAdminInvestigatorsIdRouteImport } from './routes/_authenticated/admin.investigators.$id'
 import { Route as AuthenticatedAdminStaffIdRouteImport } from './routes/_authenticated/admin.staff.$id'
 import { Route as ApiExtensionReportIdRouteImport } from './routes/api/extension/report.$id'
@@ -124,6 +127,11 @@ const AboutRoute = AboutRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BecomeAResellerRoute = BecomeAResellerRouteImport.update({
+  id: '/become-a-reseller',
+  path: '/become-a-reseller',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -260,6 +268,11 @@ const ApiScanWorkerRoute = ApiScanWorkerRouteImport.update({
   id: '/api/scan-worker',
   path: '/api/scan-worker',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BecomeAResellerCountryRoute = BecomeAResellerCountryRouteImport.update({
+  id: '/$country',
+  path: '/$country',
+  getParentRoute: () => BecomeAResellerRoute,
 } as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
@@ -610,6 +623,12 @@ const RemoveGoogleReviewCountryCityRoute =
     path: '/remove-google-review/$country/$city',
     getParentRoute: () => rootRouteImport,
   } as any)
+const LocaleRemoveGoogleReviewCountryCityRoute =
+  LocaleRemoveGoogleReviewCountryCityRouteImport.update({
+    id: '/$locale/remove-google-review/$country/$city',
+    path: '/$locale/remove-google-review/$country/$city',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAdminInvestigatorsIdRoute =
   AuthenticatedAdminInvestigatorsIdRouteImport.update({
     id: '/$id',
@@ -638,6 +657,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
+  '/become-a-reseller': typeof BecomeAResellerRouteWithChildren
   '/contact': typeof ContactRoute
   '/get-started': typeof GetStartedRoute
   '/join': typeof JoinRoute
@@ -664,6 +684,7 @@ export interface FileRoutesByFullPath {
   '/api/broadcast': typeof ApiBroadcastRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
+  '/become-a-reseller/$country': typeof BecomeAResellerCountryRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
@@ -727,6 +748,7 @@ export interface FileRoutesByFullPath {
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/remove-google-review/$country/$city': typeof RemoveGoogleReviewCountryCityRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
+  '/$locale/remove-google-review/$country/$city': typeof LocaleRemoveGoogleReviewCountryCityRoute
   '/admin/investigators/$id': typeof AuthenticatedAdminInvestigatorsIdRoute
   '/admin/staff/$id': typeof AuthenticatedAdminStaffIdRoute
   '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
@@ -736,6 +758,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
+  '/become-a-reseller': typeof BecomeAResellerRouteWithChildren
   '/contact': typeof ContactRoute
   '/get-started': typeof GetStartedRoute
   '/join': typeof JoinRoute
@@ -762,6 +785,7 @@ export interface FileRoutesByTo {
   '/api/broadcast': typeof ApiBroadcastRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
+  '/become-a-reseller/$country': typeof BecomeAResellerCountryRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
@@ -825,6 +849,7 @@ export interface FileRoutesByTo {
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/remove-google-review/$country/$city': typeof RemoveGoogleReviewCountryCityRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
+  '/$locale/remove-google-review/$country/$city': typeof LocaleRemoveGoogleReviewCountryCityRoute
   '/admin/investigators/$id': typeof AuthenticatedAdminInvestigatorsIdRoute
   '/admin/staff/$id': typeof AuthenticatedAdminStaffIdRoute
   '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
@@ -836,6 +861,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
+  '/become-a-reseller': typeof BecomeAResellerRouteWithChildren
   '/contact': typeof ContactRoute
   '/get-started': typeof GetStartedRoute
   '/join': typeof JoinRoute
@@ -862,6 +888,7 @@ export interface FileRoutesById {
   '/api/broadcast': typeof ApiBroadcastRoute
   '/api/health': typeof ApiHealthRoute
   '/api/scan-worker': typeof ApiScanWorkerRoute
+  '/become-a-reseller/$country': typeof BecomeAResellerCountryRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
@@ -925,6 +952,7 @@ export interface FileRoutesById {
   '/api/workers/status': typeof ApiWorkersStatusRoute
   '/remove-google-review/$country/$city': typeof RemoveGoogleReviewCountryCityRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
+  '/$locale/remove-google-review/$country/$city': typeof LocaleRemoveGoogleReviewCountryCityRoute
   '/_authenticated/admin/investigators/$id': typeof AuthenticatedAdminInvestigatorsIdRoute
   '/_authenticated/admin/staff/$id': typeof AuthenticatedAdminStaffIdRoute
   '/api/extension/report/$id': typeof ApiExtensionReportIdRoute
@@ -936,6 +964,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/auth'
+    | '/become-a-reseller'
     | '/contact'
     | '/get-started'
     | '/join'
@@ -962,6 +991,7 @@ export interface FileRouteTypes {
     | '/api/broadcast'
     | '/api/health'
     | '/api/scan-worker'
+    | '/become-a-reseller/$country'
     | '/blog/$slug'
     | '/reseller/register'
     | '/staff/register'
@@ -1025,6 +1055,7 @@ export interface FileRouteTypes {
     | '/api/workers/status'
     | '/remove-google-review/$country/$city'
     | '/reports/'
+    | '/$locale/remove-google-review/$country/$city'
     | '/admin/investigators/$id'
     | '/admin/staff/$id'
     | '/api/extension/report/$id'
@@ -1034,6 +1065,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/auth'
+    | '/become-a-reseller'
     | '/contact'
     | '/get-started'
     | '/join'
@@ -1060,6 +1092,7 @@ export interface FileRouteTypes {
     | '/api/broadcast'
     | '/api/health'
     | '/api/scan-worker'
+    | '/become-a-reseller/$country'
     | '/blog/$slug'
     | '/reseller/register'
     | '/staff/register'
@@ -1123,6 +1156,7 @@ export interface FileRouteTypes {
     | '/api/workers/status'
     | '/remove-google-review/$country/$city'
     | '/reports'
+    | '/$locale/remove-google-review/$country/$city'
     | '/admin/investigators/$id'
     | '/admin/staff/$id'
     | '/api/extension/report/$id'
@@ -1133,6 +1167,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/about'
     | '/auth'
+    | '/become-a-reseller'
     | '/contact'
     | '/get-started'
     | '/join'
@@ -1159,6 +1194,7 @@ export interface FileRouteTypes {
     | '/api/broadcast'
     | '/api/health'
     | '/api/scan-worker'
+    | '/become-a-reseller/$country'
     | '/blog/$slug'
     | '/reseller/register'
     | '/staff/register'
@@ -1222,6 +1258,7 @@ export interface FileRouteTypes {
     | '/api/workers/status'
     | '/remove-google-review/$country/$city'
     | '/_authenticated/reports/'
+    | '/$locale/remove-google-review/$country/$city'
     | '/_authenticated/admin/investigators/$id'
     | '/_authenticated/admin/staff/$id'
     | '/api/extension/report/$id'
@@ -1233,6 +1270,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
+  BecomeAResellerRoute: typeof BecomeAResellerRouteWithChildren
   ContactRoute: typeof ContactRoute
   GetStartedRoute: typeof GetStartedRoute
   JoinRoute: typeof JoinRoute
@@ -1267,6 +1305,7 @@ export interface RootRouteChildren {
   ApiTeamLeaderAddStaffRoute: typeof ApiTeamLeaderAddStaffRoute
   ApiWorkersStatusRoute: typeof ApiWorkersStatusRoute
   RemoveGoogleReviewCountryCityRoute: typeof RemoveGoogleReviewCountryCityRoute
+  LocaleRemoveGoogleReviewCountryCityRoute: typeof LocaleRemoveGoogleReviewCountryCityRoute
   ApiPublicHooksScanWorkerRoute: typeof ApiPublicHooksScanWorkerRoute
 }
 
@@ -1298,6 +1337,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/become-a-reseller': {
+      id: '/become-a-reseller'
+      path: '/become-a-reseller'
+      fullPath: '/become-a-reseller'
+      preLoaderRoute: typeof BecomeAResellerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -1481,6 +1527,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/scan-worker'
       preLoaderRoute: typeof ApiScanWorkerRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/become-a-reseller/$country': {
+      id: '/become-a-reseller/$country'
+      path: '/$country'
+      fullPath: '/become-a-reseller/$country'
+      preLoaderRoute: typeof BecomeAResellerCountryRouteImport
+      parentRoute: typeof BecomeAResellerRoute
     }
     '/blog/': {
       id: '/blog/'
@@ -1923,6 +1976,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RemoveGoogleReviewCountryCityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$locale/remove-google-review/$country/$city': {
+      id: '/$locale/remove-google-review/$country/$city'
+      path: '/$locale/remove-google-review/$country/$city'
+      fullPath: '/$locale/remove-google-review/$country/$city'
+      preLoaderRoute: typeof LocaleRemoveGoogleReviewCountryCityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/investigators/$id': {
       id: '/_authenticated/admin/investigators/$id'
       path: '/$id'
@@ -2129,6 +2189,18 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface BecomeAResellerRouteChildren {
+  BecomeAResellerCountryRoute: typeof BecomeAResellerCountryRoute
+}
+
+const BecomeAResellerRouteChildren: BecomeAResellerRouteChildren = {
+  BecomeAResellerCountryRoute: BecomeAResellerCountryRoute,
+}
+
+const BecomeAResellerRouteWithChildren = BecomeAResellerRoute._addFileChildren(
+  BecomeAResellerRouteChildren,
+)
+
 interface ApiExtensionReportRouteChildren {
   ApiExtensionReportIdRoute: typeof ApiExtensionReportIdRoute
 }
@@ -2145,6 +2217,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
+  BecomeAResellerRoute: BecomeAResellerRouteWithChildren,
   ContactRoute: ContactRoute,
   GetStartedRoute: GetStartedRoute,
   JoinRoute: JoinRoute,
@@ -2179,6 +2252,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTeamLeaderAddStaffRoute: ApiTeamLeaderAddStaffRoute,
   ApiWorkersStatusRoute: ApiWorkersStatusRoute,
   RemoveGoogleReviewCountryCityRoute: RemoveGoogleReviewCountryCityRoute,
+  LocaleRemoveGoogleReviewCountryCityRoute:
+    LocaleRemoveGoogleReviewCountryCityRoute,
   ApiPublicHooksScanWorkerRoute: ApiPublicHooksScanWorkerRoute,
 }
 export const routeTree = rootRouteImport

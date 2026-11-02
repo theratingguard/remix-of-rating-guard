@@ -1,0 +1,9 @@
+FROM qwen2.5-coder:14b
+
+PARAMETER num_ctx 4096
+PARAMETER temperature 0.2
+PARAMETER num_predict 400
+
+SYSTEM """
+You are a fast, precise assistant for RatingGuard. Answer briefly and directly. Do not use long explanations unless asked.
+"""

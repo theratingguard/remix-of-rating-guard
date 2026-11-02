@@ -68,10 +68,7 @@ export type SeoHeadOptions = {
   video?: SeoVideo;
 };
 
-export function organizationJsonLd(
-  origin: string,
-  options: SeoHeadOptions["organization"] = {},
-) {
+export function organizationJsonLd(origin: string, options: SeoHeadOptions["organization"] = {}) {
   const officialProfiles = (options?.sameAs ?? []).filter((profile) => {
     try {
       return new URL(profile).protocol === "https:";
@@ -149,15 +146,13 @@ export function SEOHead(
   const hashtags = (page.hashtags ?? [])
     .filter((hashtag) => /^#[A-Za-z][A-Za-z0-9]{1,31}$/.test(hashtag))
     .filter((hashtag, index, all) => all.indexOf(hashtag) === index)
-    .slice(0, 100);
-  const keywordMeta = [...keywords, ...hashtags].filter(
-    (keyword, index, all) => all.indexOf(keyword) === index,
-  );
-  const alternateRows = translations.length && page.locale
-    ? translations
-    : page.locale && page.slug
-      ? [{ locale: page.locale, slug: page.slug }]
-      : [];
+    .slice(0, 5);
+  const alternateRows =
+    translations.length && page.locale
+      ? translations
+      : page.locale && page.slug
+        ? [{ locale: page.locale, slug: page.slug }]
+        : [];
   const alternates = alternateRows.map((translation) => ({
     rel: "alternate",
     hrefLang: translation.locale,
@@ -255,14 +250,14 @@ export function SEOHead(
           contentUrl: `https://www.youtube.com/watch?v=${videoId}`,
         }
       : null;
-  const breadcrumbs = options.breadcrumbs ?? (
-    page.locale && page.slug
+  const breadcrumbs =
+    options.breadcrumbs ??
+    (page.locale && page.slug
       ? [
           { name: "Home", url: new URL("/", origin).toString() },
           { name: page.title, url: canonical },
         ]
-      : []
-  );
+      : []);
   const breadcrumbSchema =
     breadcrumbs.length > 0
       ? {
@@ -281,7 +276,7 @@ export function SEOHead(
     meta: [
       { title: page.title },
       { name: "description", content: page.description.slice(0, 160) },
-      { name: "keywords", content: keywordMeta.join(", ") },
+      { name: "keywords", content: keywords.join(", ") },
       { name: "robots", content: "index,follow,max-image-preview:large" },
       { property: "og:title", content: page.title },
       { property: "og:description", content: page.description.slice(0, 160) },
@@ -302,8 +297,10 @@ export function SEOHead(
     ],
     links: [
       { rel: "canonical", href: canonical },
-      ...alternates.filter((alternate) =>
-        SEO_LOCALES.some((locale) => locale.code === alternate.hrefLang) || alternate.hrefLang === "x-default",
+      ...alternates.filter(
+        (alternate) =>
+          SEO_LOCALES.some((locale) => locale.code === alternate.hrefLang) ||
+          alternate.hrefLang === "x-default",
       ),
     ],
     scripts: [
@@ -312,18 +309,14 @@ export function SEOHead(
       ...(softwareSchema
         ? [{ type: "application/ld+json", children: safeJson(softwareSchema) }]
         : []),
-      ...(faqSchema
-        ? [{ type: "application/ld+json", children: safeJson(faqSchema) }]
-        : []),
+      ...(faqSchema ? [{ type: "application/ld+json", children: safeJson(faqSchema) }] : []),
       ...(localBusinessSchema
         ? [{ type: "application/ld+json", children: safeJson(localBusinessSchema) }]
         : []),
       ...(articleSchema
         ? [{ type: "application/ld+json", children: safeJson(articleSchema) }]
         : []),
-      ...(videoSchema
-        ? [{ type: "application/ld+json", children: safeJson(videoSchema) }]
-        : []),
+      ...(videoSchema ? [{ type: "application/ld+json", children: safeJson(videoSchema) }] : []),
       ...(breadcrumbSchema
         ? [{ type: "application/ld+json", children: safeJson(breadcrumbSchema) }]
         : []),

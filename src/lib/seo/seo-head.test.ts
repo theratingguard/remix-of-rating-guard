@@ -36,7 +36,7 @@ describe("SEOHead", () => {
     });
   });
 
-  it("adds country hashtags to the page keywords metadata", () => {
+  it("keeps country keywords concise and does not inject hashtags into metadata", () => {
     const tags = Array.from({ length: 100 }, (_, index) => `#ReviewRemoval${index}`);
     const head = SEOHead(
       {
@@ -51,10 +51,11 @@ describe("SEOHead", () => {
     const keywordMeta = head.meta?.find((item) => "name" in item && item.name === "keywords");
     const keywords = keywordMeta && "content" in keywordMeta ? keywordMeta.content : "";
 
-    expect(keywords).toContain("#ReviewRemoval0");
-    expect(keywords).toContain("#ReviewRemoval99");
+    expect(JSON.stringify(head.meta)).toContain("#ReviewRemoval0");
+    expect(JSON.stringify(head.meta)).toContain("#ReviewRemoval4");
+    expect(JSON.stringify(head.meta)).not.toContain("#ReviewRemoval5");
     expect(keywords).toContain("Google review removal policy help in USA");
     expect(keywords).toContain("fake review removal service in USA");
-    expect(keywords.split(", ")).toHaveLength(204);
+    expect(keywords.split(", ")).toHaveLength(13);
   });
 });

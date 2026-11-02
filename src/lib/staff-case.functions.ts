@@ -731,6 +731,101 @@ export const getAdminStaffData = createServerFn({ method: "GET" })
     };
   });
 
+export const getAdminStaffApprovalData = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const [staffResult, activityResult, allCount, submittedCount, closedCount, handlingResult] =
+      await Promise.all([
+        supabaseAdmin
+          .from("staff")
+          .select(
+            "id,name,mobile,email,status,created_at,address,region_city,region_state,skills,referral_by,live_selfie_url,photo_url,last_seen_at",
+            { count: "exact" },
+          )
+          .order("created_at", { ascending: false }),
+        supabaseAdmin
+          .from("staff_activity_log")
+          .select("staff_id,action,created_at")
+          .in("action", ["approval", "rejection"])
+          .gte("created_at", start.toISOString()),
+        supabaseAdmin.from("staff_cases").select("id", { count: "exact", head: true }),
+        supabaseAdmin
+          .from("staff_cases")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["submitted", "reply_received", "closed"]),
+        supabaseAdmin
+          .from("staff_cases")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "closed"),
+        supabaseAdmin
+          .from("staff_cases")
+          .select("assigned_at,closed_at")
+          .not("closed_at", "is", null)
+          .order("closed_at", { ascending: false })
+          .limit(5000),
+      ]);
+    if (staffResult.error) throw new Error(`Could not load staff: ${staffResult.error.message}`);
+    if (activityResult.error)
+      throw new Error(`Could not load today's staff activity: ${activityResult.error.message}`);
+    if (allCount.error) throw new Error(`Could not count staff cases: ${allCount.error.message}`);
+    if (submittedCount.error)
+      throw new Error(`Could not count submitted staff cases: ${submittedCount.error.message}`);
+    if (closedCount.error)
+      throw new Error(`Could not count closed staff cases: ${closedCount.error.message}`);
+    if (handlingResult.error)
+      throw new Error(`Could not load case handling times: ${handlingResult.error.message}`);
+
+    const selfiePaths = (staffResult.data ?? [])
+      .map((person) => person.live_selfie_url)
+      .filter((path): path is string => Boolean(path));
+    const selfieResults = selfiePaths.length
+      ? await supabaseAdmin.storage.from("staff-photos").createSignedUrls(selfiePaths, 3600)
+      : { data: [], error: null };
+    if (selfieResults.error)
+      throw new Error("Could not create temporary access links for staff photos.");
+    const selfieUrls = new Map(
+      (selfieResults.data ?? [])
+        .filter((item) => item.signedUrl)
+        .map((item) => [item.path, item.signedUrl]),
+    );
+    const staff = (staffResult.data ?? []).map((person) => ({
+      ...person,
+      selfie_url: person.live_selfie_url ? (selfieUrls.get(person.live_selfie_url) ?? null) : null,
+    }));
+    const handlingRows = handlingResult.data ?? [];
+    const meanHandlingHours = handlingRows.length
+      ? handlingRows.reduce(
+          (total, row) =>
+            total + Math.max(0, Date.parse(row.closed_at!) - Date.parse(row.assigned_at)),
+          0,
+        ) /
+        handlingRows.length /
+        3_600_000
+      : null;
+
+    return {
+      staff,
+      activity: activityResult.data ?? [],
+      stats: {
+        totalStaff: staffResult.count ?? staff.length,
+        activeToday:
+          staffResult.data?.filter(
+            (row) =>
+              ["approved", "active"].includes(row.status) &&
+              (row.last_seen_at ?? "") >= start.toISOString(),
+          ).length ?? 0,
+        casesAssigned: allCount.count ?? 0,
+        casesSubmitted: submittedCount.count ?? 0,
+        casesClosed: closedCount.count ?? 0,
+        meanHandlingHours,
+      },
+    };
+  });
+
 export const getManagerStaffAssignmentData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -13,6 +13,7 @@ import {
   assignStaffCases,
   closeStaffCase,
   getAdminStaffData,
+  getAdminStaffApprovalData,
   getClientStaffCases,
   getManagerStaffAssignmentData,
   getStaffWorkspace,
@@ -25,15 +26,33 @@ import {
   type StaffProfileInput,
   type StaffRegistrationInput,
 } from "@/lib/staff-case.functions";
-import { AdminStaffChat } from "@/components/admin-staff-chat";
-import { AdminStaffPhaseTwo } from "@/components/admin-staff-phase-two";
-import { BroadcastComposer } from "@/components/broadcast-composer";
-import { SuperAdminAddUserForm } from "@/components/super-admin-add-user-form";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
+const AdminStaffChat = lazy(() =>
+  import("@/components/admin-staff-chat").then((module) => ({
+    default: module.AdminStaffChat,
+  })),
+);
+const AdminStaffPhaseTwo = lazy(() =>
+  import("@/components/admin-staff-phase-two").then((module) => ({
+    default: module.AdminStaffPhaseTwo,
+  })),
+);
+const BroadcastComposer = lazy(() =>
+  import("@/components/broadcast-composer").then((module) => ({
+    default: module.BroadcastComposer,
+  })),
+);
+const SuperAdminAddUserForm = lazy(() =>
+  import("@/components/super-admin-add-user-form").then((module) => ({
+    default: module.SuperAdminAddUserForm,
+  })),
+);
+
 const staffKey = ["staff-workspace"];
 const adminStaffKey = ["admin-staff-cases"];
+const adminStaffApprovalKey = ["admin-staff-approvals"];
 const managerAssignmentKey = ["manager-staff-case-assignment"];
 const emptyStaff: StaffProfileInput = { name: "", mobile: "", region_city: "", region_state: "" };
 
@@ -1087,10 +1106,14 @@ function CaseAssignmentForm({
 
 export function AdminStaffPage() {
   const queryClient = useQueryClient();
-  const result = useQuery({ queryKey: adminStaffKey, queryFn: useServerFn(getAdminStaffData) });
+  const result = useQuery({
+    queryKey: adminStaffApprovalKey,
+    queryFn: useServerFn(getAdminStaffApprovalData),
+  });
   const setStatus = useServerFn(setStaffStatus);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tab, setTab] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+  const [showAddUser, setShowAddUser] = useState(false);
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
   const [customReasons, setCustomReasons] = useState<Record<string, string>>({});
   async function updateStatus(
@@ -1110,6 +1133,7 @@ export function AdminStaffPage() {
         },
       });
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminStaffApprovalKey }),
         queryClient.invalidateQueries({ queryKey: adminStaffKey }),
         queryClient.invalidateQueries({ queryKey: ["admin-team-management"] }),
         queryClient.invalidateQueries({ queryKey: ["team-task-data"] }),
@@ -1132,10 +1156,21 @@ export function AdminStaffPage() {
       setBusyId(null);
     }
   }
-  if (result.isLoading) return <p>Loading staff dashboard…</p>;
+  if (result.isLoading)
+    return (
+      <main className="space-y-6" aria-busy="true" aria-label="Loading staff approvals">
+        <div className="surface h-24 animate-pulse rounded-xl" />
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((item) => (
+            <div className="surface h-20 animate-pulse rounded-xl" key={item} />
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">Loading staff approvals…</p>
+      </main>
+    );
   if (result.error || !result.data)
     return <p role="alert">{result.error?.message ?? "Could not load staff."}</p>;
-  const { staff, cases, stats } = result.data;
+  const { staff, stats } = result.data;
   const statusOrder: Record<string, number> = {
     pending: 0,
     approved: 1,
@@ -1182,12 +1217,31 @@ export function AdminStaffPage() {
           </Link>
         }
       />
-      <BroadcastComposer />
-      <SuperAdminAddUserForm
-        onCreated={async () => {
-          await queryClient.invalidateQueries({ queryKey: adminStaffKey });
-        }}
-      />
+      <Suspense fallback={<div className="surface h-12 animate-pulse rounded-lg" />}>
+        <BroadcastComposer />
+      </Suspense>
+      <section className="surface space-y-4 p-4 sm:p-6">
+        <Button
+          type="button"
+          variant={showAddUser ? "outline" : "default"}
+          aria-expanded={showAddUser}
+          aria-controls="staff-add-user-form"
+          onClick={() => setShowAddUser((open) => !open)}
+        >
+          {showAddUser ? "Close Add User" : "+ Add User"}
+        </Button>
+        {showAddUser && (
+          <div id="staff-add-user-form">
+            <Suspense fallback={<div className="h-48 animate-pulse rounded-lg bg-muted" />}>
+              <SuperAdminAddUserForm
+                onCreated={async () => {
+                  await queryClient.invalidateQueries({ queryKey: adminStaffApprovalKey });
+                }}
+              />
+            </Suspense>
+          </div>
+        )}
+      </section>
       <section className="grid gap-3 sm:grid-cols-3">
         {[
           ["Pending", staff.filter((person) => person.status === "pending").length],
@@ -1244,6 +1298,10 @@ export function AdminStaffPage() {
                   <img
                     className="size-24 shrink-0 rounded-lg object-cover"
                     src={person.selfie_url ?? person.photo_url ?? undefined}
+                    loading="lazy"
+                    decoding="async"
+                    width={96}
+                    height={96}
                     alt={
                       person.selfie_url
                         ? `Live selfie of ${person.name}`
@@ -1643,8 +1701,10 @@ export function AdminStaffDetailPage({ id }: { id: string }) {
           </article>
         ))}
       </section>
-      <AdminStaffPhaseTwo staffId={person.id} monthlyTarget={person.monthly_task_target} />
-      <AdminStaffChat staffId={person.id} staffName={person.name} />
+      <Suspense fallback={<div className="surface h-32 animate-pulse rounded-xl" />}>
+        <AdminStaffPhaseTwo staffId={person.id} monthlyTarget={person.monthly_task_target} />
+        <AdminStaffChat staffId={person.id} staffName={person.name} />
+      </Suspense>
       <section className="sticky bottom-2 z-20 flex flex-wrap items-center gap-2 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur">
         {person.status === "pending" && (
           <>

@@ -119,6 +119,53 @@ reputation search phrases to the `keywords` metadata for localized service and
 published location pages. These are generated from each page's supported
 country locale at render time and are not used to auto-publish content.
 
+### Review reply RAG
+
+Apply `supabase/migrations/20261101130000_reply_training_rag.sql`, pull the
+local reply model, and create the custom Ollama model:
+
+```sh
+ollama pull nomic-embed-text
+ollama pull qwen2.5-coder:14b
+ollama create ratingguard-reply -f Modelfile.reply
+npm run seed:reply-training
+```
+
+Set `OLLAMA_URL`, `OLLAMA_REPLY_MODEL`, and `REPLY_EMBEDDING_MODEL` server-side.
+The seed command creates 500 benchmark scenarios across 20 industries, five
+ratings, and five feedback themes, plus 20 wrong-location review examples. It
+embeds the synthetic examples locally and upserts them into
+`reply_training_data`; it requires `SUPABASE_URL` and a server-only
+`SUPABASE_SERVICE_ROLE_KEY`. Authenticated reply drafting embeds the new review
+locally, retrieves the top three examples through a restricted RPC, and saves an
+editable draft. Replies remain drafts and are never posted automatically.
+
+### CPU-only Ollama server tuning
+
+The general assistant model is built separately from the review-reply model so
+their system prompts and behavior do not conflict. Pull the base model and run
+`ollama create ratingguard-fast -f Modelfile`; set `OLLAMA_MODEL=ratingguard-fast`
+in the app's server environment. To configure the Ollama daemon on Ubuntu, use
+a systemd drop-in:
+
+```sh
+sudo mkdir -p /etc/systemd/system/ollama.service.d
+sudo tee /etc/systemd/system/ollama.service.d/override.conf >/dev/null <<'EOF'
+[Service]
+Environment="OLLAMA_KEEP_ALIVE=-1"
+Environment="OLLAMA_NUM_PARALLEL=2"
+Environment="OLLAMA_MAX_LOADED_MODELS=1"
+Environment="OLLAMA_CONTEXT_LENGTH=4096"
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart ollama
+sudo systemctl --no-pager --full status ollama
+```
+
+Parallel requests can increase memory use and may reduce per-request speed on a
+CPU-only 16 GB host. Check available memory under real workload before keeping
+two concurrent requests enabled.
+
 Curated location pages use `/remove-google-review/{country}/{city}`. Apply
 `supabase/migrations/20261026150000_review_location_pages.sql` before adding
 reviewed page records. Pages remain drafts until their city-specific content

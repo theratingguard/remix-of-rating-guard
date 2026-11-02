@@ -6,6 +6,7 @@ const STATIC_PATHS = [
   "/",
   "/about",
   "/blog",
+  "/become-a-reseller",
   "/contact",
   "/get-started",
   "/privacy",
@@ -13,9 +14,26 @@ const STATIC_PATHS = [
   "/terms",
 ];
 const SUPPORTED_LOCALES = new Set([
-  "en-US", "en-GB", "es-ES", "fr-FR", "de-DE", "ar-AE", "hi-IN", "ja-JP",
-  "pt-BR", "en-CA", "en-AU", "it-IT", "nl-NL", "ko-KR", "zh-CN", "tr-TR",
-  "id-ID", "sv-SE", "pl-PL", "en-SG",
+  "en-US",
+  "en-GB",
+  "es-ES",
+  "fr-FR",
+  "de-DE",
+  "ar-AE",
+  "hi-IN",
+  "ja-JP",
+  "pt-BR",
+  "en-CA",
+  "en-AU",
+  "it-IT",
+  "nl-NL",
+  "ko-KR",
+  "zh-CN",
+  "tr-TR",
+  "id-ID",
+  "sv-SE",
+  "pl-PL",
+  "en-SG",
 ]);
 const PAGE_BATCH_SIZE = 1000;
 
@@ -105,8 +123,8 @@ function getVideoMetadata(content) {
       ? parsed.pathname.slice(1)
       : ["youtube.com", "www.youtube.com", "m.youtube.com"].includes(host)
         ? parsed.pathname === "/watch"
-          ? parsed.searchParams.get("v") ?? ""
-          : parsed.pathname.match(/^\/(?:embed|shorts)\/([\w-]{11})$/)?.[1] ?? ""
+          ? (parsed.searchParams.get("v") ?? "")
+          : (parsed.pathname.match(/^\/(?:embed|shorts)\/([\w-]{11})$/)?.[1] ?? "")
         : "";
   if (!/^[\w-]{11}$/.test(videoId)) return null;
   const durationParts = duration.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
@@ -193,9 +211,26 @@ async function fetchPublishedBlogPosts(settings) {
 
 function isSubstantiveLocationContent(content) {
   if (!content || typeof content !== "object" || Array.isArray(content)) return false;
+  const wordCount = [
+    content.intro,
+    ...(Array.isArray(content.sections)
+      ? content.sections.flatMap((section) =>
+          section && typeof section === "object" ? [section.body] : [],
+        )
+      : []),
+    ...(Array.isArray(content.faqs)
+      ? content.faqs.flatMap((faq) => (faq && typeof faq === "object" ? [faq.answer] : []))
+      : []),
+  ]
+    .filter((part) => typeof part === "string")
+    .join(" ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
   return (
     typeof content.intro === "string" &&
     content.intro.trim().length >= 120 &&
+    wordCount >= 300 &&
     Array.isArray(content.sections) &&
     content.sections.length >= 3 &&
     content.sections.every(
@@ -231,11 +266,12 @@ async function fetchPublishedLocationPages(settings) {
   for (let start = 0; ; start += PAGE_BATCH_SIZE) {
     const { data, error } = await supabase
       .from("review_location_pages")
-      .select("country_slug,city_slug,updated_at,page_content")
+      .select("country_slug,city_slug,locale,updated_at,page_content")
       .eq("status", "published")
       .not("published_at", "is", null)
       .lte("published_at", new Date().toISOString())
       .order("country_slug")
+      .order("locale")
       .order("city_slug")
       .range(start, start + PAGE_BATCH_SIZE - 1);
     if (error)
@@ -246,6 +282,7 @@ async function fetchPublishedLocationPages(settings) {
         (page) =>
           /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(page.country_slug) &&
           /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(page.city_slug) &&
+          SUPPORTED_LOCALES.has(page.locale) &&
           isSubstantiveLocationContent(page.page_content),
       ),
     );
@@ -289,15 +326,38 @@ function sitemapXml(origin, pages, blogPosts, locationPages) {
     alternates: [],
     video: null,
   }));
-  const locationUrls = locationPages.map((page) => ({
-    loc: new URL(
-      `/remove-google-review/${encodeURIComponent(page.country_slug)}/${encodeURIComponent(page.city_slug)}`,
-      origin,
-    ).toString(),
-    lastmod: page.updated_at,
-    video: getVideoMetadata(page.page_content),
-    alternates: [],
-  }));
+  const locationGroups = new Map();
+  for (const page of locationPages) {
+    const key = `${page.country_slug}/${page.city_slug}`;
+    const group = locationGroups.get(key) ?? [];
+    group.push(page);
+    locationGroups.set(key, group);
+  }
+  const locationPath = (page) => {
+    const path = `/remove-google-review/${encodeURIComponent(page.country_slug)}/${encodeURIComponent(page.city_slug)}`;
+    return page.locale === "en-US" ? path : `/${encodeURIComponent(page.locale)}${path}`;
+  };
+  const locationUrls = locationPages.map((page) => {
+    const group = locationGroups.get(`${page.country_slug}/${page.city_slug}`) ?? [];
+    const alternates = group.map((translation) => ({
+      locale: translation.locale,
+      loc: new URL(locationPath(translation), origin).toString(),
+    }));
+    const defaultTranslation =
+      group.find((translation) => translation.locale === "en-US") ?? group[0];
+    if (defaultTranslation && group.length > 1) {
+      alternates.push({
+        locale: "x-default",
+        loc: new URL(locationPath(defaultTranslation), origin).toString(),
+      });
+    }
+    return {
+      loc: new URL(locationPath(page), origin).toString(),
+      lastmod: page.updated_at,
+      video: getVideoMetadata(page.page_content),
+      alternates,
+    };
+  });
   const urls = [...staticUrls, ...pageUrls, ...blogUrls, ...locationUrls];
   const entries = urls.map(({ loc, lastmod, alternates, video }) => {
     const lastmodTag =
@@ -359,7 +419,8 @@ async function notifyGoogleSearchConsole(settings, sitemapUrl) {
       }),
       signal: AbortSignal.timeout(10_000),
     });
-    if (!tokenResponse.ok) throw new Error(`OAuth token request returned HTTP ${tokenResponse.status}.`);
+    if (!tokenResponse.ok)
+      throw new Error(`OAuth token request returned HTTP ${tokenResponse.status}.`);
     const tokenBody = await tokenResponse.json();
     if (typeof tokenBody.access_token !== "string")
       throw new Error("OAuth token response did not contain an access token.");
@@ -416,8 +477,7 @@ async function notifyIndexNow(settings, urls, origin) {
         }),
         signal: AbortSignal.timeout(10_000),
       });
-      if (!response.ok)
-        throw new Error(`IndexNow returned HTTP ${response.status}.`);
+      if (!response.ok) throw new Error(`IndexNow returned HTTP ${response.status}.`);
       console.info(
         `[sitemap] Submitted ${Math.min(10_000, urls.length - start)} URLs to IndexNow.`,
       );
