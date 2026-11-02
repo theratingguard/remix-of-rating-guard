@@ -43,8 +43,10 @@ import { Route as ApiScanWorkerRouteImport } from './routes/api/scan-worker'
 import { Route as BecomeAResellerCountryRouteImport } from './routes/become-a-reseller.$country'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as PartnersCountryRouteImport } from './routes/partners.$country'
 import { Route as ResellerRegisterRouteImport } from './routes/reseller.register'
 import { Route as StaffRegisterRouteImport } from './routes/staff.register'
+import { Route as StartChar123industryChar125AgencyCountryRouteImport } from './routes/start-{$industry}-agency.$country'
 import { Route as LocaleServiceSlugRouteImport } from './routes/$locale.service.$slug'
 import { Route as AuthenticatedAdminAssignRouteImport } from './routes/_authenticated/admin.assign'
 import { Route as AuthenticatedAdminCaseAssignmentRouteImport } from './routes/_authenticated/admin.case-assignment'
@@ -284,6 +286,11 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PartnersCountryRoute = PartnersCountryRouteImport.update({
+  id: '/partners/$country',
+  path: '/partners/$country',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResellerRegisterRoute = ResellerRegisterRouteImport.update({
   id: '/reseller/register',
   path: '/reseller/register',
@@ -294,6 +301,12 @@ const StaffRegisterRoute = StaffRegisterRouteImport.update({
   path: '/staff/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StartChar123industryChar125AgencyCountryRoute =
+  StartChar123industryChar125AgencyCountryRouteImport.update({
+    id: '/start-{$industry}-agency/$country',
+    path: '/start-{$industry}-agency/$country',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LocaleServiceSlugRoute = LocaleServiceSlugRouteImport.update({
   id: '/$locale/service/$slug',
   path: '/$locale/service/$slug',
@@ -686,8 +699,10 @@ export interface FileRoutesByFullPath {
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/become-a-reseller/$country': typeof BecomeAResellerCountryRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/partners/$country': typeof PartnersCountryRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
+  '/start-{$industry}-agency/$country': typeof StartChar123industryChar125AgencyCountryRoute
   '/blog/': typeof BlogIndexRoute
   '/$locale/service/$slug': typeof LocaleServiceSlugRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
@@ -787,8 +802,10 @@ export interface FileRoutesByTo {
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/become-a-reseller/$country': typeof BecomeAResellerCountryRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/partners/$country': typeof PartnersCountryRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
+  '/start-{$industry}-agency/$country': typeof StartChar123industryChar125AgencyCountryRoute
   '/blog': typeof BlogIndexRoute
   '/$locale/service/$slug': typeof LocaleServiceSlugRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
@@ -890,8 +907,10 @@ export interface FileRoutesById {
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/become-a-reseller/$country': typeof BecomeAResellerCountryRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/partners/$country': typeof PartnersCountryRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
+  '/start-{$industry}-agency/$country': typeof StartChar123industryChar125AgencyCountryRoute
   '/blog/': typeof BlogIndexRoute
   '/$locale/service/$slug': typeof LocaleServiceSlugRoute
   '/_authenticated/admin/assign': typeof AuthenticatedAdminAssignRoute
@@ -993,8 +1012,10 @@ export interface FileRouteTypes {
     | '/api/scan-worker'
     | '/become-a-reseller/$country'
     | '/blog/$slug'
+    | '/partners/$country'
     | '/reseller/register'
     | '/staff/register'
+    | '/start-{$industry}-agency/$country'
     | '/blog/'
     | '/$locale/service/$slug'
     | '/admin/assign'
@@ -1094,8 +1115,10 @@ export interface FileRouteTypes {
     | '/api/scan-worker'
     | '/become-a-reseller/$country'
     | '/blog/$slug'
+    | '/partners/$country'
     | '/reseller/register'
     | '/staff/register'
+    | '/start-{$industry}-agency/$country'
     | '/blog'
     | '/$locale/service/$slug'
     | '/admin/assign'
@@ -1196,8 +1219,10 @@ export interface FileRouteTypes {
     | '/api/scan-worker'
     | '/become-a-reseller/$country'
     | '/blog/$slug'
+    | '/partners/$country'
     | '/reseller/register'
     | '/staff/register'
+    | '/start-{$industry}-agency/$country'
     | '/blog/'
     | '/$locale/service/$slug'
     | '/_authenticated/admin/assign'
@@ -1282,8 +1307,10 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiScanWorkerRoute: typeof ApiScanWorkerRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  PartnersCountryRoute: typeof PartnersCountryRoute
   ResellerRegisterRoute: typeof ResellerRegisterRoute
   StaffRegisterRoute: typeof StaffRegisterRoute
+  StartChar123industryChar125AgencyCountryRoute: typeof StartChar123industryChar125AgencyCountryRoute
   BlogIndexRoute: typeof BlogIndexRoute
   LocaleServiceSlugRoute: typeof LocaleServiceSlugRoute
   ApiAdminGenerateBacklinkOutreachRoute: typeof ApiAdminGenerateBacklinkOutreachRoute
@@ -1549,6 +1576,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/partners/$country': {
+      id: '/partners/$country'
+      path: '/partners/$country'
+      fullPath: '/partners/$country'
+      preLoaderRoute: typeof PartnersCountryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reseller/register': {
       id: '/reseller/register'
       path: '/reseller/register'
@@ -1561,6 +1595,13 @@ declare module '@tanstack/react-router' {
       path: '/staff/register'
       fullPath: '/staff/register'
       preLoaderRoute: typeof StaffRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start-{$industry}-agency/$country': {
+      id: '/start-{$industry}-agency/$country'
+      path: '/start-{$industry}-agency/$country'
+      fullPath: '/start-{$industry}-agency/$country'
+      preLoaderRoute: typeof StartChar123industryChar125AgencyCountryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$locale/service/$slug': {
@@ -2229,8 +2270,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiScanWorkerRoute: ApiScanWorkerRoute,
   BlogSlugRoute: BlogSlugRoute,
+  PartnersCountryRoute: PartnersCountryRoute,
   ResellerRegisterRoute: ResellerRegisterRoute,
   StaffRegisterRoute: StaffRegisterRoute,
+  StartChar123industryChar125AgencyCountryRoute:
+    StartChar123industryChar125AgencyCountryRoute,
   BlogIndexRoute: BlogIndexRoute,
   LocaleServiceSlugRoute: LocaleServiceSlugRoute,
   ApiAdminGenerateBacklinkOutreachRoute: ApiAdminGenerateBacklinkOutreachRoute,

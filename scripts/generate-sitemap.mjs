@@ -1,6 +1,7 @@
 import { createSign } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
+import { countries, industries, programmaticSeoPaths } from "../src/lib/seo/lead-catalog.js";
 
 const STATIC_PATHS = [
   "/",
@@ -358,7 +359,28 @@ function sitemapXml(origin, pages, blogPosts, locationPages) {
       alternates,
     };
   });
-  const urls = [...staticUrls, ...pageUrls, ...blogUrls, ...locationUrls];
+  const seoPaths = programmaticSeoPaths();
+  const catalogPaths = [...seoPaths.review, ...seoPaths.agency, ...seoPaths.partners];
+  const catalogUrls = catalogPaths.map((path) => ({
+    loc: new URL(path, origin).toString(),
+    lastmod: null,
+    alternates: [],
+    video: null,
+  }));
+  const expectedIndustryCountryCount = countries.length * industries.length;
+  const expectedCatalogUrlCount = expectedIndustryCountryCount * 2 + countries.length;
+  if (
+    seoPaths.review.length !== expectedIndustryCountryCount ||
+    seoPaths.agency.length !== expectedIndustryCountryCount ||
+    seoPaths.partners.length !== countries.length ||
+    catalogUrls.length !== expectedCatalogUrlCount ||
+    new Set(catalogUrls.map((url) => url.loc)).size !== expectedCatalogUrlCount
+  ) {
+    throw new Error(
+      "Generated industry, agency, and partner sitemap URLs are incomplete or duplicated.",
+    );
+  }
+  const urls = [...staticUrls, ...pageUrls, ...blogUrls, ...locationUrls, ...catalogUrls];
   const entries = urls.map(({ loc, lastmod, alternates, video }) => {
     const lastmodTag =
       typeof lastmod === "string" && Number.isFinite(Date.parse(lastmod))
@@ -518,7 +540,7 @@ await writeFile(
   "utf8",
 );
 console.info(
-  `[sitemap] Generated ${sitemap.urls.length} public URLs (${pages.length} SEO pages, ${blogPosts.length} blog posts, ${locationPages.length} reviewed location pages) for ${origin.origin}.`,
+  `[sitemap] Generated ${sitemap.urls.length} public URLs (${pages.length} SEO pages, ${blogPosts.length} blog posts, ${locationPages.length} reviewed location pages, ${countries.length * industries.length} industry-country pairs across review and agency pages, ${countries.length} partner pages) for ${origin.origin}.`,
 );
 await Promise.all([
   notifyGoogleSearchConsole(settings, new URL("/sitemap.xml", origin).toString()),
