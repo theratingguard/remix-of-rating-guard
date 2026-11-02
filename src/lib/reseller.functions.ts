@@ -46,8 +46,20 @@ async function getResellerAdmin(userId: string) {
     .eq("user_id", userId)
     .maybeSingle();
   if (profileError) throw new Error(`Could not load reseller status: ${profileError.message}`);
-  if (!profile || ["rejected", "suspended"].includes(profile.status))
+  if (!profile || profile.status !== "approved")
     throw new Error("This reseller account cannot manage clients or team members.");
+
+  const { data: membership, error: membershipError } = await supabaseAdmin
+    .from("reseller_memberships")
+    .select("id")
+    .eq("reseller_id", userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (membershipError)
+    throw new Error(`Could not verify reseller membership: ${membershipError.message}`);
+  if (!membership)
+    throw new Error("An active reseller membership is required to manage clients or team members.");
+
   return { supabaseAdmin, profile };
 }
 
