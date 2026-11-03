@@ -69,7 +69,8 @@ export function getIndustry(slug: string) {
 }
 
 export function getCountry(slug: string) {
-  return countries.find((country) => country.slug === slug);
+  const identifier = slug.toLowerCase();
+  return countries.find((country) => country.slug === identifier || country.code === identifier);
 }
 
 export function getIndustryCountryPage(industrySlug: string, countrySlug: string) {

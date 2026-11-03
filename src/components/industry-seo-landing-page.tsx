@@ -106,6 +106,22 @@ export function IndustrySeoLandingPage(props: Props) {
         </PageLink>
       </header>
 
+      {props.kind === "partners" && (
+        <section
+          aria-labelledby="first-partner-heading"
+          className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-6"
+        >
+          <h2 id="first-partner-heading" className="text-2xl font-semibold">
+            Become the first partner in {country.name}
+          </h2>
+          <p className="max-w-3xl leading-7 text-muted-foreground">
+            We do not have a public partner listing for this country yet. Approved partners can
+            apply to join the Rating Guard reseller program; availability and program terms apply.
+          </p>
+          <PageLink href="/reseller/register">Apply to become a partner</PageLink>
+        </section>
+      )}
+
       <article className="space-y-9">
         {content.map((section) => (
           <section key={section.heading} className="space-y-3">

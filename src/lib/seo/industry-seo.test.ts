@@ -27,4 +27,9 @@ describe("programmatic industry SEO catalog", () => {
     expect(getIndustryCountryPage("unknown", "united-states")).toBeNull();
     expect(getCountry("not-a-country")).toBeUndefined();
   });
+
+  it("resolves country-code URLs for review, agency, and partner pages", () => {
+    expect(getCountry("us")?.slug).toBe("united-states");
+    expect(getIndustryCountryPage("restaurants", "us")?.country.name).toBe("United States");
+  });
 });
