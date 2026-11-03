@@ -1,0 +1,19 @@
+[Unit]
+Description=Rating Guard daily AI blog drafts (unpublished, human-reviewed)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/rating-guard
+EnvironmentFile=/opt/rating-guard/.env
+EnvironmentFile=/opt/rating-guard/.env.production
+EnvironmentFile=/etc/ratingguard-worker.env
+ExecStart=/usr/bin/node scripts/generate-five-blog-drafts.mjs
+MemoryMax=512M
+TimeoutStartSec=900
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict

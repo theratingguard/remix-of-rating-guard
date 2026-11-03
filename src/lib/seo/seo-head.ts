@@ -52,6 +52,7 @@ export type ProgrammaticSeoPage = {
 export type SeoBreadcrumb = { name: string; url: string };
 export type SeoHeadOptions = {
   canonicalPath?: string;
+  alternatePaths?: Array<{ hrefLang: string; path: string }>;
   contentType?: "website" | "article";
   breadcrumbs?: SeoBreadcrumb[];
   article?: {
@@ -129,6 +130,20 @@ export function SEOHead(
       ? `/${encodeURIComponent(page.locale)}/service/${encodeURIComponent(page.slug)}`
       : "/");
   const canonical = new URL(path, origin).toString();
+  const regionalAlternates = (options.alternatePaths ?? []).map(({ hrefLang, path }) => {
+    if (
+      !(/^[a-z]{2}(?:-[A-Z]{2})?$/.test(hrefLang) || hrefLang === "x-default") ||
+      !path.startsWith("/") ||
+      path.startsWith("//")
+    ) {
+      throw new Error("SEO alternate links must use a valid language tag and local absolute path.");
+    }
+    return {
+      rel: "alternate" as const,
+      hrefLang,
+      href: new URL(path, origin).toString(),
+    };
+  });
   const image = DEFAULT_IMAGE;
   const organizationSchema = organizationJsonLd(origin, options.organization);
   const websiteSchema = websiteJsonLd(origin);
@@ -283,7 +298,7 @@ export function SEOHead(
       { property: "og:type", content: options.contentType ?? "website" },
       { property: "og:url", content: canonical },
       { property: "og:image", content: image },
-      { property: "og:image:alt", content: `${page.title} — ${APP_NAME}` },
+      { property: "og:image:alt", content: `${APP_NAME} logo` },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: page.title },
       { name: "twitter:description", content: page.description.slice(0, 160) },
@@ -302,6 +317,7 @@ export function SEOHead(
           SEO_LOCALES.some((locale) => locale.code === alternate.hrefLang) ||
           alternate.hrefLang === "x-default",
       ),
+      ...regionalAlternates,
     ],
     scripts: [
       { type: "application/ld+json", children: safeJson(organizationSchema) },

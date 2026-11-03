@@ -8,3 +8,11 @@ export function programmaticSeoPaths(): {
   agency: string[];
   partners: string[];
 };
+export function programmaticSeoAlternates(kind: "partners"): Array<{
+  hrefLang: string;
+  path: string;
+}>;
+export function programmaticSeoAlternates(
+  kind: "review" | "agency",
+  industrySlug: string,
+): Array<{ hrefLang: string; path: string }>;

@@ -18,6 +18,10 @@ describe("SEOHead", () => {
       name: "description",
       content: "Learn about Rating Guard.",
     });
+    expect(head.meta).toContainEqual({
+      property: "og:image:alt",
+      content: "Rating Guard logo",
+    });
     expect(head.links).toContainEqual({
       rel: "canonical",
       href: "https://ratingguard.online/about",

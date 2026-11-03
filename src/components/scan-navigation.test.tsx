@@ -9,10 +9,13 @@ const mocks = vi.hoisted(() => ({
   status: vi.fn(),
   find: vi.fn(),
   invalidateQueries: vi.fn(),
+  scanMode: "single" as "single" | "bulk",
 }));
 
 vi.mock("@tanstack/react-router", () => ({
-  createFileRoute: () => () => ({ useSearch: () => ({}) }),
+  createFileRoute: () => () => ({
+    useSearch: () => ({ mode: mocks.scanMode === "bulk" ? "bulk" : undefined }),
+  }),
   useNavigate: () => mocks.navigate,
   Link: () => null,
 }));
@@ -72,7 +75,9 @@ vi.mock("@/components/scan-result", () => ({
   RatingAnalysis: () => null,
   RiskAnalysis: () => null,
 }));
-vi.mock("@/components/bulk-scan", () => ({ BulkScan: () => null }));
+vi.mock("@/components/bulk-scan", () => ({
+  BulkScan: () => <div>Bulk scan test surface</div>,
+}));
 vi.mock("@/components/top-bar", () => ({ TopBar: () => null }));
 vi.mock("@/components/scan-stats-cards", () => ({ ScanStatsCards: () => null }));
 vi.mock("@/components/scan-progress", () => ({ ScanProgress: () => null }));
@@ -87,11 +92,20 @@ beforeEach(() => {
   mocks.status.mockReset().mockResolvedValue({ googleConfigured: true });
   mocks.find.mockReset();
   mocks.invalidateQueries.mockReset();
+  mocks.scanMode = "single";
 });
 
 afterEach(cleanup);
 
 describe("scan-to-report navigation", () => {
+  it("opens the bulk scanning workflow when the bulk mode is selected", async () => {
+    mocks.scanMode = "bulk";
+    render(<ScanPage />);
+
+    expect(await screen.findByText("Bulk scan test surface")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Paste URL")).not.toBeInTheDocument();
+  });
+
   it("opens the saved report route after scan and analysis both succeed", async () => {
     mocks.fetch.mockResolvedValue({ ok: true, scanId: "scan-123" });
     mocks.analyze.mockResolvedValue({ ok: true, scanId: "scan-123", reviews: 5 });

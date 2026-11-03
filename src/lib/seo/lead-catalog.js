@@ -853,3 +853,24 @@ export function programmaticSeoPaths() {
     partners: countries.map((country) => `/partners/${country.slug}`),
   };
 }
+
+export function programmaticSeoAlternates(kind, industrySlug) {
+  if (kind !== "partners" && !industries.some((industry) => industry.slug === industrySlug)) {
+    throw new Error(`Unknown industry for regional SEO alternates: ${industrySlug}`);
+  }
+
+  const pathForCountry = (country) => {
+    if (kind === "partners") return `/partners/${country.slug}`;
+    if (kind === "review") return `/remove-google-review/${industrySlug}/${country.slug}`;
+    if (kind === "agency") return `/start-${industrySlug}-agency/${country.slug}`;
+    throw new Error(`Unknown regional SEO page type: ${kind}`);
+  };
+  const alternates = countries.map((country) => ({
+    hrefLang: `en-${country.code.toUpperCase()}`,
+    path: pathForCountry(country),
+  }));
+  const defaultCountry = countries.find((country) => country.code === "us");
+  if (!defaultCountry) throw new Error("The SEO country catalog must include the United States.");
+  alternates.push({ hrefLang: "x-default", path: pathForCountry(defaultCountry) });
+  return alternates;
+}

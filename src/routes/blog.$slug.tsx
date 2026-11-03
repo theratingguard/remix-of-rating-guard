@@ -2,6 +2,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/lib/seo/seo-head";
 import { createDirectAnswer } from "@/lib/seo/direct-answer";
+import { relatedPillarGuides } from "@/lib/seo/pillar-guides";
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: async ({ params }) => {
@@ -14,41 +15,39 @@ export const Route = createFileRoute("/blog/$slug")({
       .maybeSingle();
     if (error) throw new Error(`Could not load the published blog post: ${error.message}`);
     if (!data?.published_at) throw notFound();
-    const firstParagraph = data.content
-      .split(/\r?\n\s*\r?\n/)
-      .map((paragraph) => paragraph.trim())
-      .find(Boolean) ?? "";
+    const firstParagraph =
+      data.content
+        .split(/\r?\n\s*\r?\n/)
+        .map((paragraph) => paragraph.trim())
+        .find(Boolean) ?? "";
     return { ...data, directAnswer: createDirectAnswer(data.title, firstParagraph) };
   },
   head: ({ loaderData }) =>
     loaderData
-      ? SEOHead(
-          { title: loaderData.title, description: loaderData.meta_description },
-          [],
-          {
-            canonicalPath: `/blog/${encodeURIComponent(loaderData.slug)}`,
-            contentType: "article",
-            article: {
-              publishedAt: loaderData.published_at!,
-              updatedAt: loaderData.updated_at,
-            },
-            speakable: true,
-            breadcrumbs: [
-              { name: "Home", url: "https://ratingguard.online/" },
-              { name: "Blog", url: "https://ratingguard.online/blog" },
-              {
-                name: loaderData.title,
-                url: `https://ratingguard.online/blog/${encodeURIComponent(loaderData.slug)}`,
-              },
-            ],
+      ? SEOHead({ title: loaderData.title, description: loaderData.meta_description }, [], {
+          canonicalPath: `/blog/${encodeURIComponent(loaderData.slug)}`,
+          contentType: "article",
+          article: {
+            publishedAt: loaderData.published_at!,
+            updatedAt: loaderData.updated_at,
           },
-        )
+          speakable: true,
+          breadcrumbs: [
+            { name: "Home", url: "https://ratingguard.online/" },
+            { name: "Blog", url: "https://ratingguard.online/blog" },
+            {
+              name: loaderData.title,
+              url: `https://ratingguard.online/blog/${encodeURIComponent(loaderData.slug)}`,
+            },
+          ],
+        })
       : {},
   component: BlogArticlePage,
 });
 
 function BlogArticlePage() {
   const post = Route.useLoaderData();
+  const relatedGuides = relatedPillarGuides(`${post.title}\n${post.content}`);
   const paragraphs = post.content
     .split(/\r?\n\s*\r?\n/)
     .map((paragraph) => paragraph.trim())
@@ -78,6 +77,28 @@ function BlogArticlePage() {
             <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
           ))}
         </div>
+        {relatedGuides.length > 0 && (
+          <nav
+            aria-labelledby="related-guides-heading"
+            className="space-y-3 border-t border-border pt-6"
+          >
+            <h2 id="related-guides-heading" className="text-xl font-semibold text-foreground">
+              Related practical guides
+            </h2>
+            <ul className="space-y-2">
+              {relatedGuides.map((guide) => (
+                <li key={guide.slug}>
+                  <a
+                    className="text-primary underline-offset-4 hover:underline"
+                    href={`/guides/${guide.slug}`}
+                  >
+                    {guide.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
         <aside className="rounded-xl border border-border bg-muted/40 p-5 text-sm leading-6 text-muted-foreground">
           Google makes all final decisions about its review policies. Rating Guard does not
           guarantee that any review will be removed.

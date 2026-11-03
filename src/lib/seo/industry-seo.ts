@@ -1,4 +1,10 @@
-import { countries, industries, type LeadCountry, type LeadIndustry } from "./lead-catalog.js";
+import {
+  countries,
+  industries,
+  programmaticSeoAlternates,
+  type LeadCountry,
+  type LeadIndustry,
+} from "./lead-catalog.js";
 import { SEOHead, type SeoFaq, type SeoSection } from "./seo-head";
 
 export type IndustryCountryPageData = {
@@ -91,6 +97,13 @@ export function partnerPath(country: string) {
   return `/partners/${encodeURIComponent(country)}`;
 }
 
+function regionalAlternates(kind: "review" | "agency" | "partners", industrySlug?: string) {
+  return programmaticSeoAlternates(kind, industrySlug).map(({ hrefLang, path }) => ({
+    hrefLang,
+    path,
+  }));
+}
+
 export function industryReviewHead({ industry, country }: IndustryCountryPageData) {
   const title = `Google Review Policy Assessment for ${industry.name} in ${country.name} | Rating Guard`;
   const description = `A practical guide for ${industry.name.toLowerCase()} businesses in ${country.name} to assess review-policy concerns, organize evidence, and understand reporting options. No removal is guaranteed.`;
@@ -129,6 +142,7 @@ export function industryReviewHead({ industry, country }: IndustryCountryPageDat
     [],
     {
       canonicalPath: industryReviewPath(industry.slug, country.slug),
+      alternatePaths: regionalAlternates("review", industry.slug),
       breadcrumbs: [
         { name: "Home", url: "https://ratingguard.online/" },
         {
@@ -178,6 +192,7 @@ export function agencyHead({ industry, country }: IndustryCountryPageData) {
     [],
     {
       canonicalPath: agencyPath(industry.slug, country.slug),
+      alternatePaths: regionalAlternates("agency", industry.slug),
       breadcrumbs: [
         { name: "Home", url: "https://ratingguard.online/" },
         {
@@ -224,6 +239,7 @@ export function partnerHead({ country }: CountryPageData) {
     [],
     {
       canonicalPath: partnerPath(country.slug),
+      alternatePaths: regionalAlternates("partners"),
       breadcrumbs: [
         { name: "Home", url: "https://ratingguard.online/" },
         {

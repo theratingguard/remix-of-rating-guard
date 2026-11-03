@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { countries, industries, programmaticSeoPaths } from "./lead-catalog.js";
-import { getIndustryCountryPage, getCountry } from "./industry-seo";
+import {
+  countries,
+  industries,
+  programmaticSeoAlternates,
+  programmaticSeoPaths,
+} from "./lead-catalog.js";
+import {
+  agencyHead,
+  getIndustryCountryPage,
+  getCountry,
+  industryReviewHead,
+  partnerHead,
+} from "./industry-seo";
 
 describe("programmatic industry SEO catalog", () => {
   it("contains the seeded 30 industries and 119 countries", () => {
@@ -31,5 +42,64 @@ describe("programmatic industry SEO catalog", () => {
   it("resolves country-code URLs for review, agency, and partner pages", () => {
     expect(getCountry("us")?.slug).toBe("united-states");
     expect(getIndustryCountryPage("restaurants", "us")?.country.name).toBe("United States");
+  });
+
+  it("adds self-canonical and reciprocal regional hreflang links to programmatic pages", () => {
+    const data = getIndustryCountryPage("restaurants", "us");
+    if (!data) throw new Error("Expected seeded restaurant and US catalog entries.");
+
+    const heads = [
+      industryReviewHead(data),
+      agencyHead(data),
+      partnerHead({ country: data.country }),
+    ];
+    const expected = [
+      {
+        rel: "canonical",
+        href: "https://ratingguard.online/remove-google-review/restaurants/united-states",
+      },
+      {
+        rel: "canonical",
+        href: "https://ratingguard.online/start-restaurants-agency/united-states",
+      },
+      {
+        rel: "canonical",
+        href: "https://ratingguard.online/partners/united-states",
+      },
+    ];
+
+    heads.forEach((head, index) => {
+      expect(head.links).toContainEqual(expected[index]);
+      expect(head.links?.filter((link) => link.rel === "alternate")).toHaveLength(
+        countries.length + 1,
+      );
+      expect(head.links).toContainEqual({
+        rel: "alternate",
+        hrefLang: "en-US",
+        href: expected[index]!.href,
+      });
+      expect(head.links).toContainEqual({
+        rel: "alternate",
+        hrefLang: "x-default",
+        href: expected[index]!.href,
+      });
+      const schemas = (head.scripts ?? []).map((script) => JSON.parse(script.children as string));
+      expect(schemas.some((schema) => schema["@type"] === "AggregateRating")).toBe(false);
+    });
+  });
+
+  it("builds regional alternate sets within each page family", () => {
+    expect(programmaticSeoAlternates("review", "restaurants")).toHaveLength(countries.length + 1);
+    expect(programmaticSeoAlternates("agency", "restaurants")[0]).toEqual({
+      hrefLang: "en-US",
+      path: "/start-restaurants-agency/united-states",
+    });
+    expect(programmaticSeoAlternates("partners").at(-1)).toEqual({
+      hrefLang: "x-default",
+      path: "/partners/united-states",
+    });
+    expect(() => programmaticSeoAlternates("review", "missing-industry")).toThrow(
+      "Unknown industry",
+    );
   });
 });

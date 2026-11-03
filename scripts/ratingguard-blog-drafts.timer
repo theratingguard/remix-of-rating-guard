@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Rating Guard editorial draft generation
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 UTC
+Persistent=true
+Unit=ratingguard-blog-drafts.service
+
+[Install]
+WantedBy=timers.target

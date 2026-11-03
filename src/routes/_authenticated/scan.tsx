@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, Check, KeyRound, Loader2, X } from "lucide-react";
@@ -21,8 +21,16 @@ import { isGoogleMapsUrl, isGoogleReviewUrl } from "@/lib/google-url";
 import { RestrictedReportSummary } from "@/components/restricted-report-summary";
 import { reportAccessQuery } from "@/lib/report-access";
 import { SimpleScanReport } from "@/components/simple-scan-report";
+import { z } from "zod";
+
+const BulkScan = lazy(() =>
+  import("@/components/bulk-scan").then((module) => ({ default: module.BulkScan })),
+);
+
+const scanSearchSchema = z.object({ mode: z.literal("bulk").optional() });
 
 export const Route = createFileRoute("/_authenticated/scan")({
+  validateSearch: scanSearchSchema,
   head: () => ({
     meta: [
       { title: "Google Review URL Scanner — Rating Guard" },
@@ -46,6 +54,29 @@ function looksLikeGoogleUrl(value: string) {
 }
 
 export function ScanPage() {
+  const { mode } = Route.useSearch();
+  const access = useQuery(reportAccessQuery());
+  if (access.error)
+    return <p role="alert">Could not verify report access: {access.error.message}</p>;
+  if (access.isPending) return <p>Verifying report access…</p>;
+  if (access.data !== "super_admin") return <RestrictedReportSummary />;
+  if (mode === "bulk")
+    return (
+      <Suspense
+        fallback={
+          <section className="mx-auto w-full max-w-4xl space-y-4" aria-busy="true">
+            <div className="surface h-8 w-40 animate-pulse rounded" />
+            <div className="surface h-64 animate-pulse rounded-2xl" />
+          </section>
+        }
+      >
+        <BulkScan disabled={false} />
+      </Suspense>
+    );
+  return <SingleScanPage />;
+}
+
+function SingleScanPage() {
   const navigate = useNavigate();
   const features = useFeatureSettings();
   const access = useQuery(reportAccessQuery());

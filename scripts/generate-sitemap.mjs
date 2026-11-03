@@ -3,10 +3,18 @@ import { readFile, writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 import { countries, industries, programmaticSeoPaths } from "../src/lib/seo/lead-catalog.js";
 
+const PILLAR_GUIDE_PATHS = [
+  "/guides/google-review-policy-assessment",
+  "/guides/review-evidence-and-recordkeeping",
+  "/guides/responding-to-negative-reviews",
+  "/guides/review-management-for-multi-location-businesses",
+  "/guides/ethical-review-management-agency",
+];
 const STATIC_PATHS = [
   "/",
   "/about",
   "/blog",
+  "/guides",
   "/become-a-reseller",
   "/contact",
   "/get-started",
@@ -14,6 +22,7 @@ const STATIC_PATHS = [
   "/responsible-use",
   "/terms",
 ];
+const PROGRAMMATIC_ROBOTS_ALLOW_PATHS = ["/remove-google-review/", "/start-", "/partners/"];
 const SUPPORTED_LOCALES = new Set([
   "en-US",
   "en-GB",
@@ -299,6 +308,12 @@ function sitemapXml(origin, pages, blogPosts, locationPages) {
     alternates: [],
     video: null,
   }));
+  const pillarGuideUrls = PILLAR_GUIDE_PATHS.map((path) => ({
+    loc: new URL(path, origin).toString(),
+    lastmod: null,
+    alternates: [],
+    video: null,
+  }));
   const groups = new Map();
   for (const page of pages) {
     if (!page.translation_group) continue;
@@ -380,7 +395,14 @@ function sitemapXml(origin, pages, blogPosts, locationPages) {
       "Generated industry, agency, and partner sitemap URLs are incomplete or duplicated.",
     );
   }
-  const urls = [...staticUrls, ...pageUrls, ...blogUrls, ...locationUrls, ...catalogUrls];
+  const urls = [
+    ...staticUrls,
+    ...pillarGuideUrls,
+    ...pageUrls,
+    ...blogUrls,
+    ...locationUrls,
+    ...catalogUrls,
+  ];
   const entries = urls.map(({ loc, lastmod, alternates, video }) => {
     const lastmodTag =
       typeof lastmod === "string" && Number.isFinite(Date.parse(lastmod))
@@ -457,9 +479,10 @@ async function notifyGoogleSearchConsole(settings, sitemapUrl) {
     if (!response.ok) throw new Error(`Search Console returned HTTP ${response.status}.`);
     console.info("[sitemap] Submitted sitemap to Google Search Console.");
   } catch (error) {
-    console.warn(
+    console.error(
       `[sitemap] Google Search Console submission failed: ${error instanceof Error ? error.message : "unknown error"}`,
     );
+    process.exitCode = 1;
   }
 }
 
@@ -533,16 +556,29 @@ if (
 ) {
   throw new Error("Generated sitemap validation failed.");
 }
-await writeFile("public/sitemap.xml", sitemap.xml, "utf8");
+let sitemapChanged = true;
+try {
+  sitemapChanged = (await readFile("public/sitemap.xml", "utf8")) !== sitemap.xml;
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
+if (sitemapChanged) {
+  await writeFile("public/sitemap.xml", sitemap.xml, "utf8");
+  console.info("[sitemap] Sitemap contents changed; submitting the updated sitemap.");
+} else {
+  console.info("[sitemap] Sitemap contents are unchanged; skipping search-engine submissions.");
+}
 await writeFile(
   "public/robots.txt",
-  `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /staff/\nDisallow: /client/\nDisallow: /manager/\nDisallow: /reseller/\nDisallow: /api/\nDisallow: /dashboard\nSitemap: ${new URL("/sitemap.xml", origin)}\n`,
+  `User-agent: *\nAllow: /\n${PROGRAMMATIC_ROBOTS_ALLOW_PATHS.map((path) => `Allow: ${path}`).join("\n")}\nDisallow: /admin/\nDisallow: /staff/\nDisallow: /client/\nDisallow: /manager/\nDisallow: /reseller/\nDisallow: /api/\nDisallow: /dashboard\nSitemap: ${new URL("/sitemap.xml", origin)}\n`,
   "utf8",
 );
 console.info(
   `[sitemap] Generated ${sitemap.urls.length} public URLs (${pages.length} SEO pages, ${blogPosts.length} blog posts, ${locationPages.length} reviewed location pages, ${countries.length * industries.length} industry-country pairs across review and agency pages, ${countries.length} partner pages) for ${origin.origin}.`,
 );
-await Promise.all([
-  notifyGoogleSearchConsole(settings, new URL("/sitemap.xml", origin).toString()),
-  notifyIndexNow(settings, sitemap.urls, origin),
-]);
+if (sitemapChanged) {
+  await Promise.all([
+    notifyGoogleSearchConsole(settings, new URL("/sitemap.xml", origin).toString()),
+    notifyIndexNow(settings, sitemap.urls, origin),
+  ]);
+}

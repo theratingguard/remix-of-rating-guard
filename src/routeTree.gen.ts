@@ -43,6 +43,8 @@ import { Route as ApiScanWorkerRouteImport } from './routes/api/scan-worker'
 import { Route as BecomeAResellerCountryRouteImport } from './routes/become-a-reseller.$country'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as GuidesIndexRouteImport } from './routes/guides.index'
+import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
 import { Route as PartnersCountryRouteImport } from './routes/partners.$country'
 import { Route as ResellerRegisterRouteImport } from './routes/reseller.register'
 import { Route as StaffRegisterRouteImport } from './routes/staff.register'
@@ -284,6 +286,16 @@ const BlogIndexRoute = BlogIndexRouteImport.update({
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidesIndexRoute = GuidesIndexRouteImport.update({
+  id: '/guides/',
+  path: '/guides/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidesSlugRoute = GuidesSlugRouteImport.update({
+  id: '/guides/$slug',
+  path: '/guides/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PartnersCountryRoute = PartnersCountryRouteImport.update({
@@ -699,11 +711,13 @@ export interface FileRoutesByFullPath {
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/become-a-reseller/$country': typeof BecomeAResellerCountryRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/guides/$slug': typeof GuidesSlugRoute
   '/partners/$country': typeof PartnersCountryRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
   '/start-{$industry}-agency/$country': typeof StartChar123industryChar125AgencyCountryRoute
   '/blog/': typeof BlogIndexRoute
+  '/guides/': typeof GuidesIndexRoute
   '/$locale/service/$slug': typeof LocaleServiceSlugRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
@@ -802,11 +816,13 @@ export interface FileRoutesByTo {
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/become-a-reseller/$country': typeof BecomeAResellerCountryRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/guides/$slug': typeof GuidesSlugRoute
   '/partners/$country': typeof PartnersCountryRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
   '/start-{$industry}-agency/$country': typeof StartChar123industryChar125AgencyCountryRoute
   '/blog': typeof BlogIndexRoute
+  '/guides': typeof GuidesIndexRoute
   '/$locale/service/$slug': typeof LocaleServiceSlugRoute
   '/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
@@ -907,11 +923,13 @@ export interface FileRoutesById {
   '/api/scan-worker': typeof ApiScanWorkerRoute
   '/become-a-reseller/$country': typeof BecomeAResellerCountryRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/guides/$slug': typeof GuidesSlugRoute
   '/partners/$country': typeof PartnersCountryRoute
   '/reseller/register': typeof ResellerRegisterRoute
   '/staff/register': typeof StaffRegisterRoute
   '/start-{$industry}-agency/$country': typeof StartChar123industryChar125AgencyCountryRoute
   '/blog/': typeof BlogIndexRoute
+  '/guides/': typeof GuidesIndexRoute
   '/$locale/service/$slug': typeof LocaleServiceSlugRoute
   '/_authenticated/admin/assign': typeof AuthenticatedAdminAssignRoute
   '/_authenticated/admin/case-assignment': typeof AuthenticatedAdminCaseAssignmentRoute
@@ -1012,11 +1030,13 @@ export interface FileRouteTypes {
     | '/api/scan-worker'
     | '/become-a-reseller/$country'
     | '/blog/$slug'
+    | '/guides/$slug'
     | '/partners/$country'
     | '/reseller/register'
     | '/staff/register'
     | '/start-{$industry}-agency/$country'
     | '/blog/'
+    | '/guides/'
     | '/$locale/service/$slug'
     | '/admin/assign'
     | '/admin/case-assignment'
@@ -1115,11 +1135,13 @@ export interface FileRouteTypes {
     | '/api/scan-worker'
     | '/become-a-reseller/$country'
     | '/blog/$slug'
+    | '/guides/$slug'
     | '/partners/$country'
     | '/reseller/register'
     | '/staff/register'
     | '/start-{$industry}-agency/$country'
     | '/blog'
+    | '/guides'
     | '/$locale/service/$slug'
     | '/admin/assign'
     | '/admin/case-assignment'
@@ -1219,11 +1241,13 @@ export interface FileRouteTypes {
     | '/api/scan-worker'
     | '/become-a-reseller/$country'
     | '/blog/$slug'
+    | '/guides/$slug'
     | '/partners/$country'
     | '/reseller/register'
     | '/staff/register'
     | '/start-{$industry}-agency/$country'
     | '/blog/'
+    | '/guides/'
     | '/$locale/service/$slug'
     | '/_authenticated/admin/assign'
     | '/_authenticated/admin/case-assignment'
@@ -1307,11 +1331,13 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiScanWorkerRoute: typeof ApiScanWorkerRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  GuidesSlugRoute: typeof GuidesSlugRoute
   PartnersCountryRoute: typeof PartnersCountryRoute
   ResellerRegisterRoute: typeof ResellerRegisterRoute
   StaffRegisterRoute: typeof StaffRegisterRoute
   StartChar123industryChar125AgencyCountryRoute: typeof StartChar123industryChar125AgencyCountryRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  GuidesIndexRoute: typeof GuidesIndexRoute
   LocaleServiceSlugRoute: typeof LocaleServiceSlugRoute
   ApiAdminGenerateBacklinkOutreachRoute: typeof ApiAdminGenerateBacklinkOutreachRoute
   ApiAdminGenerateBlogRoute: typeof ApiAdminGenerateBlogRoute
@@ -1574,6 +1600,20 @@ declare module '@tanstack/react-router' {
       path: '/blog/$slug'
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides/': {
+      id: '/guides/'
+      path: '/guides'
+      fullPath: '/guides/'
+      preLoaderRoute: typeof GuidesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides/$slug': {
+      id: '/guides/$slug'
+      path: '/guides/$slug'
+      fullPath: '/guides/$slug'
+      preLoaderRoute: typeof GuidesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/partners/$country': {
@@ -2270,12 +2310,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiScanWorkerRoute: ApiScanWorkerRoute,
   BlogSlugRoute: BlogSlugRoute,
+  GuidesSlugRoute: GuidesSlugRoute,
   PartnersCountryRoute: PartnersCountryRoute,
   ResellerRegisterRoute: ResellerRegisterRoute,
   StaffRegisterRoute: StaffRegisterRoute,
   StartChar123industryChar125AgencyCountryRoute:
     StartChar123industryChar125AgencyCountryRoute,
   BlogIndexRoute: BlogIndexRoute,
+  GuidesIndexRoute: GuidesIndexRoute,
   LocaleServiceSlugRoute: LocaleServiceSlugRoute,
   ApiAdminGenerateBacklinkOutreachRoute: ApiAdminGenerateBacklinkOutreachRoute,
   ApiAdminGenerateBlogRoute: ApiAdminGenerateBlogRoute,

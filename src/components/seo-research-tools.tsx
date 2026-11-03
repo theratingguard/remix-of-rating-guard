@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SeoEditorialTemplates } from "@/components/seo-editorial-templates";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeSemanticContent, type SemanticAnalysis } from "@/lib/seo/semantic-analyzer";
 
@@ -334,6 +335,8 @@ export function SeoResearchTools() {
           )}
         </CardContent>
       </Card>
+
+      <SeoEditorialTemplates />
     </section>
   );
 }

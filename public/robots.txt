@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
+Allow: /remove-google-review/
+Allow: /start-
+Allow: /partners/
+Allow: /guides/
 Disallow: /admin/
 Disallow: /staff/
 Disallow: /client/
